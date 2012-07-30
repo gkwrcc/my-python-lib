@@ -126,7 +126,72 @@ def find_start_end_dates(cmd):
 			e_date = cmd['end_date']
 	return s_date, e_date
 
+
 def get_sodsum_data(cmd):
+	if 'element' not in cmd.keys() or 'coop_station_ids' not in cmd.keys():
+		print 'element and coop_station_id options required!'
+		sys.exit(0)
+	if not cmd['element'] or not cmd['coop_station_ids']:
+		print 'element and coop_station_id options required!'
+		sys.exit(0)
+	s_date, e_date = find_start_end_dates(cmd)
+	#Get list of station ids.
+	#if 'county' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_county(cmd['county'])
+	#elif 'climdiv' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_climdiv(cmd['climdiv'])
+	#elif 'cwa' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_cwa(cmd['cwa'])
+	#elif 'basin' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_basin(cmd['basin'])
+	#elif 'state' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_cwa(cmd['state'])
+	#elif 'bounding_box' in cmd.keys():
+		#coop_station_ids = AcisWS.get_station_ids_by_cwa([cmd['bounding_box'].split(,)])
+	coop_station_ids = cmd['coop_station_ids'] #list of stn ids (converted to list in form)
+	#sort coop ids in ascending order, strip left zeros first, sort and reattach zeros
+	c_ids_strip_list = [int(stn.lstrip('0')) for stn in coop_station_ids]
+	coop_station_ids = sorted(c_ids_strip_list)
+	for i, stn in enumerate(coop_station_ids):
+		if len(str(stn)) == 5:
+			coop_station_ids[i] = '0'+ str(stn)
+		else:
+			coop_station_ids[i] = str(stn)
+	print coop_station_ids
+	datadict = defaultdict(list)
+	station_names=[' ' for i in range(len(coop_station_ids))]
+	if cmd['element']!= 'multi':
+		elements = [cmd['element']]
+		#evap, wdmv, wesf not fully implemented into Acis_WS yet
+		if cmd['element'] in ['evap', 'wdmv', 'wesf']:
+			print 'Evaporation, wind and water equivalent not implemented yet. Please chose another element!'
+			sys.exit(0)
+	else:
+		elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
+	#request data on a station by station basis
+	for i, stn_id in enumerate(coop_station_ids):
+		if cmd['element']!= 'multi':
+			params = dict(sid=stn_id, sdate=s_date, edate=e_date, elems=[dict(name='%s' % cmd['element'])])
+		else:
+			params = dict(sid=stn_id, sdate=s_date, edate=e_date, elems=[dict(name='pcpn'), \
+			dict(name='snow'), dict(name='snwd'), dict(name='maxt'), dict(name='mint'), dict(name='obst')])
+
+		request = StnData(params)
+		try:
+			request['meta']
+			station_names[i] = request['meta']['name']
+		except:
+			station_names[i] = ' '
+
+		try:
+			request['data']
+			datadict[i] = request['data']
+		except:
+			datadict[i]=[]
+
+	return datadict, elements, coop_station_ids, station_names
+
+def get_sodsum_data_multi(cmd):
 	if 'element' not in cmd.keys() or 'coop_station_ids' not in cmd.keys():
 		print 'Error in AcisWs.get_sodsum_data! element and coop_station_id options required!'
 		sys.exit(0)
