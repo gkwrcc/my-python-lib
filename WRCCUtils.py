@@ -57,3 +57,112 @@ def get_dates(s_date, e_date):
 		next_date = start_date + datetime.timedelta(n)
 		dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
 	return dates
+
+def strip_n_sort(station_list):
+	c_ids_strip_list = [int(stn.lstrip('0')) for stn in station_list]
+	stn_list = sorted(c_ids_strip_list)
+	for i, stn in enumerate(stn_list):
+		if len(str(stn)) == 5:
+			stn_list[i] = '0' + str(stn)
+		else:
+			stn_list[i] = str(stn)
+	return stn_list
+
+#Routine to filter out data according to window specification
+#############################################################
+def get_windowed_data(data, start_date, end_date, start_window, end_window):
+	if start_window == '0101' and end_window == '1231':
+		windowed_data = data
+	else:
+		windowed_data = []
+		start_indices=[]
+		end_indices=[]
+		if start_date == 'por':
+			start_d = ''.join(data[0][0].split('-'))
+		else:
+			start_d = start_date
+		if end_date == 'por':
+			end_d = ''.join(data[-1][0].split('-'))
+		else:
+			end_d = end_date
+		st_yr = int(start_d[0:4])
+		st_mon = int(start_d[4:6])
+		st_day = int(start_d[6:8])
+		end_yr = int(end_d[0:4])
+		end_mon = int(end_d[4:6])
+		end_day = int(end_d[6:8])
+		#Date formatting needed to deal with end of data and window size
+		#doy = day of year
+		if WRCCUtils.is_leap_year(st_yr) and st_mon > 2:
+			doy_first = datetime.datetime(st_yr, st_mon, st_day).timetuple().tm_yday -1
+		else:
+			doy_first = datetime.datetime(st_yr, st_mon, st_day).timetuple().tm_yday
+		if WRCCUtils.is_leap_year(end_yr) and end_mon > 2:
+			doy_last = datetime.datetime(end_yr, end_mon, end_day).timetuple().tm_yday - 1
+		else:
+			doy_last = datetime.datetime(end_yr, end_mon, end_day).timetuple().tm_yday
+		doy_window_st = WRCCUtils.compute_doy(start_window[0:2], start_window[2:4])
+		doy_window_end = WRCCUtils.compute_doy(end_window[0:2], end_window[2:4])
+		dates = [data[i][0] for i  in range(len(data))]
+		start_w = '%s-%s' % (start_window[0:2], start_window[2:4])
+		end_w = '%s-%s' % (end_window[0:2], end_window[2:4])
+		#silly python doesn't have list.indices() method
+		#Look for windows in data
+		for i, date in enumerate(dates):
+			if date[5:] == start_w:
+				start_indices.append(i)
+			if date[5:] == end_w:
+				end_indices.append(i)
+		#Check end conditions at endpoints:
+		if doy_window_st == doy_window_end:
+			pass
+		elif doy_window_st < doy_window_end:
+			if doy_first <= doy_window_end and doy_window_st < doy_first:
+				start_indices.insert(0, 0)
+			if doy_last < doy_window_end and doy_window_st <= doy_last:
+				end_indices.insert(len(dates),len(dates)-1)
+		else: #doy_window_st > doy_window_end
+			if (doy_window_st > doy_first and doy_first <= doy_window_end) or (doy_window_st < doy_first and doy_first >= doy_window_end):
+				start_indices.insert(0, 0)
+			if (doy_last <= doy_window_st and doy_last < doy_window_end) or (doy_window_st <= doy_last and doy_last > doy_window_end):
+				end_indices.insert(len(dates),len(dates)-1)
+		#Sanity check
+		if len(start_indices)!= len(end_indices):
+			print 'Index error when finidng window. Maybe your window is not chronologically defined?'
+			sys.exit(1)
+
+		for j in range(len(start_indices)):
+			add_data = data[start_indices[j]:end_indices[j]+1]
+			windowed_data = windowed_data + add_data
+	return windowed_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
