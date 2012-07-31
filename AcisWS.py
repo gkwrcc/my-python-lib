@@ -34,12 +34,16 @@ def make_request(url,params) :
 	response = urllib2.urlopen(req)
 	return json.loads(response.read())
 
-def MultiStnData(params) :
+def MultiStnData(params):
 	return make_request(base_url+'MultiStnData',params)
 
-def StnData(params) :
+def StnData(params):
 	return make_request(base_url+'StnData',params)
 
+def StnMeta(params):
+	return make_request(base_url+'StnMeta',params)
+
+#Utility functions
 def find_start_end_dates(form_input):
 	if 'start_date' not in form_input.keys():
 		s_date = 'por'
@@ -57,52 +61,115 @@ def find_start_end_dates(form_input):
 			e_date = form_input['end_date']
 	return s_date, e_date
 
-def get_station_list_from_county(county):
-	pass
-def get_soddy_rec_data(form_input):
+def get_station_list(by_type, val):
+	stn_list = []
+	if by_type == 'county':
+		params = dict(county=val)
+	elif by_type == 'climdiv':
+		params = dict(climdiv=val)
+	elif by_type == 'cwa':
+		params = dict(cwa=val)
+	elif by_type == 'basin':
+		params = dict(basin=val)
+	elif by_type == 'state':
+		params = dict(state=val)
+	elif by_type == 'bounding_box':
+		params = dict(bbox=val)
+	else:
+		pass
+	request=StnMeta(params)
+	try:
+		request['meta']
+		for i, stn in enumerate(request['meta']):
+			sids = stn['sids']
+			for sid in sids:
+				sid_split = sid.split(' ')
+				if sid_split[1] == '2':
+					stn_list.append(str(sid_split[0]))
+	except:
+		pass
+
+	return stn_list
+
+
+
+def get_soddyrec_data(form_input):
 	datadict = defaultdict(list)
-	station_names = []
 	s_date, e_date = find_start_end_dates(form_input)
 	if form_input['element'] == 'all':
-		element_list = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
+		elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
 	elif form_input['element'] == 'tmp':
-		element_list = ['maxt', 'mint', 'pcpn']
+		elements = ['maxt', 'mint', 'pcpn']
 	elif form_input['element'] == 'wtr':
-		element_list = ['pcpn', 'snow', 'snwd']
-	els = [dict(name='%s' % el) for el in element_list]
+		elements = ['pcpn', 'snow', 'snwd']
+	els = [dict(name='%s' % el) for el in elements]
 	if 'coop_station_id' in form_input.keys():
-		params = dict(sid='%s' % form_input['coop_station_id'], sdate=s_date, edate=e_date, elems=els)
+		coop_station_ids =[form_input['coop_station_id']]
+	elif 'coop_station_ids' in form_input.keys():
+		coop_station_ids = form_input['coop_station_ids']
+	elif 'county' in form_input.keys():
+		coop_station_ids = get_station_list('county', form_input['county'])
+	elif 'climdiv' in form_input.keys():
+		coop_station_ids = get_station_list('climdiv', form_input['climdiv'])
+	elif 'county_warning_area' in form_input.keys():
+		coop_station_ids = get_station_list('cwa', form_input['county_warning_area'])
+	elif 'basin' in form_input.keys():
+		coop_station_ids = get_station_list('basin', form_input['basin'])
+	elif 'state' in form_input.keys():
+		coop_station_ids = get_station_list('state', form_input['state'])
+	elif 'bounding_box' in form_input.keys():
+		coop_station_ids = get_station_list('bounding_box', form_input['bounding_box'])
+	else:
+		coop_station_ids =[]
+	station_names=[' ' for i in range(len(coop_station_ids))]
+	#MULTISTATION
+	params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=els)
+	request = MultiStnData(params)
+	try:
+		request['data']#list of data for the stations
+	except:
+		if request['error']:
+			print '%s' % str(request['error'])
+			sys.exit(1)
+		else:
+			'Unknown error ocurred when getting data'
+			sys.exit(1)
+	for j, stn_data in enumerate(request['data']):
+		try:
+			stn_data['meta']
+			station_id = str(stn_data['meta']['sids'][1].split()[0])
+			try:
+				index = coop_station_ids.index(station_id)
+			except ValueError:
+				continue
+			station_names[index] = stn_data['meta']['name']
+			try:
+				stn_data['data']
+				datadict[index] = stn_data['data']
+			except:
+				datadict[index] = []
+		except:
+			pass
+
+	#STATION BY STATION
+	#NOTE: VERY SLOW IN COMPARISON TO MULTI STATION CALL (~10fold or more)
+	'''
+	for i, stn in enumerate(coop_station_ids):
+		params = dict(sid=stn, sdate=s_date, edate=e_date, elems=els)
 		request = StnData(params)
 		try:
 			request['meta']
-			station_names[0] = request['meta']['name']
+			station_names[i] = request['meta']['name']
 		except:
-			station_names[0] = ' '
+			station_names[i] = ' '
+
 		try:
 			request['data']
 			datadict[i] = request['data']
 		except:
-			datadict[0]=[]
-	else:
-		if 'coop_station_ids' in form_input.keys():
-			coop_station_ids = form_input['coop_station_ids']
-		elif 'county' in form_input.keys():
-
-			for stn in coop_station_ids :
-				params = dict(sid=stn, sdate=s_date, edate=e_date, elems=els)
-				request = StnData(params)
-				try:
-					request['meta']
-					station_names[i] = request['meta']['name']
-				except:
-					station_names[i] = ' '
-
-				try:
-					request['data']
-					datadict[i] = request['data']
-				except:
-					datadict[i]=[]
-
+			datadict[i]=[]
+	'''
+	return datadict, elements, coop_station_ids, station_names
 
 def get_sodsum_data(form_input):
 	if 'element' not in form_input.keys() or 'coop_station_ids' not in form_input.keys():
