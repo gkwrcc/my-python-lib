@@ -45,17 +45,20 @@ def is_leap_year(year):
 	else:
 		return False
 
-#This function is in place because Acis_WS does not return dates
+#This function is in place because Acis_WS's MultiStnCall does not return dates
 #it takes as arguments a start date and an end date (format yyyymmdd)
 #and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
 def get_dates(s_date, e_date):
-	dates = [s_date]
-	#convert to datetimes
-	start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
-	end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
-	for n in range(int ((end_date - start_date).days +1)):
-		next_date = start_date + datetime.timedelta(n)
-		dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
+	if s_date and e_date:
+		dates = [s_date]
+		#convert to datetimes
+		start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
+		end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
+		for n in range(int ((end_date - start_date).days +1)):
+			next_date = start_date + datetime.timedelta(n)
+			dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
+	else:
+		dates = []
 	return dates
 
 def strip_n_sort(station_list):
@@ -68,8 +71,51 @@ def strip_n_sort(station_list):
 			stn_list[i] = str(stn)
 	return stn_list
 
-#Routine to filter out data according to window specification
-#############################################################
+#Utility functions
+def find_start_end_dates(form_input):
+	if 'start_date' not in form_input.keys():
+		s_date = 'por'
+	else:
+		if form_input['start_date'] == '' or form_input['start_date'] == ' ':
+			s_date = 'por'
+		else:
+			if len(form_input['start_date']) == 4:
+				s_date = form_input['start_date'] + '0101'
+			elif len(form_input['start_date']) == 8:
+				s_date = form_input['start_date']
+			else:
+				print 'Invalid start date format, should be yyyy or yyyymmdd!'
+				s_date = None
+	if 'end_date' not in form_input.keys():
+		e_date = 'por'
+	else:
+ 		if form_input['end_date'] == '' or form_input['end_date'] == ' ':
+ 			e_date = 'por'
+ 		else:
+			if len(form_input['end_date']) == 4:
+				e_date = form_input['end_date'] + '1231'
+			elif len(form_input['end_date']) == 8:
+				e_date = form_input['end_date']
+			else:
+				print 'Invalid end date format, should be yyyy or yyyymmdd!'
+				e_date = None
+	return s_date, e_date
+
+def get_element_list(form_input, program):
+	if program == 'soddyrec':
+		if form_input['element'] == 'all':
+			elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
+		elif form_input['element'] == 'tmp':
+			elements = ['maxt', 'mint', 'pcpn']
+		elif form_input['element'] == 'wtr':
+			elements = ['pcpn', 'snow', 'snwd']
+	elif program == 'soddynorm':
+		elements = ['maxt', 'mint', 'pcpn']
+	else:
+		elements = []
+	return elements
+#Routine to filter out data according to window specification(sodlist)
+#######################################################################
 def get_windowed_data(data, start_date, end_date, start_window, end_window):
 	if start_window == '0101' and end_window == '1231':
 		windowed_data = data

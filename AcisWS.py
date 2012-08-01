@@ -43,24 +43,6 @@ def StnData(params):
 def StnMeta(params):
 	return make_request(base_url+'StnMeta',params)
 
-#Utility functions
-def find_start_end_dates(form_input):
-	if 'start_date' not in form_input.keys():
-		s_date = 'por'
-	else:
-		if form_input['start_date'] == '' or form_input['start_date'] == ' ':
-			s_date = 'por'
-		else:
-			s_date = form_input['start_date']
-	if 'end_date' not in form_input.keys():
-		e_date = 'por'
-	else:
-		if form_input['end_date'] == '' or form_input['end_date'] == ' ':
-			e_date = 'por'
-		else:
-			e_date = form_input['end_date']
-	return s_date, e_date
-
 def get_station_list(by_type, val):
 	stn_list = []
 	if by_type == 'county':
@@ -93,15 +75,11 @@ def get_station_list(by_type, val):
 
 
 
-def get_soddyrec_data(form_input):
+def get_sod_data(form_input, program):
 	datadict = defaultdict(list)
-	s_date, e_date = find_start_end_dates(form_input)
-	if form_input['element'] == 'all':
-		elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
-	elif form_input['element'] == 'tmp':
-		elements = ['maxt', 'mint', 'pcpn']
-	elif form_input['element'] == 'wtr':
-		elements = ['pcpn', 'snow', 'snwd']
+	s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+	dates = WRCCUtils.get_dates(s_date, e_date)
+	elements = WRCCUtils.get_element_list(form_input, program)
 	els = [dict(name='%s' % el) for el in elements]
 	if 'coop_station_id' in form_input.keys():
 		coop_station_ids =[form_input['coop_station_id']]
@@ -121,6 +99,8 @@ def get_soddyrec_data(form_input):
 		coop_station_ids = get_station_list('bounding_box', form_input['bounding_box'])
 	else:
 		coop_station_ids =[]
+	#sort station id in ascending order
+	coop_station_ids = WRCCUtils.strip_n_sort(coop_station_ids)
 	station_names=[' ' for i in range(len(coop_station_ids))]
 	#MULTISTATION
 	params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=els)
@@ -137,17 +117,24 @@ def get_soddyrec_data(form_input):
 	for j, stn_data in enumerate(request['data']):
 		try:
 			stn_data['meta']
-			station_id = str(stn_data['meta']['sids'][1].split()[0])
+			#find station_id, Note: MultiStnData call may not return the stations in order
+			sids = stn_data['meta']['sids']
+			for sid in sids:
+				sid_split = sid.split(' ')
+				if sid_split[1] == '2':
+					#station_id = str(stn_data['meta']['sids'][1].split()[0])
+					station_id = str(sid_split[0])
+					break
 			try:
 				index = coop_station_ids.index(station_id)
+				station_names[index] = stn_data['meta']['name']
+				try:
+					stn_data['data']
+					datadict[index] = stn_data['data']
+				except:
+					datadict[index] = []
 			except ValueError:
 				continue
-			station_names[index] = stn_data['meta']['name']
-			try:
-				stn_data['data']
-				datadict[index] = stn_data['data']
-			except:
-				datadict[index] = []
 		except:
 			pass
 
@@ -169,7 +156,7 @@ def get_soddyrec_data(form_input):
 		except:
 			datadict[i]=[]
 	'''
-	return datadict, elements, coop_station_ids, station_names
+	return datadict, dates, elements, coop_station_ids, station_names
 
 def get_sodsum_data(form_input):
 	if 'element' not in form_input.keys() or 'coop_station_ids' not in form_input.keys():
@@ -178,7 +165,7 @@ def get_sodsum_data(form_input):
 	if not form_input['element'] or not form_input['coop_station_ids']:
 		print 'element and coop_station_id options required!'
 		sys.exit(0)
-	s_date, e_date = find_start_end_dates(form_input)
+	s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
 	#Get list of station ids.
 	#if 'county' in form_input.keys():
 		#coop_station_ids = AcisWS.get_station_ids_by_county(form_input['county'])
@@ -232,7 +219,7 @@ def get_sodsum_data_multi(form_input):
 	if 'element' not in form_input.keys() or 'coop_station_ids' not in form_input.keys():
 		print 'Error in AcisWs.get_sodsum_data! element and coop_station_id options required!'
 		sys.exit(0)
-	s_date, e_date = find_start_end_dates(form_input)
+	s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
 	#FIX ME: Acis_WS MultiStnData call does not support 'por' yet!
 	if s_date == 'por' or e_date == 'por':
 		print "Error! Acis_WS multi station call does not support calls for period of record yet. Please chose a data!"
@@ -338,8 +325,8 @@ def get_sodsum_data_multi(form_input):
 	return data_dict, dates, elements, coop_station_ids, station_names
 
 #Routine to return data for programs sodlist, sodmonline(my), sodcnv
-def get_sod_data(form_input, program):
-	s_date, e_date = find_start_end_dates(form_input)
+def get_sodlist_data(form_input, program):
+	s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
 	coop_station_id = form_input['coop_station_id']
 	if program in ['sodlist', 'sodcnv']:
 		if 'include_tobs_evap' in form_input.keys():
@@ -375,7 +362,7 @@ def get_sod_data(form_input, program):
 		else:
 			params = dict(sid='%s' % coop_station_id, sdate=s_date, edate=e_date, elems=[dict(name='%s' % form_input['element'])])
 	else:
-		print 'Program %s not supported in get_sod_data. Program should be one out of [sodlist, sodcnv, sodmonline, sodmonlinemy]!' % program
+		print 'Program %s not supported in get_sodlist_data. Program should be one out of [sodlist, sodcnv, sodmonline, sodmonlinemy]!' % program
 		sys.exit(0)
 
 	#Request evap, wind and water equivalent data
