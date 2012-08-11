@@ -23,8 +23,7 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
             results[i][j] = []
             for doy,vals in enumerate(data[i][j]):
                 mon, day = WRCCUtils.compute_mon_day(doy+1)
-                yrs = len(dates)
-                print vals
+                yrs = int(dates[-1][0:4]) - int(dates[0][0:4])
                 no  = yrs - int(vals[-1]) #no of years with records
                 results[i][j].append([mon, day,vals[0], no, vals[1], vals[2]])
 
