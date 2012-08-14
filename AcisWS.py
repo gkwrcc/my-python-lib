@@ -50,9 +50,9 @@ def get_station_list(by_type, val):
     stn_list = []
     if by_type == 'county':
         params = dict(county=val)
-    elif by_type == 'climdiv':
+    elif by_type == 'climate_division':
         params = dict(climdiv=val)
-    elif by_type == 'cwa':
+    elif by_type == 'county_warning_area':
         params = dict(cwa=val)
     elif by_type == 'basin':
         params = dict(basin=val)
@@ -78,7 +78,6 @@ def get_station_list(by_type, val):
 
 
 def get_sod_data(form_input, program):
-    datadict = defaultdict(list)
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     dates = WRCCUtils.get_dates(s_date, e_date)
     elements = WRCCUtils.get_element_list(form_input, program)
@@ -89,10 +88,10 @@ def get_sod_data(form_input, program):
         coop_station_ids = form_input['coop_station_ids']
     elif 'county' in form_input.keys():
         coop_station_ids = get_station_list('county', form_input['county'])
-    elif 'climdiv' in form_input.keys():
-        coop_station_ids = get_station_list('climdiv', form_input['climdiv'])
+    elif 'climate_division' in form_input.keys():
+        coop_station_ids = get_station_list('climate_division', form_input['climate_division'])
     elif 'county_warning_area' in form_input.keys():
-        coop_station_ids = get_station_list('cwa', form_input['county_warning_area'])
+        coop_station_ids = get_station_list('county_warning_area', form_input['county_warning_area'])
     elif 'basin' in form_input.keys():
         coop_station_ids = get_station_list('basin', form_input['basin'])
     elif 'state' in form_input.keys():
@@ -104,22 +103,30 @@ def get_sod_data(form_input, program):
     #sort station id in ascending order
     coop_station_ids = WRCCUtils.strip_n_sort(coop_station_ids)
     station_names=['No Name' for i in range(len(coop_station_ids))]
+    #Since Acis may not return results for some stations, we need to initialize output dictionary
+    datadict = defaultdict(list)
+    for i, stn in enumerate(coop_station_ids):
+        if program == 'soddyrec':
+            yr_list = [[['#', '#', '#', '#', '#'] for k in range(366)] for el in elements]
+        else:
+            yr_list = [[['#', '#', '#', '#', '#'] for k in range(len(dates))]for el in elements]
+        datadict[i] = yr_list
     #MULTISTATION
     if program == 'soddyrec':
         smry_opts = {'reduce':'max', 'add':'date,mcnt'}
         if len(elements) >1 and 'mint'in elements:
             mint_indx = elements.index('mint')
             elements.remove('mint')
-            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts, \
-            smry_only=1, groupby="year") for el in elements]
+            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts\
+            , groupby="year") for el in elements]
             elts.insert(mint_indx,dict(name='mint', interval='dly', duration='dly', \
-            smry={'reduce':'min', 'add':'date,mcnt'}, smry_only=1, groupby="year"))
+            smry={'reduce':'min', 'add':'date,mcnt'}, groupby="year"))
             elements.insert(mint_indx, 'mint')
         elif len(elements) == 1 and elements[0] == 'mint':
             elts = [dict(name='mint', interval='dly', duration='dly',\
-            smry={'reduce':'min', 'add':'date,mcnt'}, smry_only=1, groupby="year")]
+            smry={'reduce':'min', 'add':'date,mcnt'}, groupby="year")]
         else:
-            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts, smry_only=1, \
+            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts, \
             groupby="year") for el in elements]
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
@@ -136,7 +143,6 @@ def get_sod_data(form_input, program):
         else:
             'Unknown error ocurred when getting data'
             sys.exit(1)
-
     for j, stn_data in enumerate(request['data']):
         try:
             stn_data['meta']
@@ -172,7 +178,7 @@ def get_sod_data(form_input, program):
 
     if program == 'soddyrec':
         #need to get averages separately add: date, mcnt fails if we ask for mean, max together
-        elts_x = [dict(name='%s' % el, interval='dly', duration='dly', smry={'reduce':'mean'}, smry_only=1, \
+        elts_x = [dict(name='%s' % el, interval='dly', duration='dly', smry={'reduce':'mean'}, \
         groupby="year") for el in elements]
         params_x = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts_x)
         request_x = MultiStnData(params_x)
@@ -200,36 +206,22 @@ def get_sod_data(form_input, program):
                         for el_id, ave_list in enumerate(stn_data['smry']): #k : element id
                             for date_id,ave in enumerate(ave_list):
                                 datadict[indx_x][el_id][date_id].insert(0,ave)
+                                #figure out the number of years that are in the record
+                                val_list = [stn_data['data'][l][0][date_id] for l in range(len(stn_data['data']))]
+                                yrs_in_record = len(filter(lambda a: a != 'M', val_list))
+                                datadict[indx_x][el_id][date_id].append(yrs_in_record)
                     except:
                         pass
                 except ValueError:
                     continue
         except:
-            if request_x['error']:
+            if 'error' in request_x.keys():
                 print '%s' % str(request_x['error'])
                 sys.exit(1)
             else:
                 'Unknown error ocurred when getting data'
                 sys.exit(1)
-
-    #STATION BY STATION
-    #NOTE: VERY SLOW IN COMPARISON TO MULTI STATION CALL (~10fold or more)
-    '''
-    for i, stn in enumerate(coop_station_ids):
-            params = dict(sid=stn, sdate=s_date, edate=e_date, elems=els)
-            request = StnData(params)
-            try:
-                    request['meta']
-                    station_names[i] = request['meta']['name']
-            except:
-                    station_names[i] = ' '
-
-            try:
-                    request['data']
-                    datadict[i] = request['data']
-            except:
-                    datadict[i]=[]
-    '''
+    print datadict
     return datadict, dates, elements, coop_station_ids, station_names
 
 def get_sodsum_data(form_input):

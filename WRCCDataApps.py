@@ -17,15 +17,19 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     #for all 365 days a year
     results = defaultdict(dict)
     for i, stn in enumerate(coop_station_ids):
-        results[i]['coop_station_id'] = coop_station_ids[i]
-        results[i]['station_name'] = station_names[i]
         for j,el in enumerate(elements):
             results[i][j] = []
+            stn_check_list = []
+            #check if the station returned valid data
+            for k in range(366):
+                for l in range(len(data[i][j][k])):
+                    stn_check_list.append(data[i][j][k][l])
+            if all(map(lambda x: x == '#',stn_check_list)):
+                continue
             for doy,vals in enumerate(data[i][j]):
                 mon, day = WRCCUtils.compute_mon_day(doy+1)
-                yrs = int(dates[-1][0:4]) - int(dates[0][0:4])
-                no  = yrs - int(vals[-1]) #no of years with records
-                results[i][j].append([mon, day,vals[0], no, vals[1], vals[2]])
+                no  = vals[-1] #no of years with records
+                results[i][j].append([mon, day,vals[0], no, vals[1], vals[2][0:4]])
 
     return results
 
