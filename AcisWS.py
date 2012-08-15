@@ -106,13 +106,13 @@ def get_sod_data(form_input, program):
     #Since Acis may not return results for some stations, we need to initialize output dictionary
     datadict = defaultdict(list)
     for i, stn in enumerate(coop_station_ids):
-        if program == 'soddyrec':
+        if program == 'Soddyrec':
             yr_list = [[['#', '#', '#', '#', '#'] for k in range(366)] for el in elements]
+            datadict[i] = yr_list
         else:
-            yr_list = [[['#', '#', '#', '#', '#'] for k in range(len(dates))]for el in elements]
-        datadict[i] = yr_list
-    #MULTISTATION
-    if program == 'soddyrec':
+            datadict[i] = [[] for el in elements]
+
+    if program == 'Soddyrec':
         smry_opts = {'reduce':'max', 'add':'date,mcnt'}
         if len(elements) >1 and 'mint'in elements:
             mint_indx = elements.index('mint')
@@ -130,6 +130,9 @@ def get_sod_data(form_input, program):
             groupby="year") for el in elements]
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
+    elif program ==  'Soddynorm':
+        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
+        elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     else:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=els)
 
@@ -157,12 +160,20 @@ def get_sod_data(form_input, program):
             try:
                 index = coop_station_ids.index(station_id)
                 station_names[index] = str(stn_data['meta']['name'])
-                if program == 'soddyrec':
+                if program == 'Soddyrec':
                     try:
                         stn_data['smry']
                         datadict[index] = stn_data['smry']
                     except:
                         datadict[index] = []
+                elif program == 'Soddynorm':
+                    try:
+                        stn_data['data']
+                        for yr, el_data in enumerate(stn_data['data']):
+                            for element, dat in enumerate(el_data):
+                                datadict[index][element].append(dat)
+                    except:
+                        pass
                 else:
                     try:
                         stn_data['data']
@@ -176,7 +187,7 @@ def get_sod_data(form_input, program):
         except:
             pass
 
-    if program == 'soddyrec':
+    if program == 'Soddyrec':
         #need to get averages separately add: date, mcnt fails if we ask for mean, max together
         elts_x = [dict(name='%s' % el, interval='dly', duration='dly', smry={'reduce':'mean'}, \
         groupby="year") for el in elements]
@@ -221,7 +232,6 @@ def get_sod_data(form_input, program):
             else:
                 'Unknown error ocurred when getting data'
                 sys.exit(1)
-    print datadict
     return datadict, dates, elements, coop_station_ids, station_names
 
 def get_sodsum_data(form_input):

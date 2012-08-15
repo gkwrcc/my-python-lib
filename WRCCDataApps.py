@@ -5,6 +5,72 @@ Module WRCCDataApps
 '''
 from collections import defaultdict
 import WRCCUtils
+import numpy
+
+'''
+Soddynorm
+Finds daily normals for each day
+of the year for each station over a multi year period. It uses either a Gaussian filter or running mean.
+'''
+def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_type, filter_days):
+    #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
+    #results[stn_id] = [[doy =1, mon=1, day=1, maxt_ave, yrs, mint_ave, yrs, pcpn_ave, yrs, sd_maxt, sd_mint],[doy=2, ...]...]
+    results = defaultdict(list)
+    #for each station and element compute
+    for i, stn in enumerate(coop_station_ids):
+        #for each day of the year, el_list will hold [average, yrs_in record, standard deviation]
+        el_data_list = [[] for el in elements]
+        results[i] = []
+        if data[i] == [[],[],[]]:
+            continue
+        for j,el in enumerate(elements):
+            if not data[i][j]:
+                continue
+            #keep track of accumulated values when precip
+            for doy in range(366):
+                s_count = [0 for yr in range(len(data[i][j]))]
+                yr_count = 0
+                vals=[]
+                for yr in range(len(data[i][j])):
+                    val, flag = WRCCUtils.strip_data(data[i][j][yr][doy])
+                    if flag == 'M' :
+                        continue
+                    elif flag == 'T':
+                        vals.append(0.0)
+                        yr_count+=1
+                    elif flag== 'S':
+                        vals.append(0.0)
+                        yr_count+=1
+                        s_count[yr]+=1
+                    elif flag == 'A':
+                        try:
+                            val_new = float(val)/s_count[doy]
+                            vals.append(val_new)
+                            s_count[yr] = 0
+                            yr_count+=1
+                        except:
+                            pass
+                    else:
+                        try:
+                            vals.append(float(val))
+                            yr_count+=1
+                        except:
+                            pass
+                ave = numpy.average(vals)
+                std = numpy.std(vals)
+                if el in ['maxt','mint']:
+                    ave = '%.1f' % ave
+                else:
+                    ave = '%.3f' % ave
+                std = '%.3f' % std
+                el_data_list[j].append([ave, std, str(yr_count)])
+        for doy in range(366):
+            mon, day = WRCCUtils.compute_mon_day(doy+1)
+            results[i].append([str(doy+1), str(mon), str(day)])
+            for j, el in enumerate(elements):
+                for k in el_data_list[j][doy]:
+                    results[i][-1].append(k)
+    return results
 
 '''
 Soddyrec

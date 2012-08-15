@@ -25,6 +25,54 @@ def JulDay(year, mon, day):
     jd+=1
     return int(jd)
 
+#Routine to compute binomial coefficients for Soddynorm
+#######################################################
+def bcof(n, normlz=True):
+    C = []
+    S = 0
+    for k in range(n+1):
+        bc = [1 for i in range(0,k+1)]
+        for j in range(1,n-k+1):
+            for i in range(1,k+1):
+                bc[i] = bc[i-1]+bc[i]
+        C.append(bc[k])
+        S+=bc[k]
+    if normlz:
+        C = ['%.6f' % (c/float(S)) for c in C ]
+    return C
+
+#Routine to strip data of attached flags
+########################################
+def strip_data(val):
+    if not val:
+        pos_val = ' '
+        flag = ' '
+    elif val[0] == '-':
+        pos_val = val[1:]
+    else:
+        pos_val = val
+    #Note: len(' ') =1!
+    if len(pos_val) ==1:
+        if pos_val.isdigit():
+            strp_val = val
+            flag = ' '
+        else:
+            strp_val = ' '
+            if pos_val in ['M', 'T', 'S', 'A', ' ']:
+                flag = pos_val
+            else:
+                print 'Error! Found invalid flag: %s' % pos_val
+                sys.exit(0)
+    else: #len(pos_val) >1
+        if not pos_val[-1].isdigit():
+            flag = val[-1]
+            strp_val = val[0:-1]
+        else:
+            flag = ' '
+            strp_val = val
+
+    return strp_val, flag
+
 #Routine to compute day of year ignoring leap years
 ###################################################
 def compute_doy(mon,day):
@@ -132,7 +180,7 @@ def find_start_end_dates(form_input):
     return s_date, e_date
 
 def get_element_list(form_input, program):
-    if program == 'soddyrec':
+    if program == 'Soddyrec':
         if form_input['element'] == 'all':
             elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
         elif form_input['element'] == 'tmp':
@@ -141,9 +189,9 @@ def get_element_list(form_input, program):
             elements = ['pcpn', 'snow', 'snwd']
         else:
             elements = [form_input['element']]
-    elif program == 'soddynorm':
+    elif program == 'Soddynorm':
         elements = ['maxt', 'mint', 'pcpn']
-    elif program == 'sodsumm':
+    elif program == 'Sodsumm':
         if form_input['element'] == 'all':
             elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow','hdd', 'cdd', 'gdd']
         elif form_input['element'] == 'tmp':
@@ -156,26 +204,17 @@ def get_element_list(form_input, program):
             elements = ['hdd', 'cdd']
         elif form_input['element'] == 'gdd':
             elements = ['gdd']
-    elif program in ['sodxtrmts', 'sodpct', 'sodpii', 'sodrunr']:
+    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr']:
         elements = ['%s' % form_input['element']]
-    elif program == 'sodpad':
+    elif program == 'Sodpad':
         elements = ['pcpn']
-    elif program == 'sodthr':
+    elif program == 'Sodthr':
         elements = ['mint']
-    elif program == 'soddd':
+    elif program == 'Soddd':
         elements = ['avgt']
     else:
         elements = []
     return elements
-
-'''
-def sort_data(data, dates, program):
-        if program in ['soddyrec', 'soddynorm']:
-                #sort data by day of year
-                new_data = defaultdict(list)
-                for stn, stn_data in data.iteritems():
-
-'''
 
 #Routine to filter out data according to window specification(sodlist)
 #######################################################################
