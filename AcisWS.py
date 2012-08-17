@@ -76,6 +76,14 @@ def get_station_list(by_type, val):
 
     return stn_list
 
+def get_us_meta():
+    #states=['CA']
+    states = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME'\
+    ,'MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC'\
+    ,'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+    params = {"state":["%s" % state for state in states]}
+    request = StnMeta(params)
+    return request
 
 def get_sod_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)

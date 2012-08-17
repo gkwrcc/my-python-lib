@@ -20,36 +20,46 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
     for i, stn in enumerate(coop_station_ids):
         #for each day of the year, el_list will hold [average, yrs_in record, standard deviation]
         el_data_list = [[] for el in elements]
+        #el_data_list_f = [[] for el in elements] #filtered data
         results[i] = []
         if data[i] == [[],[],[]]:
             continue
         for j,el in enumerate(elements):
             if not data[i][j]:
                 continue
-            #keep track of accumulated values when precip
+            el_data = data[i][j]
+            if el == 'pcpn': #deal with S, A and T flags
+                s_count = 0
+                for yr in range(len(el_data)):
+                    for doy in range(366):
+                        val, flag = WRCCUtils.strip_data(str(el_data[yr][doy]))
+                        if flag == 'A':
+                            s_count+=1
+                        elif flag == 'S':
+                            s_count+=1
+                            val_new = float(val)/s_count
+                            if s_count > doy: #need to jump back to last year
+                                for k in range(doy):
+                                    el_data[yr][k] = val_new
+                                for k in range(365,365-(s_count-doy),-1):
+                                    el_data[yr-1][k] = val_new
+                            else:
+                                for k in range (doy,doy-s_count,-1):
+                                    el_data[yr][k] = val_new
+                        elif flag == 'T':
+                            if val ==' ' or not val:
+                                el_data[yr][doy] = 0.0025
+                            elif abs(100*val - float(int(100*val))) < 0.05:
+                                el_data[yr][doy] = 0.0025
+
+            #loop over day of year and compute averages
             for doy in range(366):
-                s_count = [0 for yr in range(len(data[i][j]))]
                 yr_count = 0
                 vals=[]
-                for yr in range(len(data[i][j])):
-                    val, flag = WRCCUtils.strip_data(data[i][j][yr][doy])
+                for yr in range(len(el_data)):
+                    val, flag = WRCCUtils.strip_data(str(el_data[yr][doy]))
                     if flag == 'M' :
                         continue
-                    elif flag == 'T':
-                        vals.append(0.0)
-                        yr_count+=1
-                    elif flag== 'S':
-                        vals.append(0.0)
-                        yr_count+=1
-                        s_count[yr]+=1
-                    elif flag == 'A':
-                        try:
-                            val_new = float(val)/s_count[doy]
-                            vals.append(val_new)
-                            s_count[yr] = 0
-                            yr_count+=1
-                        except:
-                            pass
                     else:
                         try:
                             vals.append(float(val))
@@ -63,7 +73,55 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                 else:
                     ave = '%.3f' % ave
                 std = '%.3f' % std
-                el_data_list[j].append([ave, std, str(yr_count)])
+                if el in ['maxt', 'mint']:
+                    el_data_list[j].append([ave, std, str(yr_count)])
+                else:
+                    el_data_list[j].append([ave, str(yr_count)])
+
+            #implement filter if needed, average of the averages and of the std
+            if filter_type == 'gauss':
+                fltr = WRCCUtils.bcof(int(filter_days) - 1, normlz=True)
+                if int(filter_days)%2 == 0:
+                    nlow = -1 * (int(filter_days)/2 - 1)
+                    nhigh = int(filter_days)/2
+                else:
+                    nlow = -1 * (int(filter_days) - 1)/2
+                    nhigh = -1 * nlow
+
+                for doy in range(366):
+                    icount = 0
+                    sum_el_ave = 0.0
+                    sum_el_sd = 0.0
+                    sum_el_ave_f = 0.0
+                    sum_el_sd_f = 0.0
+                    for ifilt in range(nlow, nhigh+1):
+                        icount+=1
+                        doyt = doy + ifilt
+                        if doyt > 365:
+                            doyt-=365
+                        if doyt < 0:
+                            doyt+=365
+                        val_ave = float(el_data_list[j][doyt][0])*float(fltr[icount-1])
+                        val_sd = float(el_data_list[j][doyt][1])*float(fltr[icount-1])
+                        ft = float(fltr[icount-1])
+                        if val_ave >= 0.5:
+                            sum_el_ave+=val_ave
+                            sum_el_ave_f+=ft
+                        if val_sd >= 0.5:
+                            sum_el_sd+=val_sd
+                            sum_el_sd_f+=ft
+                    #replace data values with smoothed values
+                    if sum_el_ave_f !=0:
+                        new_ave = sum_el_ave/sum_el_ave_f
+                        if el in ['maxt','mint']:
+                            el_data_list[j][doy][0] ='%.1f' % new_ave
+                        else:
+                            el_data_list[j][doy][0] ='%.3f' % new_ave
+                    if sum_el_sd_f !=0:
+                        new_sd = sum_el_sd/sum_el_sd_f
+                        if el in ['maxt','mint']:
+                            el_data_list[j][doy][1] = '%.3f' % new_sd
+        #write results
         for doy in range(366):
             mon, day = WRCCUtils.compute_mon_day(doy+1)
             results[i].append([str(doy+1), str(mon), str(day)])
