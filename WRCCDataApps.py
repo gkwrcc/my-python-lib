@@ -22,12 +22,11 @@ def Soddd(**kwargs):
     #if output_type monthly time series:
     #results[stn_id][yr] =[Year,Jan_dd, Feb_dd, ..., Dec_dd]
     #if output_type daily long-term ave:
-    #results[stn_id]=[doy, Jan_ave, Jan_yrs, Feb_ave, Feb_yrs, ..., Dec_ave, Dec_yrs]
+    #results[stn_id][doy]=[doy, Jan_ave, Jan_yrs, Feb_ave, Feb_yrs, ..., Dec_ave, Dec_yrs]
     results = defaultdict(list)
     for i, stn in enumerate(kwargs['coop_station_ids']):
         yrs = max(len(kwargs['data'][i][j]) for j in range(len(kwargs['elements'])))
         dd = [[-9999 for day in range(366)] for yr in range(yrs)]
-        results[i] = [[] for yr in range(yrs)]
         for yr in range(yrs):
             for doy in range(366):
                 maxt = str(kwargs['data'][i][0][yr][doy])
@@ -65,12 +64,14 @@ def Soddd(**kwargs):
                 #NCDC roundoff of dd if desired
                 if kwargs['ncdc_round']:
                     dd[yr][doy] = numpy.ceil(dd[yr][doy])
+
         #Summarize:
-        mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         days_miss = map(chr, range(97, 123))
         year = int(kwargs['dates'][0][0:4]) -1
         if kwargs['output_type'] == 'm':
             #monthly time series
+            results[i] =  [[]for ys in range(yrs)]
             for yr in range(yrs):
                 last_day = 0
                 year+=1
@@ -78,7 +79,10 @@ def Soddd(**kwargs):
                 for mon in range(12):
                     sm = 0
                     sm_miss = 0
-                    mon_len = mon_lens[mon]
+                    if mon == 1 and WRCCUtils.is_leap_year(year):
+                        mon_len = 29
+                    else:
+                        mon_len = mon_lens[mon]
                     if mon > 0:
                         last_day+= mon_lens[mon-1]
                     for day in range(mon_len):
@@ -100,8 +104,32 @@ def Soddd(**kwargs):
                     else:
                         results[i][yr].append(str(sm) + '%s' % days_miss[-1])
         else:
-            pass
             #long-term daily average
+            results[i] = [[] for day in range(31)]
+            for day in range(31):
+                year = int(kwargs['dates'][0][0:4]) -1
+                results[i][day].append(day)
+                for mon in range(12):
+                    sm = 0
+                    sm_yrs = 0
+                    doy = WRCCUtils.compute_doy(str(mon+1), str(day+1))
+                    for yr in range(yrs):
+                        year+=1
+                        if mon == 1 and WRCCUtils.is_leap_year(year):
+                            mon_len = 29
+                        else:
+                            mon_len = mon_lens[mon]
+                        if day+1 > mon_len:
+                            continue
+                        if dd[yr][doy] != -9999:
+                            sm+=dd[yr][doy]
+                            sm_yrs+=1
+                    if sm_yrs > 0.5:
+                        results[i][day].append(int(round(float(sm)/sm_yrs)))
+                        results[i][day].append(sm_yrs)
+                    else:
+                        results[i][day].append(-99)
+                        results[i][day].append(0)
     return results
 
 '''
