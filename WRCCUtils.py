@@ -211,7 +211,7 @@ def get_element_list(form_input, program):
     elif program == 'Sodthr':
         elements = ['mint']
     elif program == 'Soddd':
-        elements = ['avgt']
+        elements = ['maxt', 'mint']
     else:
         elements = []
     return elements

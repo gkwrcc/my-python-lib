@@ -8,6 +8,103 @@ import WRCCUtils
 import numpy
 
 '''
+Soddd
+This program finds degree days above or below any selected
+base temperature, allowing for heating, cooling, freezing,
+thawing, chilling and other degree day thresholds.
+NCDC round-off can be simulated (truncation rather than rounding).
+Maximum and minimum temperatures can be truncated, and certain days can be skipped.
+The program can find either time series of monthly values,
+or long term averages of daily values.
+'''
+def Soddd(**kwargs):
+    #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
+    #if output_type monthly time series:
+    #results[stn_id][yr] =[Year,Jan_dd, Feb_dd, ..., Dec_dd]
+    #if output_type daily long-term ave:
+    #results[stn_id]=[doy, Jan_ave, Jan_yrs, Feb_ave, Feb_yrs, ..., Dec_ave, Dec_yrs]
+    results = defaultdict(list)
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        yrs = max(len(kwargs['data'][i][j]) for j in range(len(kwargs['elements'])))
+        dd = [[-9999 for day in range(366)] for yr in range(yrs)]
+        results[i] = [[] for yr in range(yrs)]
+        for yr in range(yrs):
+            for doy in range(366):
+                maxt = str(kwargs['data'][i][0][yr][doy])
+                mint = str(kwargs['data'][i][1][yr][doy])
+                val_x, flag_x = WRCCUtils.strip_data(maxt)
+                val_n, flag_n = WRCCUtils.strip_data(mint)
+                try:
+                    val_x = int(val_x)
+                    val_n = int(val_n)
+                except:
+                    continue
+                #Truncation if desired
+                if 'trunc_high' in kwargs.keys() and val_x > kwargs['trunc_high']:
+                    val_x = kwargs['trunc_high']
+                if 'trunc_low' in kwargs.keys() and val_n < kwargs['trunc_low']:
+                    val_n = kwargs['trunc_low']
+                ave = (val_x + val_n)/2.0
+                #Implement skip days if desired
+                if 'skip_max_above' in kwargs.keys() and val_x > kwargs['skip_max_above']:
+                    dd[yr][doy] = 0
+                    continue
+                if 'skip_min_below' in kwargs.keys() and val_n < kwargs['skip_min_below']:
+                    dd[yr][doy] = 0
+                    continue
+                #NCDC roundoff of ave if desired
+                if kwargs['ncdc_round']:
+                    ave = numpy.ceil(ave)
+                #Compute dd
+                if kwargs['a_b'] == 'b':
+                    dd[yr][doy] = kwargs['base_temp'] - ave
+                else:
+                    dd[yr][doy] = ave - kwargs['base_temp']
+                if dd[yr][doy] < 0:
+                    dd[yr][doy] = 0
+                #NCDC roundoff of dd if desired
+                if kwargs['ncdc_round']:
+                    dd[yr][doy] = numpy.ceil(dd[yr][doy])
+        #Summarize:
+        mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        days_miss = map(chr, range(97, 123))
+        year = int(kwargs['dates'][0][0:4]) -1
+        if kwargs['output_type'] == 'm':
+            #monthly time series
+            for yr in range(yrs):
+                last_day = 0
+                year+=1
+                results[i][yr].append(year)
+                for mon in range(12):
+                    sm = 0
+                    sm_miss = 0
+                    mon_len = mon_lens[mon]
+                    if mon > 0:
+                        last_day+= mon_lens[mon-1]
+                    for day in range(mon_len):
+                        dd_val = dd[yr][last_day+day]
+                        if dd_val != -9999:
+                            sm+=dd_val
+                        else:
+                            sm_miss+=1
+                    #take care of missing days max if desired
+                    if 'max_miss' in kwargs.keys() and sm_miss > kwargs['max_miss']:
+                        sm = -999
+                    elif sm_miss > 0.5:
+                        sm = (sm/(float(mon_len)- sm_miss))*float(last_day)
+
+                    if sm_miss == 0:
+                        results[i][yr].append(str(sm)+ ' ')
+                    elif sm_miss > 0 and sm_miss <= 26:
+                        results[i][yr].append(str(sm) + '%s' % days_miss[sm_miss-1])
+                    else:
+                        results[i][yr].append(str(sm) + '%s' % days_miss[-1])
+        else:
+            pass
+            #long-term daily average
+    return results
+
+'''
 Soddynorm
 Finds daily normals for each day
 of the year for each station over a multi year period. It uses either a Gaussian filter or running mean.
@@ -16,7 +113,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
     #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
     #results[stn_id] = [[doy =1, mon=1, day=1, maxt_ave, yrs, mint_ave, yrs, pcpn_ave, yrs, sd_maxt, sd_mint],[doy=2, ...]...]
     results = defaultdict(list)
-    #for each station and element compute
+    #for each station and element compute normals
     for i, stn in enumerate(coop_station_ids):
         #for each day of the year, el_list will hold [average, yrs_in record, standard deviation]
         el_data_list = [[] for el in elements]
@@ -33,9 +130,9 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                 for yr in range(len(el_data)):
                     for doy in range(366):
                         val, flag = WRCCUtils.strip_data(str(el_data[yr][doy]))
-                        if flag == 'A':
+                        if flag == 'S':
                             s_count+=1
-                        elif flag == 'S':
+                        elif flag == 'A':
                             s_count+=1
                             val_new = float(val)/s_count
                             if s_count > doy: #need to jump back to last year
@@ -66,13 +163,19 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                             yr_count+=1
                         except:
                             pass
-                ave = numpy.average(vals)
-                std = numpy.std(vals)
+                if vals != []:
+                    ave = numpy.average(vals)
+                    std = numpy.std(vals)
+                else:
+                    ave = float('NaN')
+                    std = float('NaN')
+
                 if el in ['maxt','mint']:
                     ave = '%.1f' % ave
                 else:
                     ave = '%.3f' % ave
                 std = '%.3f' % std
+
                 if el in ['maxt', 'mint']:
                     el_data_list[j].append([ave, std, str(yr_count)])
                 else:
@@ -101,8 +204,11 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                             doyt-=365
                         if doyt < 0:
                             doyt+=365
-                        val_ave = float(el_data_list[j][doyt][0])*float(fltr[icount-1])
-                        val_sd = float(el_data_list[j][doyt][1])*float(fltr[icount-1])
+                        try:
+                            val_ave = float(el_data_list[j][doyt][0])*float(fltr[icount-1])
+                            val_sd = float(el_data_list[j][doyt][1])*float(fltr[icount-1])
+                        except:
+                            continue
                         ft = float(fltr[icount-1])
                         if val_ave >= 0.5:
                             sum_el_ave+=val_ave

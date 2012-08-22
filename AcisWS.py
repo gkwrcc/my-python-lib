@@ -76,8 +76,9 @@ def get_station_list(by_type, val):
 
     return stn_list
 
+
 def get_us_meta():
-    #states=['CA']
+    #states=['DE']
     states = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME'\
     ,'MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC'\
     ,'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
@@ -85,6 +86,7 @@ def get_us_meta():
     request = StnMeta(params)
     return request
 
+#data acquisition for Soddyrec, Soddynorm, Soddd
 def get_sod_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     dates = WRCCUtils.get_dates(s_date, e_date)
@@ -138,11 +140,11 @@ def get_sod_data(form_input, program):
             groupby="year") for el in elements]
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
-    elif program ==  'Soddynorm':
+    elif program in ['Soddynorm', 'Soddd']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     else:
-        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=els)
+        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elements)
 
     request = MultiStnData(params)
     try:
@@ -154,7 +156,8 @@ def get_sod_data(form_input, program):
         else:
             'Unknown error ocurred when getting data'
             sys.exit(1)
-    for j, stn_data in enumerate(request['data']):
+
+    for stn, stn_data in enumerate(request['data']):
         try:
             stn_data['meta']
             #find station_id, Note: MultiStnData call may not return the stations in order
@@ -174,7 +177,7 @@ def get_sod_data(form_input, program):
                         datadict[index] = stn_data['smry']
                     except:
                         datadict[index] = []
-                elif program == 'Soddynorm':
+                elif program in ['Soddynorm', 'Soddd']:
                     try:
                         stn_data['data']
                         for yr, el_data in enumerate(stn_data['data']):
@@ -206,7 +209,7 @@ def get_sod_data(form_input, program):
             request_x['data']#list of data for the stations
             #order results by stn id
 
-            for j, stn_data in enumerate(request_x['data']):
+            for stn, stn_data in enumerate(request_x['data']):
                 sids = stn_data['meta']['sids']
                 station_id = ' '
                 for sid in sids:
@@ -250,19 +253,6 @@ def get_sodsum_data(form_input):
         print 'element and coop_station_id options required!'
         sys.exit(0)
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
-    #Get list of station ids.
-    #if 'county' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_county(form_input['county'])
-    #elif 'climdiv' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_climdiv(form_input['climdiv'])
-    #elif 'cwa' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_cwa(form_input['cwa'])
-    #elif 'basin' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_basin(form_input['basin'])
-    #elif 'state' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_cwa(form_input['state'])
-    #elif 'bounding_box' in form_input.keys():
-        #coop_station_ids = AcisWS.get_station_ids_by_cwa([form_input['bounding_box'].split(,)])
     coop_station_ids = form_input['coop_station_ids'] #list of stn ids (converted to list in form)
     #sort coop ids in ascending order, strip left zeros first, sort and reattach zeros
     coop_station_ids = WRCCUtils.strip_n_sort(coop_station_ids)
