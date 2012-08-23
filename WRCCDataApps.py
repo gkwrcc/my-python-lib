@@ -8,6 +8,26 @@ import WRCCUtils
 import numpy
 
 '''
+Sodlist
+'''
+
+def Sodlist(**kwargs):
+    results = defaultdict(list)
+    coop_station_ids = kwargs['coop_station_ids']
+    elements = kwargs['elements']
+    dates = kwargs['dates']
+    for i, stn in enumerate(coop_station_ids):
+        stn_data = kwargs['data'][i]
+        print len(stn_data)
+        print dates
+        #first format data to include dates
+        for k, date in enumerate(dates):
+            for j, el in enumerate(elements):
+                stn_data[k][j].insert(0,date)
+        results[i]=stn_data
+    return results
+
+'''
 Soddd
 This program finds degree days above or below any selected
 base temperature, allowing for heating, cooling, freezing,
@@ -143,10 +163,17 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
     results = defaultdict(list)
     #for each station and element compute normals
     for i, stn in enumerate(coop_station_ids):
-        #for each day of the year, el_list will hold [average, yrs_in record, standard deviation]
+        #Find long-term daily averages of each element
+        #for each day of the year, el_data_list will hold [average, yrs_in record, standard deviation]
         el_data_list = [[] for el in elements]
+        el_data_list2 = [[] for el in elements]
+        for j, el in enumerate(elements):
+            if el == 'pcpn':
+                el_data_list2[j] = [['0.0', '0'] for day in range(366)] #holds filtered data
+            else:
+                el_data_list2[j] = [['0.0','0.0','0'] for day in range(366)]
         #el_data_list_f = [[] for el in elements] #filtered data
-        results[i] = []
+        results[i] = [[] for el in elements]
         if data[i] == [[],[],[]]:
             continue
         for j,el in enumerate(elements):
@@ -171,16 +198,26 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                             else:
                                 for k in range (doy,doy-s_count,-1):
                                     el_data[yr][k] = val_new
+                            s_count = 0
                         elif flag == 'T':
                             if val ==' ' or not val:
                                 el_data[yr][doy] = 0.0025
                             elif abs(100*val - float(int(100*val))) < 0.05:
                                 el_data[yr][doy] = 0.0025
-
+                            else:
+                                try:
+                                    el_data[yr][doy] = float(val)
+                                except:
+                                    el_data[yr][doy] = 0.0
             #loop over day of year and compute averages
             for doy in range(366):
                 yr_count = 0
                 vals=[]
+                sm  = 0
+                sms = 0
+                n = 0
+                ave = 0
+                std = 0
                 for yr in range(len(el_data)):
                     val, flag = WRCCUtils.strip_data(str(el_data[yr][doy]))
                     if flag == 'M' :
@@ -189,11 +226,21 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                         try:
                             vals.append(float(val))
                             yr_count+=1
+                            sm+=float(val)
+                            sms+= float(val)**2
+                            n+=1
                         except:
-                            pass
-                if vals != []:
-                    ave = numpy.average(vals)
-                    std = numpy.std(vals)
+                            continue
+
+                if sms > 0:
+                    ave = sm/n
+                    if sms > 1.5:
+                        std = float(numpy.sqrt((sms-(sm*sm)/n)/(n - 1)))
+                    else:
+                        std = 0.0
+                elif abs(sms - 0) < 0.05:
+                    ave = 0
+                    std = 0
                 else:
                     ave = float('NaN')
                     std = float('NaN')
@@ -206,8 +253,10 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
 
                 if el in ['maxt', 'mint']:
                     el_data_list[j].append([ave, std, str(yr_count)])
+                    #el_data_list.append([ave, std, str(yr_count)])
                 else:
                     el_data_list[j].append([ave, str(yr_count)])
+                    #el_data_list.append([ave, str(yr_count)])
 
             #implement filter if needed, average of the averages and of the std
             if filter_type == 'gauss':
@@ -220,7 +269,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                     nhigh = -1 * nlow
 
                 for doy in range(366):
-                    icount = 0
+                    icount = -1
                     sum_el_ave = 0.0
                     sum_el_sd = 0.0
                     sum_el_ave_f = 0.0
@@ -229,39 +278,61 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                         icount+=1
                         doyt = doy + ifilt
                         if doyt > 365:
-                            doyt-=365
+                            doyt-=366
                         if doyt < 0:
-                            doyt+=365
+                            doyt+=366
+
+                        if el !='pcpn':
+                            yr_count = float(el_data_list[j][doyt][2])
+                        else:
+                            yr_count = float(el_data_list[j][doyt][1])
+
                         try:
-                            val_ave = float(el_data_list[j][doyt][0])*float(fltr[icount-1])
-                            val_sd = float(el_data_list[j][doyt][1])*float(fltr[icount-1])
+                            val_ave = float(el_data_list[j][doyt][0])
                         except:
                             continue
-                        ft = float(fltr[icount-1])
-                        if val_ave >= 0.5:
-                            sum_el_ave+=val_ave
+
+                        if el != 'pcpn':
+                            try:
+                                val_sd = float(el_data_list[j][doyt][1])
+                            except:
+                                val_sd = None
+
+                        ft = float(fltr[icount])
+                        if yr_count > 0.5:
+                            sum_el_ave+=val_ave*ft
                             sum_el_ave_f+=ft
-                        if val_sd >= 0.5:
-                            sum_el_sd+=val_sd
-                            sum_el_sd_f+=ft
+                        if el !='pcpn' and yr_count >=0.5:
+                            if val_sd:
+                                sum_el_sd+=val_sd*ft
+                                sum_el_sd_f+=ft
+
                     #replace data values with smoothed values
                     if sum_el_ave_f !=0:
                         new_ave = sum_el_ave/sum_el_ave_f
                         if el in ['maxt','mint']:
-                            el_data_list[j][doy][0] ='%.1f' % new_ave
+                            el_data_list2[j][doy][0] ='%.1f' % new_ave
+                            el_data_list2[j][doy][2] = el_data_list[j][doy][2]
                         else:
-                            el_data_list[j][doy][0] ='%.3f' % new_ave
-                    if sum_el_sd_f !=0:
+                            el_data_list2[j][doy][0] ='%.3f' % new_ave
+                            el_data_list2[j][doy][1] = el_data_list[j][doy][1]
+
+                    if el != 'pcpn' and sum_el_sd_f !=0:
                         new_sd = sum_el_sd/sum_el_sd_f
-                        if el in ['maxt','mint']:
-                            el_data_list[j][doy][1] = '%.3f' % new_sd
+                        el_data_list2[j][doy][1] = '%.3f' % new_sd
+
         #write results
         for doy in range(366):
             mon, day = WRCCUtils.compute_mon_day(doy+1)
             results[i].append([str(doy+1), str(mon), str(day)])
-            for j, el in enumerate(elements):
-                for k in el_data_list[j][doy]:
-                    results[i][-1].append(k)
+            if filter_type == 'gauss':
+               for j, el in enumerate(elements):
+                   for k in el_data_list2[j][doy]:
+                       results[i][-1].append(k)
+            else:
+                for j, el in enumerate(elements):
+                    for k in el_data_list[j][doy]:
+                        results[i][-1].append(k)
     return results
 
 '''

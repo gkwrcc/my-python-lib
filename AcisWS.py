@@ -143,6 +143,9 @@ def get_sod_data(form_input, program):
     elif program in ['Soddynorm', 'Soddd']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
+    elif program in ['Sodlist', 'Sodcnv']:
+        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
+        elems=[dict(name=el,add='t')for el in elements])
     else:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elements)
 

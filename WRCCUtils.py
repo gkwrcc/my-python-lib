@@ -124,7 +124,7 @@ def is_leap_year(year):
 #and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
 def get_dates(s_date, e_date):
     if s_date and e_date:
-        dates = [s_date]
+        dates = []
         #convert to datetimes
         start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
         end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
@@ -133,6 +133,9 @@ def get_dates(s_date, e_date):
             dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
     else:
         dates = []
+    #convert to acis format
+    #for i,date in enumerate(dates):
+    #    dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
     return dates
 
 def strip_n_sort(station_list):
@@ -212,6 +215,12 @@ def get_element_list(form_input, program):
         elements = ['mint']
     elif program == 'Soddd':
         elements = ['maxt', 'mint']
+    elif program in ['Sodmonline', 'Sodmonlinemy']:
+        elements = [form_input['element']]
+    elif program == 'Sodlist':
+        elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
+    elif program == 'Sodcnv':
+        elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
     else:
         elements = []
     return elements
