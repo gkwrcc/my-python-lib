@@ -18,14 +18,29 @@ def Sodlist(**kwargs):
     dates = kwargs['dates']
     for i, stn in enumerate(coop_station_ids):
         stn_data = kwargs['data'][i]
-        print len(stn_data)
-        print dates
         #first format data to include dates
         for k, date in enumerate(dates):
             for j, el in enumerate(elements):
                 stn_data[k][j].insert(0,date)
         results[i]=stn_data
     return results
+
+'''
+Sodmonline
+'''
+def Sodmonline(**kwargs):
+    results = defaultdict(list)
+    coop_station_ids = kwargs['coop_station_ids']
+    elements = kwargs['elements']
+    dates = kwargs['dates']
+    for i, stn in enumerate(coop_station_ids):
+        stn_data = kwargs['data'][i]
+        #first format data to include dates
+        for k, date in enumerate(dates):
+            stn_data[k].insert(0,date)
+        results[i]=stn_data
+    return results
+
 
 '''
 Soddd

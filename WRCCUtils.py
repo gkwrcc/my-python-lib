@@ -134,8 +134,8 @@ def get_dates(s_date, e_date):
     else:
         dates = []
     #convert to acis format
-    #for i,date in enumerate(dates):
-    #    dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
+    for i,date in enumerate(dates):
+        dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
     return dates
 
 def strip_n_sort(station_list):
