@@ -276,78 +276,75 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
             #implement filter if needed, average of the averages and of the std
             if filter_type == 'gauss':
                 fltr = WRCCUtils.bcof(int(filter_days) - 1, normlz=True)
-                if int(filter_days)%2 == 0:
-                    nlow = -1 * (int(filter_days)/2 - 1)
-                    nhigh = int(filter_days)/2
-                else:
-                    nlow = -1 * (int(filter_days) - 1)/2
-                    nhigh = -1 * nlow
+            else:
+                fltr = [1.0/int(filter_days) for k in range(int(filter_days))]
+            if int(filter_days)%2 == 0:
+                nlow = -1 * (int(filter_days)/2 - 1)
+                nhigh = int(filter_days)/2
+            else:
+                nlow = -1 * (int(filter_days) - 1)/2
+                nhigh = -1 * nlow
 
-                for doy in range(366):
-                    icount = -1
-                    sum_el_ave = 0.0
-                    sum_el_sd = 0.0
-                    sum_el_ave_f = 0.0
-                    sum_el_sd_f = 0.0
-                    for ifilt in range(nlow, nhigh+1):
-                        icount+=1
-                        doyt = doy + ifilt
-                        if doyt > 365:
-                            doyt-=366
-                        if doyt < 0:
-                            doyt+=366
+            for doy in range(366):
+                icount = -1
+                sum_el_ave = 0.0
+                sum_el_sd = 0.0
+                sum_el_ave_f = 0.0
+                sum_el_sd_f = 0.0
+                for ifilt in range(nlow, nhigh+1):
+                    icount+=1
+                    doyt = doy + ifilt
+                    if doyt > 365:
+                        doyt-=366
+                    if doyt < 0:
+                        doyt+=366
 
-                        if el !='pcpn':
-                            yr_count = float(el_data_list[j][doyt][2])
-                        else:
-                            yr_count = float(el_data_list[j][doyt][1])
+                    if el !='pcpn':
+                        yr_count = float(el_data_list[j][doyt][2])
+                    else:
+                        yr_count = float(el_data_list[j][doyt][1])
 
+                    try:
+                        val_ave = float(el_data_list[j][doyt][0])
+                    except:
+                        continue
+
+                    if el != 'pcpn':
                         try:
-                            val_ave = float(el_data_list[j][doyt][0])
+                            val_sd = float(el_data_list[j][doyt][1])
                         except:
-                            continue
+                            val_sd = None
 
-                        if el != 'pcpn':
-                            try:
-                                val_sd = float(el_data_list[j][doyt][1])
-                            except:
-                                val_sd = None
+                    ft = float(fltr[icount])
+                    if yr_count > 0.5:
+                        sum_el_ave+=val_ave*ft
+                        sum_el_ave_f+=ft
+                    if el !='pcpn' and yr_count >=0.5:
+                        if val_sd:
+                            sum_el_sd+=val_sd*ft
+                            sum_el_sd_f+=ft
 
-                        ft = float(fltr[icount])
-                        if yr_count > 0.5:
-                            sum_el_ave+=val_ave*ft
-                            sum_el_ave_f+=ft
-                        if el !='pcpn' and yr_count >=0.5:
-                            if val_sd:
-                                sum_el_sd+=val_sd*ft
-                                sum_el_sd_f+=ft
+                #Insert smoothed values
+                if sum_el_ave_f !=0:
+                    new_ave = sum_el_ave/sum_el_ave_f
+                    if el in ['maxt','mint']:
+                        el_data_list2[j][doy][0] ='%.1f' % new_ave
+                        el_data_list2[j][doy][2] = el_data_list[j][doy][2]
+                    else:
+                        el_data_list2[j][doy][0] ='%.3f' % new_ave
+                        el_data_list2[j][doy][1] = el_data_list[j][doy][1]
 
-                    #replace data values with smoothed values
-                    if sum_el_ave_f !=0:
-                        new_ave = sum_el_ave/sum_el_ave_f
-                        if el in ['maxt','mint']:
-                            el_data_list2[j][doy][0] ='%.1f' % new_ave
-                            el_data_list2[j][doy][2] = el_data_list[j][doy][2]
-                        else:
-                            el_data_list2[j][doy][0] ='%.3f' % new_ave
-                            el_data_list2[j][doy][1] = el_data_list[j][doy][1]
-
-                    if el != 'pcpn' and sum_el_sd_f !=0:
-                        new_sd = sum_el_sd/sum_el_sd_f
-                        el_data_list2[j][doy][1] = '%.3f' % new_sd
+                if el != 'pcpn' and sum_el_sd_f !=0:
+                    new_sd = sum_el_sd/sum_el_sd_f
+                    el_data_list2[j][doy][1] = '%.3f' % new_sd
 
         #write results
         for doy in range(366):
             mon, day = WRCCUtils.compute_mon_day(doy+1)
             results[i].append([str(doy+1), str(mon), str(day)])
-            if filter_type == 'gauss':
-               for j, el in enumerate(elements):
-                   for k in el_data_list2[j][doy]:
-                       results[i][-1].append(k)
-            else:
-                for j, el in enumerate(elements):
-                    for k in el_data_list[j][doy]:
-                        results[i][-1].append(k)
+            for j, el in enumerate(elements):
+                for k in el_data_list2[j][doy]:
+                    results[i][-1].append(k)
     return results
 
 '''
