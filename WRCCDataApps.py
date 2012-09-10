@@ -41,6 +41,104 @@ def Sodmonline(**kwargs):
         results[i]=stn_data
     return results
 
+'''
+Sodpad
+THIS PROGRAM READS IN PRECIPITATION FROM THE NCC SOD SET, AND THEN
+FINDS, FOR EACH DAY OF THE YEAR, THE NUMBER OF TIMES THAT A RANGE OF
+THRESHOLD AMOUNTS WAS EQUALLED, FOR A RANGE OF DURATIONS.
+'''
+def Sodpad(**kwargs):
+    results = defaultdict(dict)
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        num_yrs = len(kwargs['data'][i])
+        el_data = kwargs['data'][i]
+        s_count = 0
+        #take care of data flags, Feb 29's are set to 99.00, missing data to 99.99
+        for yr in range(num_yrs):
+            for doy in range(366):
+                if doy == 59:
+                    el_data[yr][0][doy] = 99.00
+                    continue
+                val, flag = WRCCUtils.strip_data(str(el_data[yr][0][doy]))
+                if flag == 'M':
+                    el_data[yr][0][doy] = 99.99
+                elif flag == 'S':
+                    s_count+=1
+                elif flag == 'A':
+                    s_count+=1
+                    val_new = float(val)/s_count
+                    if s_count > doy: #need to jump back to last year
+                        for k in range(doy):
+                            el_data[yr][0][k] = val_new
+                            for k in range(365,365-(s_count-doy),-1):
+                                el_data[yr-1][0][k] = val_new
+                    else:
+                        for k in range (doy,doy-s_count,-1):
+                            el_data[yr][0][k] = val_new
+                        s_count = 0
+                elif flag == 'T':
+                    el_data[yr][0][doy] = 0.0
+        #find accumulation-duration tables for each day of the year
+        thramt = [.005,.095,.145,.195,.245,.295,.395,.495,.745,.995,1.495,1.995,2.495,2.995,3.995,4.995,5.995,7.995,9.995]
+        lenper = [1,2,3,4,5,6,7,8,9,10,12,14,15,16,18,20,22,24,25,26,28,30]
+        for doy in range(366):
+            results[i][doy] = [[0.0 for k in range(len(thramt)+1)] for j in lenper]
+            #skip leap days, too complicated
+            if doy == 59:
+                continue
+            sumpre = 0
+            sumobs = 0
+            leapda = 0
+            sumpcpn = [0 for l in range(num_yrs)]
+            misdys = [1 for l in range(num_yrs)]
+            leap = [1 for l in range(num_yrs)]
+            #loop over durations and
+            for idx, idur in enumerate(lenper):
+                for yr in range(num_yrs):
+                    ndoyt = doy + idur - 1
+                    iyeart = yr
+                    if ndoyt > 365:
+                        ndoyt-=365
+                        iyeart+=1
+                    if iyeart > range(num_yrs)[-1]:
+                        break
+                    #look for leap days and skip Feb 29 if not a leap year
+                    dates = kwargs['dates']
+                    if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.05:
+                        leap[yr] = 0
+                    if iyeart == int(dates[0][0:4]) and ndoyt == 59:
+                        leapda = 1
+                    if leap[yr] == 0 and leapda == 1:
+                        ndoyt+=1
+                    pcp = float(el_data[iyeart][0][ndoyt])
+                    #Note that these sums continue to accumulate over all durations
+                    if pcp < 98.00:
+                        sumpcpn[yr]+=pcp
+                        sumpre+=pcp
+                        sumobs+=1
+                        misdys[yr] = 0
+
+                #Loop over thresholds
+                sumthr = [0 for k in range(19)]
+                pctthr = [111.0 for k in range(19)]
+                for ithr in range(19):
+                    thresh = thramt[ithr]
+                    nprsnt = 0 #no years with non-missing values
+                    #loop over years and compute percentages
+                    for yr in range(num_yrs):
+                        if misdys[yr] == 0:
+                            nprsnt+=1
+                            if sumpcpn[yr] > thresh:
+                                sumthr[ithr]+=1
+                    aveobs = sumobs/float(idur)
+                    if nprsnt != 0:
+                        results[i][doy][idx][ithr] = 100.0 * sumthr[ithr]/float(nprsnt)
+                        pctthr[ithr] = 100.0 * sumthr[ithr]/float(nprsnt)
+                if aveobs != 0:
+                    results[i][doy][idx][19] = sumpre / aveobs
+                    avepre = sumpre / aveobs
+
+    return results
 
 '''
 Soddd
