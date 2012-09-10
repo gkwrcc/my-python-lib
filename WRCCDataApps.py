@@ -120,7 +120,6 @@ def Sodpad(**kwargs):
 
                 #Loop over thresholds
                 sumthr = [0 for k in range(19)]
-                pctthr = [111.0 for k in range(19)]
                 for ithr in range(19):
                     thresh = thramt[ithr]
                     nprsnt = 0 #no years with non-missing values
@@ -132,11 +131,11 @@ def Sodpad(**kwargs):
                                 sumthr[ithr]+=1
                     aveobs = sumobs/float(idur)
                     if nprsnt != 0:
-                        results[i][doy][idx][ithr] = 100.0 * sumthr[ithr]/float(nprsnt)
-                        pctthr[ithr] = 100.0 * sumthr[ithr]/float(nprsnt)
+                        pcthr = 100.0 * sumthr[ithr]/float(nprsnt)
+                        results[i][doy][idx][ithr] = '%.2f' % pcthr
                 if aveobs != 0:
-                    results[i][doy][idx][19] = sumpre / aveobs
-                    avepre = sumpre / aveobs
+                    ave = sumpre / aveobs
+                    results[i][doy][idx][19] = '%.2f' % ave
 
     return results
 
