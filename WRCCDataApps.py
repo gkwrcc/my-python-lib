@@ -66,7 +66,7 @@ def Sodpad(**kwargs):
                     s_count+=1
                 elif flag == 'A':
                     s_count+=1
-                    val_new = float(val)/s_count
+                    val_new = float(val) / s_count
                     if s_count > doy: #need to jump back to last year
                         for k in range(doy):
                             el_data[yr][0][k] = val_new
@@ -78,6 +78,8 @@ def Sodpad(**kwargs):
                         s_count = 0
                 elif flag == 'T':
                     el_data[yr][0][doy] = 0.0
+                else:
+                    el_data[yr][0][doy] = float(val)
         #find accumulation-duration tables for each day of the year
         thramt = [.005,.095,.145,.195,.245,.295,.395,.495,.745,.995,1.495,1.995,2.495,2.995,3.995,4.995,5.995,7.995,9.995]
         lenper = [1,2,3,4,5,6,7,8,9,10,12,14,15,16,18,20,22,24,25,26,28,30]
@@ -86,14 +88,18 @@ def Sodpad(**kwargs):
             #skip leap days, too complicated
             if doy == 59:
                 continue
+            icount = 0
+            idur = 0
             sumpre = 0
             sumobs = 0
             leapda = 0
             sumpcpn = [0 for l in range(num_yrs)]
             misdys = [1 for l in range(num_yrs)]
             leap = [1 for l in range(num_yrs)]
-            #loop over durations and
-            for idx, idur in enumerate(lenper):
+            #loop over durations
+            #for idx, idur in enumerate(lenper):
+            while icount <= 21:
+                idur+=1
                 for yr in range(num_yrs):
                     ndoyt = doy + idur - 1
                     iyeart = yr
@@ -101,7 +107,7 @@ def Sodpad(**kwargs):
                         ndoyt-=365
                         iyeart+=1
                     if iyeart > range(num_yrs)[-1]:
-                        break
+                        continue
                     #look for leap days and skip Feb 29 if not a leap year
                     dates = kwargs['dates']
                     if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.05:
@@ -118,24 +124,31 @@ def Sodpad(**kwargs):
                         sumobs+=1
                         misdys[yr] = 0
 
+                if lenper[icount] != idur:
+                    continue
+
                 #Loop over thresholds
-                sumthr = [0 for k in range(19)]
                 for ithr in range(19):
+                    sumthr = 0
+                    pcthr = 111.0
                     thresh = thramt[ithr]
                     nprsnt = 0 #no years with non-missing values
                     #loop over years and compute percentages
                     for yr in range(num_yrs):
-                        if misdys[yr] == 0:
-                            nprsnt+=1
-                            if sumpcpn[yr] > thresh:
-                                sumthr[ithr]+=1
+                        if misdys[yr] == 1:
+                            continue
+                        nprsnt+=1
+                        if sumpcpn[yr] > thresh:
+                            #sumthr[ithr]+=1
+                            sumthr+=1
                     aveobs = sumobs/float(idur)
                     if nprsnt != 0:
-                        pcthr = 100.0 * sumthr[ithr]/float(nprsnt)
-                        results[i][doy][idx][ithr] = '%.2f' % pcthr
+                        pcthr = 100.0 * sumthr/float(nprsnt)
+                    results[i][doy][icount][ithr] = '%.1f' % pcthr
                 if aveobs != 0:
-                    ave = sumpre / aveobs
-                    results[i][doy][idx][19] = '%.2f' % ave
+                    avepre = sumpre / aveobs
+                    results[i][doy][icount][19] = '%.2f' % avepre
+                icount+=1
 
     return results
 
