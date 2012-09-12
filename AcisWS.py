@@ -86,7 +86,7 @@ def get_us_meta():
     request = StnMeta(params)
     return request
 
-#data acquisition for Soddyrec, Soddynorm, Soddd
+#data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
 def get_sod_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     dates = WRCCUtils.get_dates(s_date, e_date)
@@ -140,7 +140,7 @@ def get_sod_data(form_input, program):
             groupby="year") for el in elements]
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
-    elif program in ['Soddynorm', 'Soddd', 'Sodpad']:
+    elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     elif program in ['Sodlist', 'Sodcnv']:

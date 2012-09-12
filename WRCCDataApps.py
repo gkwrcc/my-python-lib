@@ -9,6 +9,7 @@ import numpy
 
 '''
 Sodlist
+
 '''
 
 def Sodlist(**kwargs):
@@ -27,6 +28,10 @@ def Sodlist(**kwargs):
 
 '''
 Sodmonline
+THIS PROGRAM WAS WRITTEN SPECIFICALLY FOR JOHN HANSON AT PGE, AND
+GIVES THE DAILY AVERAGE TEMPERATURE FOR SPECIFIED STATIONS
+THE FIRST YEARS ARE FROM THE SOD DATA BASE AND THE LATER YEARS
+MAY BE FROM THE MONTHLY NCDC TELEPHONE CALL FILES
 '''
 def Sodmonline(**kwargs):
     results = defaultdict(list)
@@ -39,6 +44,38 @@ def Sodmonline(**kwargs):
         for k, date in enumerate(dates):
             stn_data[k].insert(0,date)
         results[i]=stn_data
+    return results
+'''
+Sodsumm
+THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
+THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
+'''
+def Sodsumm(**kwargs):
+    elements = kwargs['elements']
+    tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    #results[i][table]
+    results = defaultdict(dict)
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        for table in tables:
+            results[i][table] = []
+        num_yrs = len(kwargs['data'][i])
+        el_data = {}
+        #Compute monthly Stats for the different tables
+        for mon_idx, mon in enumerate(months):
+            #Sort data by month
+            if mon_idx == 0:
+                idx_start = 0
+                idx_end = 31
+            else:
+                idx_start = sum(mon_lens[idx] for idx in range(mon_idx))
+                idx_end = idx_start + mon_lens[mon_idx]
+            for el_idx, element in enumerate(elements):
+                el_data[element] = []
+                for yr in range(num_yrs):
+                    el_data[element].append(kwargs['data'][i][yr][el_idx][idx_start:idx_end])
+
     return results
 
 '''
@@ -53,7 +90,7 @@ def Sodpad(**kwargs):
         num_yrs = len(kwargs['data'][i])
         el_data = kwargs['data'][i]
         s_count = 0
-        #take care of data flags, Feb 29's are set to 99.00, missing data to 99.99
+        #Take care of data flags, Feb 29's are set to 99.00, missing data to 99.99
         for yr in range(num_yrs):
             for doy in range(366):
                 if doy == 59:
@@ -279,8 +316,8 @@ def Soddd(**kwargs):
 
 '''
 Soddynorm
-Finds daily normals for each day
-of the year for each station over a multi year period. It uses either a Gaussian filter or running mean.
+FINDS DAILY NORMALS FOR EACH DAY OF THE YEAR FOR EACH STATION
+OVER A MULTI YEAR PERIOD. IT USES EITHER A GAUSSIAN FILTER OR RUNNING MEAN.
 '''
 def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_type, filter_days):
     #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
@@ -459,8 +496,8 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
 
 '''
 Soddyrec
-Finds daily averages and record  for each day
-of the year for each station over a multi year period
+FINDS DAILY AVERAGES AND RECORD FOR EACH DAY OF THE YEAR
+FOR EACH STATION OVER A MULTI YEAR PERIOD
 '''
 def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     #data[stn_id][el] = smry for station stn_id, element el = [ave, high_or_low, date,yrs_missing]
@@ -487,14 +524,13 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
 
 '''
 Sodsum:
-This function counts the number of observations for the period of record
-at each station in the SOD data set.
-It also finds the amount of potential, present, missing and
-consecutive present and missing days.
-Elements are given in this order:
-[pcpn, snow, snwd, maxt, mint, tobs]
-Not all elements may be present. Data may be obtained for
-a single element only or all of the above listed.
+COUNTS THE NUMBER OF OBSERVATIONS FOR THE PERIOD OF RECORD
+OF EACH STATION IN THE SOD DATA SET. IT ALSO FINDS THE AOUNT OF
+POTENTIAL, PRESENT, MISSING AND CONSECUTIVE PRESENT AND MISSING DAYS.
+ELEMENTS ARE GIVEN IN THIS ORDER:
+[PCPN, SNOW,SNWD,MAXT,MINT,TOBS]
+NOT ALL ELEMENTS MAY BE PREENT. DATA MAY BE OBTAINED FOR A SINGLE ELELMENT ONLY
+OR FOR ALL OF THE ABOVE LISTED.
 '''
 
 def Sodsum(data, elements, coop_station_ids, station_names):
