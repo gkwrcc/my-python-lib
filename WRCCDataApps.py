@@ -52,6 +52,7 @@ THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
 '''
 def Sodsumm(**kwargs):
     elements = kwargs['elements']
+    dates = kwargs['dates']
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -61,7 +62,9 @@ def Sodsumm(**kwargs):
         for table in tables:
             results[i][table] = []
         num_yrs = len(kwargs['data'][i])
+        start_year = dates[0][0:4]
         el_data = {}
+        el_dates = {} #indexed as el_data, keeps track of dates
         #Compute monthly Stats for the different tables
         for mon_idx, mon in enumerate(months):
             #Sort data by month
@@ -73,9 +76,97 @@ def Sodsumm(**kwargs):
                 idx_end = idx_start + mon_lens[mon_idx]
             for el_idx, element in enumerate(elements):
                 el_data[element] = []
+                el_dates[element] = []
                 for yr in range(num_yrs):
-                    el_data[element].append(kwargs['data'][i][yr][el_idx][idx_start:idx_end])
+                    for idx in range(idx_start, idx_end):
+                        el_data[element].append(kwargs['data'][i][yr][el_idx][idx])
+                        date_idx  = yr * 366 + idx
+                        el_dates[element].append(kwargs['dates'][date_idx])
+                    #el_data[element].append(kwargs['data'][i][yr][el_idx][idx_start:idx_end])
+                    #date_idx_start = yr * 366 + idx_start
+                    #date_idx_end = yr * 366 + idx_end
+                    #el_dates[element].append(kwargs['dates'][date_idx_start:date_idx_end])
+                #strip data of flags and convert unicode to floats for stats calculations
+                for idx, dat in enumerate(el_data[element]):
+                    val, flag = WRCCUtils.strip_data(dat)
+                    #take care of flags: missing data, s,a flags data are ignored, traces count as 0.0
+                    # trace behavior needs checking
+                    if val == 'M' or val == ' ' or val == '':
+                        el_data[element][idx] = 9999.0
+                    if flag == 'M':
+                        el_data[element][idx] = 9999.0
+                    elif flag == 'S':
+                        #el_data[element][idx] = 245
+                        el_data[element][idx] = 0.0
+                    elif flag == 'A':
+                        #el_data[element][idx] = float(val) +100
+                        el_data[element][idx] = float(val)
+                    elif flag == 'T':
+                        el_data[element][idx] = 0.0
 
+                    else:
+                        el_data[element][idx] = float(val)
+
+                for idx, dat in enumerate(el_data[element]):
+                    #el_data[element][idx] = float(el_data[element][idx])
+                    if  abs(dat - 9999.0) < 0.05:
+                        del el_data[element][idx]
+                        del el_dates[element][idx]
+
+            if kwargs['el_type'] == 'temp' or kwargs['el_type'] == 'both':
+                #Do Temperature Statistics
+                val_list = [mon]
+                #1) Averages
+                for el in ['maxt', 'mint', 'avgt']:
+                    ave = numpy.mean(el_data[el])
+                    val_list.append('%.1f' % ave)
+                #2) Daily Extremes
+                max_max = max(el_data['maxt'])
+                min_min = min(el_data['mint'])
+                #find day and yr of occurrence:
+                date_max = el_dates[element][el_data['maxt'].index(max_max)]
+                date_min = el_dates[element][el_data['mint'].index(min_min)]
+                val_list.append(int(max_max))
+                val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
+                val_list.append(int(min_min))
+                val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
+                #3)  Mean Extremes (over yrs)
+                means_yr=[]
+                for yr in range(num_yrs):
+                    idx_start = mon_lens[mon_idx]*yr
+                    idx_end = idx_start + mon_lens[mon_idx]
+                    yr_dat = el_data['avgt'][idx_start:idx_end]
+                    means_yr.append(numpy.mean(yr_dat))
+                ave_low = min(means_yr)
+                ave_high = max(means_yr)
+                yr_idx_low = means_yr.index(ave_low)
+                yr_idx_high = means_yr.index(ave_high)
+                yr_low = str(int(start_year) + yr_idx_low - 1900)
+                yr_high = str(int(start_year) + yr_idx_high - 1900)
+                val_list.append('%.1f' %ave_high)
+                val_list.append(yr_high)
+                val_list.append('%.1f' %ave_low)
+                val_list.append(yr_low)
+                #4) Threshold days for maxt, mint
+                for el in ['maxt', 'mint']:
+                    if el == 'maxt':
+                        threshs = ['90', '32']
+                    else:
+                        threshs = ['32', '0']
+                    for thresh in threshs:
+                        cnt_days = []
+                        for yr in range(num_yrs):
+                            idx_start = mon_lens[mon_idx]*yr
+                            idx_end = idx_start + mon_lens[mon_idx]
+                            yr_dat = numpy.array(el_data[el][idx_start:idx_end])
+                            if thresh == '90':
+                                yr_dat_thresh = numpy.where(yr_dat >= 90)
+                            else:
+                                yr_dat_thresh = numpy.where(yr_dat <= int(thresh))
+                            cnt_days.append(len(yr_dat_thresh[0]))
+                        val_list.append('%.1f' % numpy.mean(cnt_days))
+                print val_list
+                results[i]['temp'].append(val_list)
     return results
 
 '''

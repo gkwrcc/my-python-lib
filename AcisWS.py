@@ -89,7 +89,7 @@ def get_us_meta():
 #data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
 def get_sod_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
-    dates = WRCCUtils.get_dates(s_date, e_date)
+    dates = WRCCUtils.get_dates(s_date, e_date, program)
     elements = WRCCUtils.get_element_list(form_input, program)
     els = [dict(name='%s' % el) for el in elements]
     if 'coop_station_id' in form_input.keys():
@@ -292,114 +292,6 @@ def get_sodsum_data(form_input):
 
     return datadict, elements, coop_station_ids, station_names
 
-def get_sodsum_data_multi(form_input):
-    if 'element' not in form_input.keys() or 'coop_station_ids' not in form_input.keys():
-        print 'Error in AcisWs.get_sodsum_data! element and coop_station_id options required!'
-        sys.exit(0)
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
-    #FIX ME: Acis_WS MultiStnData call does not support 'por' yet!
-    if s_date == 'por' or e_date == 'por':
-        print "Error! Acis_WS multi station call does not support calls for period of record yet. Please chose a data!"
-        sys.exit(1)
-    coop_station_ids = form_input['coop_station_ids']
-    stn_name = ' '
-    #make list of dates in date range [s_date, e_date]
-    #NOTE: this assumes no gaps in data which may not be true
-    #Currently no dates come out of Acis_WS MultiStnData calls
-    dates = WRCCUtils.get_dates(s_date, e_date)
-    #make params list for data call
-    if form_input['element']!= 'multi':
-        element = form_input['element']
-        elements = [form_input['element']]
-        if element == 'evap': #need to work with var major (vX) and var minor (vN)
-            vXvN = 7
-        elif element == 'wdmv':
-            vXvN = 12
-        elif  element == 'wesf':
-            vXvN = 13
-        if element in ['evap', 'wdmv', 'wesf']:
-            params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=[dict(vX=vXvN)])
-        else:
-            params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=[dict(name='%s' % element)])
-
-        params_e = None
-        params_w = None
-        params_ws = None
-    else:
-        #elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst', 'evap', 'wdmv', 'wesf']
-        elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
-        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
-        elems=[dict(name='pcpn'), dict(name='snow'), dict(name='snwd'), dict(name='maxt'), dict(name='mint'), dict(name='obst')])
-        #FIX ME: leaving out evap,wdmv, wesf data for now until MultiStnData is implemented fully
-    #(date issue)
-
-        '''
-        FIX ME: leaving out evap,wdmv, wesf data for now until MultiStnData is implemented fully
-        ()
-        params_e = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=[dict(vX=7)])
-        params_w = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=[dict(vX=12)])
-        params_ws = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=[dict(vX=13)])
-        '''
-
-    #Request data
-    data_dict = defaultdict(list)
-    station_names=[' ' for i in range(len(coop_station_ids))]
-    request = MultiStnData(params)
-    try:
-        request['data']#list of data for the stations
-    except:
-        if request['error']:
-            print '%s' % str(request['error'])
-            sys.exit(1)
-        else:
-            'Unknown error ocurred when getting data'
-            sys.exit(1)
-    for j, stn_data in enumerate(request['data']):
-        try:
-            stn_data['meta']
-            station_id = str(stn_data['meta']['sids'][1].split()[0])
-            try:
-                index = coop_station_ids.index(station_id)
-            except ValueError:
-                continue
-            station_names[index] = stn_data['meta']['name']
-            try:
-                stn_data['data']
-                data_dict[index] = stn_data['data']
-            except:
-                data_dict[index] = []
-        except:
-            pass
-    '''
-    #ADD rest of data
-    params_list = [params_e, params_w, params_ws]
-    for i, prms in enumerate(params_list):
-            if prms:
-                    request = MultiStnData(prms)
-                    try:
-                            request['data']#list of data for the stations
-                    except:
-                            if request['error']:
-                                    print '%s' % str(request['error'])
-                                    print 'For element %s (1: evap, 2: wind movement, 3: water equivalent)' % i
-                            else:
-                                    print 'Unknown error ocurred when getting data'
-
-                    for j, stn_data in enumerate(request['data']):
-                            try:
-                                    stn_data['meta']
-                                    station_id = stn_data['meta']['sids'][0].split()[0]
-                                    index = coop_station_ids.find(station_id)
-                                    try:
-                                            stn_data['data']
-                                            for k in stn_data['data']:
-                                                    data_dict[index][k]+= stn_data['data'][k]
-                                    except:
-                                            pass
-                            except:
-                                    pass
-    '''
-    return data_dict, dates, elements, coop_station_ids, station_names
 
 #Routine to return data for programs sodlist, sodmonline(my), sodcnv
 def get_sodlist_data(form_input, program):

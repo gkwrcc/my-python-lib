@@ -73,6 +73,7 @@ def strip_data(val):
 
     return strp_val, flag
 
+
 #Routine to compute day of year ignoring leap years
 ###################################################
 def compute_doy(mon,day):
@@ -122,7 +123,7 @@ def is_leap_year(year):
 #This function is in place because Acis_WS's MultiStnCall does not return dates
 #it takes as arguments a start date and an end date (format yyyymmdd)
 #and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
-def get_dates(s_date, e_date):
+def get_dates(s_date, e_date, app_name):
     if s_date and e_date:
         dates = []
         #convert to datetimes
@@ -131,6 +132,10 @@ def get_dates(s_date, e_date):
         for n in range(int ((end_date - start_date).days +1)):
             next_date = start_date + datetime.timedelta(n)
             dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
+            #note, these apps are grouped by year and return a 366 day year even for non-leap years
+            if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
+                if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
+                    dates.append('dates[-1][0:4]0229')
     else:
         dates = []
     #convert to acis format
