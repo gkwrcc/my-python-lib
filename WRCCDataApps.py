@@ -54,7 +54,9 @@ def Sodsumm(**kwargs):
     elements = kwargs['elements']
     dates = kwargs['dates']
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    months = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De']
+    time_cats = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De', 'An', 'Wi', 'Sp', 'Su', 'Fa']
+    time_cats_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 366, 91, 92, 92, 91]
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     #results[i][table]
     results = defaultdict(dict)
@@ -63,29 +65,66 @@ def Sodsumm(**kwargs):
             results[i][table] = []
         num_yrs = len(kwargs['data'][i])
         start_year = dates[0][0:4]
+        end_year = dates[-1][0:4]
         el_data = {}
-        el_dates = {} #indexed as el_data, keeps track of dates
-        #Compute monthly Stats for the different tables
-        for mon_idx, mon in enumerate(months):
-            #Sort data by month
-            if mon_idx == 0:
+        el_data_Mon = {}
+        el_data_An = {}
+        el_data_Wi = {}
+        el_data_Sp = {}
+        el_data_Su = {}
+        el_data_Fa = {}
+        el_dates = {}
+        el_dates_Mon = {} #indexed as el_data, keeps track of dates
+        el_dates_An = {}
+        el_dates_Wi = {}
+        el_dates_Sp = {}
+        el_dates_Su = {}
+        el_dates_Fa = {}
+        #Sort data
+        for cat_idx, cat in enumerate(time_cats):
+            if cat_idx < 12: #months
+                if cat_idx == 0:
+                    idx_start = 0
+                    idx_end = 31
+                else:
+                    idx_start = sum(mon_lens[idx] for idx in range(cat_idx))
+                    idx_end = idx_start + mon_lens[cat_idx]
+            elif cat_idx == 12: #Annual
                 idx_start = 0
-                idx_end = 31
-            else:
-                idx_start = sum(mon_lens[idx] for idx in range(mon_idx))
-                idx_end = idx_start + mon_lens[mon_idx]
+                idx_end = 366
+            elif cat_idx == 13: #Winter
+                idx_start = 335
+                idx_end = 60
+            elif cat_idx == 14: #Spring
+                idx_start = 60
+                idx_end = 152
+            elif cat_idx == 15: #Summer
+                idx_start = 152
+                idx_end = 244
+            elif cat_idx == 16: # Fall
+                idx_start = 244
+                idx_end = 335
+            #Find data for each element
             for el_idx, element in enumerate(elements):
                 el_data[element] = []
                 el_dates[element] = []
                 for yr in range(num_yrs):
-                    for idx in range(idx_start, idx_end):
-                        el_data[element].append(kwargs['data'][i][yr][el_idx][idx])
-                        date_idx  = yr * 366 + idx
-                        el_dates[element].append(kwargs['dates'][date_idx])
-                    #el_data[element].append(kwargs['data'][i][yr][el_idx][idx_start:idx_end])
-                    #date_idx_start = yr * 366 + idx_start
-                    #date_idx_end = yr * 366 + idx_end
-                    #el_dates[element].append(kwargs['dates'][date_idx_start:date_idx_end])
+                    #Winter jumps year
+                    if cat_idx == 13:
+                        for idx in range(idx_start, 366):
+                            el_data[element].append(kwargs['data'][i][yr][el_idx][idx])
+                            date_idx  = yr * 366 + idx
+                            el_dates[element].append(kwargs['dates'][date_idx])
+                        if yr < num_yrs - 1:
+                            for idx in range(0,idx_end):
+                                el_data[element].append(kwargs['data'][i][yr+1][el_idx][idx])
+                                date_idx  = yr+1 * 366 + idx
+                                el_dates[element].append(kwargs['dates'][date_idx])
+                    else:
+                        for idx in range(idx_start, idx_end):
+                            el_data[element].append(kwargs['data'][i][yr][el_idx][idx])
+                            date_idx  = yr * 366 + idx
+                            el_dates[element].append(kwargs['dates'][date_idx])
                 #strip data of flags and convert unicode to floats for stats calculations
                 for idx, dat in enumerate(el_data[element]):
                     val, flag = WRCCUtils.strip_data(dat)
@@ -96,26 +135,26 @@ def Sodsumm(**kwargs):
                     if flag == 'M':
                         el_data[element][idx] = 9999.0
                     elif flag == 'S':
-                        #el_data[element][idx] = 245
+                        #el_data_Mon[element][idx] = 245
                         el_data[element][idx] = 0.0
                     elif flag == 'A':
-                        #el_data[element][idx] = float(val) +100
+                        #el_data_Mon[element][idx] = float(val) +100
                         el_data[element][idx] = float(val)
                     elif flag == 'T':
                         el_data[element][idx] = 0.0
-
                     else:
                         el_data[element][idx] = float(val)
-
+                #Delete missing data
                 for idx, dat in enumerate(el_data[element]):
-                    #el_data[element][idx] = float(el_data[element][idx])
+                    #el_data_Mon[element][idx] = float(el_data_Mon[element][idx])
                     if  abs(dat - 9999.0) < 0.05:
                         del el_data[element][idx]
                         del el_dates[element][idx]
 
+            #Compute monthly Stats for the different tables
             if kwargs['el_type'] == 'temp' or kwargs['el_type'] == 'both':
                 #Do Temperature Statistics
-                val_list = [mon]
+                val_list = [cat]
                 #1) Averages
                 for el in ['maxt', 'mint', 'avgt']:
                     ave = numpy.mean(el_data[el])
@@ -133,8 +172,8 @@ def Sodsumm(**kwargs):
                 #3)  Mean Extremes (over yrs)
                 means_yr=[]
                 for yr in range(num_yrs):
-                    idx_start = mon_lens[mon_idx]*yr
-                    idx_end = idx_start + mon_lens[mon_idx]
+                    idx_start = time_cats_lens[cat_idx] * yr
+                    idx_end = idx_start + time_cats_lens[cat_idx]
                     yr_dat = el_data['avgt'][idx_start:idx_end]
                     means_yr.append(numpy.mean(yr_dat))
                 ave_low = min(means_yr)
@@ -156,8 +195,8 @@ def Sodsumm(**kwargs):
                     for thresh in threshs:
                         cnt_days = []
                         for yr in range(num_yrs):
-                            idx_start = mon_lens[mon_idx]*yr
-                            idx_end = idx_start + mon_lens[mon_idx]
+                            idx_start = time_cats_lens[cat_idx]*yr
+                            idx_end = idx_start + time_cats_lens[cat_idx]
                             yr_dat = numpy.array(el_data[el][idx_start:idx_end])
                             if thresh == '90':
                                 yr_dat_thresh = numpy.where(yr_dat >= 90)
