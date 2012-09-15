@@ -201,17 +201,15 @@ def get_element_list(form_input, program):
         elements = ['maxt', 'mint', 'pcpn']
     elif program == 'Sodsumm':
         if form_input['element'] == 'all':
-            elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow','hdd', 'cdd', 'gdd']
+            elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
         elif form_input['element'] == 'temp':
             elements = ['maxt', 'mint', 'avgt']
         elif form_input['element'] == 'prsn':
             elements = ['pcpn', 'snow']
         elif form_input['element'] == 'both':
             elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
-        elif form_input['element'] == 'hc':
-            elements = ['hdd', 'cdd']
-        elif form_input['element'] == 'g':
-            elements = ['gdd']
+        elif form_input['element'] in ['hc', 'g']:
+            elements = ['maxt', 'mint']
     elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr']:
         elements = ['%s' % form_input['element']]
     elif program == 'Sodpad':

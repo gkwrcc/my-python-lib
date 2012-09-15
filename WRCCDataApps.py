@@ -67,20 +67,9 @@ def Sodsumm(**kwargs):
         start_year = dates[0][0:4]
         end_year = dates[-1][0:4]
         el_data = {}
-        el_data_Mon = {}
-        el_data_An = {}
-        el_data_Wi = {}
-        el_data_Sp = {}
-        el_data_Su = {}
-        el_data_Fa = {}
         el_dates = {}
-        el_dates_Mon = {} #indexed as el_data, keeps track of dates
-        el_dates_An = {}
-        el_dates_Wi = {}
-        el_dates_Sp = {}
-        el_dates_Su = {}
-        el_dates_Fa = {}
         #Sort data
+        dd_acc = 0 #for degree days sum
         for cat_idx, cat in enumerate(time_cats):
             if cat_idx < 12: #months
                 if cat_idx == 0:
@@ -131,9 +120,9 @@ def Sodsumm(**kwargs):
                     #take care of flags: missing data, s,a flags data are ignored, traces count as 0.0
                     # trace behavior needs checking
                     if val == 'M' or val == ' ' or val == '':
-                        el_data[element][idx] = 9999.0
+                        el_data[element][idx] = -9999.0
                     if flag == 'M':
-                        el_data[element][idx] = 9999.0
+                        el_data[element][idx] = -9999.0
                     elif flag == 'S':
                         #el_data_Mon[element][idx] = 245
                         el_data[element][idx] = 0.0
@@ -144,31 +133,49 @@ def Sodsumm(**kwargs):
                         el_data[element][idx] = 0.0
                     else:
                         el_data[element][idx] = float(val)
+                '''
                 #Delete missing data
                 for idx, dat in enumerate(el_data[element]):
                     #el_data_Mon[element][idx] = float(el_data_Mon[element][idx])
                     if  abs(dat - 9999.0) < 0.05:
                         del el_data[element][idx]
                         del el_dates[element][idx]
-
+                '''
             #Compute monthly Stats for the different tables
+            #1) Temperature Stats
             if kwargs['el_type'] == 'temp' or kwargs['el_type'] == 'both':
-                #Do Temperature Statistics
                 val_list = [cat]
-                #1) Averages
+                #1) Averages and Daily extremes
+                max_max = -9999.0
+                min_min = 9999.0
+                date_min ='0000-00-00'
+                date_max = '0000-00-00'
                 for el in ['maxt', 'mint', 'avgt']:
-                    ave = numpy.mean(el_data[el])
+                    sm = 0
+                    cnt = 0
+                    for idx, dat in enumerate(el_data[el]):
+                        if abs(dat + 9999.0) < 0.05:
+                            continue
+
+                        if el == 'maxt' and dat > max_max:
+                            max_max = dat
+                            date_max = el_dates[el][idx]
+                        if el == 'mint' and dat < min_min:
+                            min_min = dat
+                            date_min = el_dates[el][idx]
+                        sm+=dat
+                        cnt+=1
+                    if cnt !=0:
+                        ave = sm/cnt
+                    else:
+                        ave = 0.0
                     val_list.append('%.1f' % ave)
-                #2) Daily Extremes
-                max_max = max(el_data['maxt'])
-                min_min = min(el_data['mint'])
-                #find day and yr of occurrence:
-                date_max = el_dates[element][el_data['maxt'].index(max_max)]
-                date_min = el_dates[element][el_data['mint'].index(min_min)]
+
                 val_list.append(int(max_max))
                 val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
                 val_list.append(int(min_min))
                 val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
+                print val_list
                 #3)  Mean Extremes (over yrs)
                 means_yr=[]
                 for yr in range(num_yrs):
@@ -204,8 +211,118 @@ def Sodsumm(**kwargs):
                                 yr_dat_thresh = numpy.where(yr_dat <= int(thresh))
                             cnt_days.append(len(yr_dat_thresh[0]))
                         val_list.append('%.1f' % numpy.mean(cnt_days))
-                print val_list
                 results[i]['temp'].append(val_list)
+            #2) Precip/Snow Stats
+            if kwargs['el_type'] == 'prsn' or kwargs['el_type'] == 'both':
+                val_list = [cat]
+                #1) Total Precipitation
+                for el in ['pcpn', 'snow']:
+                    sum_yr=[]
+                    for yr in range(num_yrs):
+                        idx_start = time_cats_lens[cat_idx] * yr
+                        idx_end = idx_start + time_cats_lens[cat_idx]
+                        yr_dat = el_data['pcpn'][idx_start:idx_end]
+                        sum_yr.append(sum(yr_dat))
+                    val_list.append('%.2f' % numpy.mean(sum_yr))
+                    if el == 'pcpn':
+                        prec_high = max(sum_yr)
+                        yr_idx_high = sum_yr.index(prec_high)
+                        prec_low = min(sum_yr)
+                        yr_idx_low = sum_yr.index(prec_low)
+                        yr_low = str(int(start_year) + yr_idx_low - 1900)
+                        yr_high = str(int(start_year) + yr_idx_high - 1900)
+                        val_list.append('%.2f' %prec_high)
+                        val_list.append(yr_high)
+                        val_list.append('%.2f' %prec_low)
+                        val_list.append(yr_low)
+                    #2) Daily Prec max
+                    prec_max = max(el_data['pcpn'])
+                    idx_max = el_data['pcpn'].index(prec_max)
+                    date_max = el_dates['pcpn'][idx_max]
+                    val_list.append('%.2f' %prec_max)
+                    val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
+                #3) Precip Thresholds
+                threshs = [0.01, 0.10, 0.50, 1.00]
+                for thresh in threshs:
+                        cnt_days = []
+                        for yr in range(num_yrs):
+                            idx_start = time_cats_lens[cat_idx]*yr
+                            idx_end = idx_start + time_cats_lens[cat_idx]
+                            yr_dat = numpy.array(el_data['pcpn'][idx_start:idx_end])
+                            yr_dat_thresh = numpy.where(yr_dat >= thresh)
+                            cnt_days.append(len(yr_dat_thresh[0]))
+                        val_list.append('%d' % int(round(numpy.mean(cnt_days))))
+                results[i]['prsn'].append(val_list)
+            #3) Degree Days tables
+            if kwargs['el_type'] in ['hc', 'g', 'all']:
+                #get base list
+                base_list = {}
+                val_list =  defaultdict(list)
+                base_list['hdd'] = [65, 60, 57, 55,50]
+                base_list['cdd'] = [55, 57, 60, 65, 70]
+                base_list['gdd'] = [40, 45, 50, 55, 60]
+                base_list['corn'] = [50]
+
+                val_list['hdd'] = [[65], [60], [57], [55], [50]]
+                val_list['cdd'] = [[55], [57], [60], [65], [70]]
+                for tbl in ['gdd', 'corn']:
+                    val_list[tbl]=[]
+                    for base in base_list[tbl]:
+                        for ch in ['M', 'S']:
+                            val_list[tbl].append([base, ch])
+
+                if kwargs['el_type'] == 'hc':
+                    table_list = ['hdd', 'cdd']
+                elif kwargs['el_type'] == 'g':
+                    table_list = ['gdd', 'corn']
+                else:
+                    table_list = ['hdd', 'cdd', 'gdd', 'corn']
+
+                if cat_idx >=13:
+                    continue
+
+                for table in table_list:
+                    for base_idx, base in enumerate(base_list[table]):
+                        yr_dat = []
+                        for yr in range(num_yrs):
+                            idx_start = time_cats_lens[cat_idx]*yr
+                            idx_end = idx_start + time_cats_lens[cat_idx]
+                            dd_sum = 0
+                            for idx in range(idx_start, idx_end):
+                                print cat_idx, cat
+                                #print idx
+                                print idx_start, idx_end
+                                print len(el_data['maxt'])
+                                t_x = el_data['maxt'][idx]
+                                t_n = el_data['mint'][idx]
+                                #corn is special:
+                                if table == 'corn' and t_x > 86.0:
+                                    t_x = 86.0
+                                if table == 'corn' and t_n < 50.0:
+                                    t_n = 50.0
+                                if table == 'corn' and t_x < t_n:
+                                    tx = t_n
+                                ave = (t_x + t_n)/2.0
+                                if table in ['cdd', 'gdd', 'corn']:
+                                    dd = ave - base
+                                else:
+                                    dd = base - ave
+                                if dd < 0:
+                                    dd = 0
+                                dd_sum+=dd
+                            yr_dat.append(dd_sum)
+                        dd_month = int(round(numpy.mean(yr_dat)))
+                        dd_acc+=dd_month
+                        if table in ['gdd', 'corn']:
+                            val_list[table][2*base_idx].append(dd_month)
+                            val_list[table][2*base_idx+1].append(dd_acc)
+                        else:
+                            val_list[table][base_idx].append(dd_month)
+                    for val_l in val_list[table]:
+                        #print val_l
+                        results[i][table].append(val_l)
+
+
     return results
 
 '''
