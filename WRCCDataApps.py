@@ -175,23 +175,34 @@ def Sodsumm(**kwargs):
                 val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
                 val_list.append(int(min_min))
                 val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
-                print val_list
                 #3)  Mean Extremes (over yrs)
                 means_yr=[]
                 for yr in range(num_yrs):
                     idx_start = time_cats_lens[cat_idx] * yr
                     idx_end = idx_start + time_cats_lens[cat_idx]
                     yr_dat = el_data['avgt'][idx_start:idx_end]
-                    means_yr.append(numpy.mean(yr_dat))
+                    sm = 0
+                    cnt = 0
+                    for yr_dat_idx, dat in enumerate(yr_dat):
+                        if abs(dat + 9999.0) < 0.05:
+                            continue
+                        sm+=dat
+                        cnt+=1
+                    #means_yr.append(numpy.mean(yr_dat))
+                    if cnt!=0:
+                        means_yr.append(sm/cnt)
+                    else:
+                        means_yr.append(0.0)
+
                 ave_low = min(means_yr)
                 ave_high = max(means_yr)
                 yr_idx_low = means_yr.index(ave_low)
                 yr_idx_high = means_yr.index(ave_high)
                 yr_low = str(int(start_year) + yr_idx_low - 1900)
                 yr_high = str(int(start_year) + yr_idx_high - 1900)
-                val_list.append('%.1f' %ave_high)
+                val_list.append('%.4f' %ave_high)
                 val_list.append(yr_high)
-                val_list.append('%.1f' %ave_low)
+                val_list.append('%.4f' %ave_low)
                 val_list.append(yr_low)
                 #4) Threshold days for maxt, mint
                 for el in ['maxt', 'mint']:
@@ -206,9 +217,9 @@ def Sodsumm(**kwargs):
                             idx_end = idx_start + time_cats_lens[cat_idx]
                             yr_dat = numpy.array(el_data[el][idx_start:idx_end])
                             if thresh == '90':
-                                yr_dat_thresh = numpy.where(yr_dat >= 90)
+                                yr_dat_thresh = numpy.where((yr_dat >= 90) & (abs(yr_dat + 9999.0) >= 0.05))
                             else:
-                                yr_dat_thresh = numpy.where(yr_dat <= int(thresh))
+                                yr_dat_thresh = numpy.where((yr_dat <= int(thresh)) & (abs(yr_dat + 9999.0) >= 0.05))
                             cnt_days.append(len(yr_dat_thresh[0]))
                         val_list.append('%.1f' % numpy.mean(cnt_days))
                 results[i]['temp'].append(val_list)
@@ -222,7 +233,11 @@ def Sodsumm(**kwargs):
                         idx_start = time_cats_lens[cat_idx] * yr
                         idx_end = idx_start + time_cats_lens[cat_idx]
                         yr_dat = el_data['pcpn'][idx_start:idx_end]
-                        sum_yr.append(sum(yr_dat))
+                        sm = 0
+                        for yr_dat_idx, dat in enumerate(yr_dat):
+                            if abs(dat + 9999.0) >= 0.05:
+                                sm+=dat
+                        sum_yr.append(sm)
                     val_list.append('%.2f' % numpy.mean(sum_yr))
                     if el == 'pcpn':
                         prec_high = max(sum_yr)
@@ -283,22 +298,21 @@ def Sodsumm(**kwargs):
 
                 for table in table_list:
                     for base_idx, base in enumerate(base_list[table]):
+                        dd_acc = 0
                         yr_dat = []
                         for yr in range(num_yrs):
                             idx_start = time_cats_lens[cat_idx]*yr
                             idx_end = idx_start + time_cats_lens[cat_idx]
                             dd_sum = 0
                             for idx in range(idx_start, idx_end):
-                                print cat_idx, cat
-                                #print idx
-                                print idx_start, idx_end
-                                print len(el_data['maxt'])
                                 t_x = el_data['maxt'][idx]
                                 t_n = el_data['mint'][idx]
+                                if abs(t_x + 9999.0) < 0.05 or abs(t_n + 9999.0) < 0.05:
+                                    continue
                                 #corn is special:
                                 if table == 'corn' and t_x > 86.0:
                                     t_x = 86.0
-                                if table == 'corn' and t_n < 50.0:
+                                if table == 'corn' and t_n < 50.0 and abs(t_x + 9999.0) >= 0.05:
                                     t_n = 50.0
                                 if table == 'corn' and t_x < t_n:
                                     tx = t_n
@@ -313,15 +327,14 @@ def Sodsumm(**kwargs):
                             yr_dat.append(dd_sum)
                         dd_month = int(round(numpy.mean(yr_dat)))
                         dd_acc+=dd_month
+
                         if table in ['gdd', 'corn']:
                             val_list[table][2*base_idx].append(dd_month)
                             val_list[table][2*base_idx+1].append(dd_acc)
                         else:
                             val_list[table][base_idx].append(dd_month)
                     for val_l in val_list[table]:
-                        #print val_l
                         results[i][table].append(val_l)
-
 
     return results
 
