@@ -6,7 +6,300 @@ Module WRCCDataApps
 from collections import defaultdict
 import WRCCUtils
 import numpy
+import sys
+'''
+Sodrun and Sodrunr
+THESE PROGRAMS FIND ALL RUNS OF CONSECUTIVE DAYS WHERE REQUESTED THRESHOLD
+CONDITIONS ARE MET. SODRUNR CONSIDERS 2 DAYS A TIME. OTHERWISE, THE TWO
+PROGRAMS ARE IDENTICAL.
+'''
 
+def Sodrun(**kwargs):
+    def write_str_missing(days, nxt):
+        print_str = '%5s DAYS MISSING.  NEXT DATE %s' % (str(days), str(nxt))
+        return print_str
+    def write_str_data(start, end, days, el, op, thresh):
+        print_str = ' %s %2s %5s START : %s END : %s %7s DAYS' % (el, op, str(thresh), str(start), str(end), str(days))
+        return print_str
+    def write_str_thresh(days, nxt):
+        print_str = '%5s DAYS WHERE THRESHOLD NOT MET.  NEXT DATE %s' % (str(days), str(nxt))
+        return print_str
+    def write_str_range(l):
+        print_str1 = '%s %s %s mx/mn day 1 = %6s %6s mx/min day 2 = %6s %6s' %(l[0],l[1],l[2], l[3], l[4], l[5], l[6])
+        print_str2 = 'max2 - min1 = %6s min2 - max1 = %6s ======> max change = %6s' %(l[7], l[8], l[9])
+        return '\n'.join([print_str1, print_str2])
+    def convert_date(date):
+        str_date = ''.join(date.split('-'))
+        return str_date
+    def update_run_cnt(run_cnt, day_cnt):
+        if day_cnt in run_cnt:
+            run_cnt[day_cnt]+=1
+        else:
+            run_cnt[day_cnt]=1
+
+    results = defaultdict(list)
+    coop_station_ids = kwargs['coop_station_ids']
+    elements = kwargs['elements']
+    dates = kwargs['dates']
+    jd_start = WRCCUtils.JulDay(int(dates[0][0:4]), int(dates[0][5:7]), int(dates[0][8:10]))#Julian day odf start date
+    jd_end = WRCCUtils.JulDay(int(dates[-1][0:4]), int(dates[-1][5:7]), int(dates[-1][8:10]))#Julian day of end date
+    app_name = kwargs['app_name']
+    op = kwargs['op']
+    if elements == ['maxt', 'mint']:
+        el = 'range'
+    else:
+        el = elements[0]
+    thresh = kwargs['thresh']
+    min_run = kwargs['minimum_run']
+    verbose = kwargs['verbose']
+    for i, stn in enumerate(coop_station_ids):
+        results[i] = []
+        stn_data = kwargs['data'][i]
+        #first format data to include dates
+        for k, date in enumerate(dates):
+            stn_data[k].insert(0,date)
+        #If el is 'range', comput range
+        if el == 'range':
+            stn_data_new = []
+            stn_data_range = []
+            for idx, val_pair in enumerate(stn_data):
+                if app_name == 'Sodrunr':
+                    idif1 = ' '
+                    idif2 = ' '
+                    imax2 = str(val_pair[1])
+                    imin2 = str(val_pair[2])
+                    if idx == 0:
+                        imax1 = imax2
+                        imin1 = imin2
+                    else:
+                        imax1 = str(stn_data[idx -1][1])
+                        imin1 = str(stn_data[idx -1][2])
+                    try:
+                        idif1 = abs(int(imax2) - int(imin1))
+                        try:
+                            idif2 = abs(int(imax1) - int(imin2))
+                            mmax = max(idif1, idif2)
+                            if idif2 > idif1:
+                                mmax = -mmax
+                        except:
+                            mmax = idif1
+                    except:
+                        try:
+                            idif2 = abs(int(imax2) - int(imin2))
+                            mmax = -idif2
+                        except:
+                            mmax = '**'
+                    if mmax == '**':
+                        stn_data_new.append([stn_data[idx][0], 'M'])
+                    else:
+                        stn_data_new.append([stn_data[idx][0], str(mmax)])
+
+                    stn_data_range.append([val_pair[0][0:4], val_pair[0][5:7], val_pair[0][8:10], imax2, \
+                    imin2,imax1, imin1, str(idif1), str(idif2), str(mmax)])
+                else:#Sodrun
+                    flag_x = val_pair[1][-1]
+                    flag_n = val_pair[2][-1]
+                    if flag_x in ['M', '', ' '] or flag_n in ['M', '', ' ']:
+                        stn_data_new.append([stn_data[idx][0], 'M'])
+                    else:
+                        try:
+                            rg = int(val_pair[1]) - int(val_pair[2])
+                        except:
+                            rg = 'M'
+                        stn_data_new.append([stn_data[idx][0], str(rg)])
+            stn_data = stn_data_new
+        #Initialize parameters
+        day_cnt = 0
+        run_cnt = {} #run_cnt[#days] = #runs of #days length
+        flag = 0  #flag are 'M', 'S', 'A', 'T' (Acis flags) or 'D', '0'(internal flag)
+        run_start = 0 # start date of run
+        run_end = 0   #end date of run
+        days_missing = 0
+        days_not_thresh = 0
+        gap = False
+        #Loop over [date, value] pairs of input data
+        ############################################
+        for idx, date_val in enumerate(stn_data):
+            #Compute Julian day for current data and check for gap with previous data
+            #########################################################################
+            if idx == 0:
+                jd_old = jd_start
+            else:
+                jd_old = jd
+            date_split = date_val[0].split('-')
+            jd = WRCCUtils.JulDay(int(date_split[0]), int(date_split[1]), int(date_split[2]))
+            gap_days = jd - jd_old
+            if idx == 0 and gap_days >0: #found gap between user given start data and  first data point
+                print_str =  write_str_missing(str(gap_days), convert_date(date_val[0]))
+                results[i].append(print_str)
+            elif gap_days >1: #gap between two successive data entries
+                days_missing += gap_days
+                gap = True
+            else:
+                gap = False
+            #Take care of gaps in data
+            ######################################################
+            if gap and day_cnt !=0: # we are in middle of run and need to stop it
+                run_end = stn_data[idx-1][0]
+                if day_cnt >= min_run:
+                    update_run_cnt(run_cnt, day_cnt)
+                    if el == 'range':
+                        print_str = write_str_range(stn_data_range[idx-1])
+                        results[i].append(print_str)
+                    print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
+                    results[i].append(print_str)
+                    if days_missing !=0:
+                        print_str = write_str_missing(str(days_missing), convert_date(date_val[0]))
+                        results[i].append(print_str)
+                day_cnt = 0
+                flag = 0
+                days_missing = 0
+            elif gap and days_missing !=0:
+                days_missing+=gap
+            elif gap and days_not_thresh !=0:
+                if verbose:
+                    print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                    results[i].append(print_str)
+            #Check internal flags
+            #####################
+            if flag == 0 and day_cnt == 0: #Beginning of a run
+                run_start = date_val[0]
+                run_start_idx = idx
+                #check for missing days
+                if days_missing != 0:
+                    flag = date_val[1][-1]
+                    if not flag in ['M', 'S', 'A', 'T', ' ']:
+                        print_str = write_str_missing(str(days_missing), convert_date(date_val[0]))
+                        results[i].append(print_str)
+                        days_missing = 0
+            elif flag == 0 and day_cnt != 0: #Middle of run
+                day_cnt+=1
+                continue
+            elif flag == 'D' and day_cnt != 0: #End of run
+                if day_cnt >= min_run:
+                    update_run_cnt(run_cnt, day_cnt)
+                    print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
+                    results[i].append(print_str)
+                day_cnt = 0
+                flag = 0
+
+            #Check data flags
+            ##############################
+            flag = date_val[1][-1]
+            if flag in ['T', 'A', 'S', 'M', ' ']:
+                if flag in ['M', ' ']:
+                    days_missing+=1
+                if day_cnt != 0 and day_cnt >= min_run: #Run ends here
+                    run_end = date_val[0]
+                    update_run_cnt(run_cnt, day_cnt)
+                    print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
+                    results[i].append(print_str)
+                if days_not_thresh != 0:
+                    if verbose:
+                        print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                        results[i].append(print_str)
+                    days_not_thresh = 0
+                if flag in ['T', 'A', 'S']:
+                    days_not_thresh+=1
+                day_cnt = 0
+                continue
+
+            #Check for invalid flag
+            #######################
+            if not flag.isdigit():
+                print 'found invalid flag %s' % str(flag)
+                sys.exit(1)
+
+            #Make sure data can be converted to float
+            #########################################
+            try:
+                float(date_val[1])
+            except ValueError:
+                print '%s cannot be converted to float' % str(date_val[1])
+                sys.exit(1)
+            #Data is sound and we can check threshold condition
+            ###################################################
+            if el in ['maxt', 'mint', 'snwd', 'range']:
+                data = int(float(date_val[1]))
+            elif el == 'snow':
+                data = int(float(date_val[1]) * 10)
+            elif el == 'pcpn':
+                data = int(float(date_val[1]) * 100)
+
+            if (op == '>' and data > thresh) or (op == '<' and data < thresh) \
+            or (op == '=' and data == thresh):
+                if el == 'range':
+                        print_str = write_str_range(stn_data_range[idx])
+                        results[i].append(print_str)
+                if day_cnt == 0: #Start of run
+                    run_start = date_val[0]
+                    run_start_idx = idx
+                    if days_missing != 0:
+                        print_str = write_str_missing(str(days_missing), convert_date(date_val[0]))
+                        results[i].append(print_str)
+                        days_missing = 0
+                    if days_not_thresh != 0:
+                        if verbose:
+                            print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                            results[i].append(print_str)
+                        days_not_thresh = 0
+                day_cnt+=1
+            else: #Run ends here
+                days_not_thresh+=1
+                run_end = date_val[0]
+                flag = 'D'
+
+        #Check if we are in middle of run at end of data
+        ################################################
+        if flag == 0 or flag.isdigit(): #last value is good
+            if day_cnt !=0 and day_cnt >= min_run:
+                update_run_cnt(run_cnt, day_cnt)
+                if el == 'range':
+                    print_str = write_str_range(stn_data_range[idx])
+                    results[i].append(print_str)
+                print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
+                results[i].append(print_str)
+            elif days_missing != 0:
+                print_str = write_str_missing(str(days_missing), convert_date(date_val[0]))
+                results[i].append(print_str)
+            elif days_not_thresh != 0:
+                if verbose:
+                    print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                    results[i].append(print_str)
+        elif flag == 'M': #last value is mising
+            if days_not_thresh != 0:
+                if verbose:
+                    print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                    results[i].append(print_str)
+        elif flag == 'D': #last value is below threshold
+            if day_cnt !=0 and day_cnt >= min_run:
+                update_run_cnt(run_cnt, day_cnt)
+                if el == 'range':
+                    print_str = write_str_range(stn_data_range[run_start_idx])
+                    results[i].append(print_str)
+                print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
+                results[i].append(print_str)
+            if days_not_thresh != 0:
+                if verbose:
+                    print_str = write_str_thresh(str(days_not_thresh), convert_date(date_val[0]))
+                    results[i].append(print_str)
+        #Check for gap between last data point and run_end given by user
+        #################################################################
+        if jd_end - jd >0:
+            days_missing+= jd_end - jd
+
+        if days_missing != 0:
+            print_str = write_str_missing(str(days_missing), convert_date(stn_data[-1][0]))
+            results[i].append(print_str)
+
+        #Summarize runs
+        ###############
+        results[i].append('RUN LENGTH  NUMBER')
+        key_list =  sorted(run_cnt)
+        key_list.sort()
+        for key in key_list:
+            results[i].append('%10s%8s' % (key, run_cnt[key]))
+    return results
 '''
 Sodlist
 
@@ -63,11 +356,31 @@ def Sodsumm(**kwargs):
     for i, stn in enumerate(kwargs['coop_station_ids']):
         for table in tables:
             results[i][table] = []
+            if table == 'temp':
+                results[i]['temp'].append(['Time__','Max___', 'Min___', 'Mean__', 'High____', 'Date____', 'Low_____', 'Date____', 'High____', 'Yr____', 'Low_____', 'Yr____', '>=90__', '<=32__', '<=32__', '<=0___'])
+            elif table == 'prsn':
+                results[i]['prsn'].append(['Time__','Mean__', 'High__', 'Yr____', 'Low__', 'Yr____', '1-Day Max', 'Date____','Mean__', 'High__', 'Yr____', '>=0.01__', '>=0.10__', '>=0.50__', '>=1.00__'])
+            elif table in ['hdd', 'cdd', 'gdd', 'corn']:
+                results[i][table].append(['Base__', 'Jan___', 'Feb___', 'Mar__', 'Apr___', 'May___', 'Jun___', 'Jul___', 'Aug___', 'Sep___', 'Oct___', 'Nov___', 'Dec___', 'Ann___'])
         num_yrs = len(kwargs['data'][i])
         start_year = dates[0][0:4]
         end_year = dates[-1][0:4]
         el_data = {}
         el_dates = {}
+        base_list = {}
+        val_list_d =  defaultdict(list)
+        #Degree day base tables
+        base_list['hdd'] = [65, 60, 57, 55,50]
+        base_list['cdd'] = [55, 57, 60, 65, 70]
+        base_list['gdd'] = [40, 45, 50, 55, 60]
+        base_list['corn'] = [50]
+        val_list_d['hdd'] = [[65], [60], [57], [55], [50]]
+        val_list_d['cdd'] = [[55], [57], [60], [65], [70]]
+        for tbl in ['gdd', 'corn']:
+            val_list_d[tbl]=[]
+            for base in base_list[tbl]:
+                for ch in ['M', 'S']:
+                    val_list_d[tbl].append([base, ch])
         #Sort data
         dd_acc = 0 #for degree days sum
         for cat_idx, cat in enumerate(time_cats):
@@ -133,17 +446,9 @@ def Sodsumm(**kwargs):
                         el_data[element][idx] = 0.0
                     else:
                         el_data[element][idx] = float(val)
-                '''
-                #Delete missing data
-                for idx, dat in enumerate(el_data[element]):
-                    #el_data_Mon[element][idx] = float(el_data_Mon[element][idx])
-                    if  abs(dat - 9999.0) < 0.05:
-                        del el_data[element][idx]
-                        del el_dates[element][idx]
-                '''
             #Compute monthly Stats for the different tables
             #1) Temperature Stats
-            if kwargs['el_type'] == 'temp' or kwargs['el_type'] == 'both':
+            if kwargs['el_type'] == 'temp' or kwargs['el_type'] == 'both' or kwargs['el_type'] == 'all':
                 val_list = [cat]
                 #1) Averages and Daily extremes
                 max_max = -9999.0
@@ -224,7 +529,7 @@ def Sodsumm(**kwargs):
                         val_list.append('%.1f' % numpy.mean(cnt_days))
                 results[i]['temp'].append(val_list)
             #2) Precip/Snow Stats
-            if kwargs['el_type'] == 'prsn' or kwargs['el_type'] == 'both':
+            if kwargs['el_type'] == 'prsn' or kwargs['el_type'] == 'both' or kwargs['el_type'] == 'all':
                 val_list = [cat]
                 #1) Total Precipitation
                 for el in ['pcpn', 'snow']:
@@ -270,22 +575,6 @@ def Sodsumm(**kwargs):
                 results[i]['prsn'].append(val_list)
             #3) Degree Days tables
             if kwargs['el_type'] in ['hc', 'g', 'all']:
-                #get base list
-                base_list = {}
-                val_list =  defaultdict(list)
-                base_list['hdd'] = [65, 60, 57, 55,50]
-                base_list['cdd'] = [55, 57, 60, 65, 70]
-                base_list['gdd'] = [40, 45, 50, 55, 60]
-                base_list['corn'] = [50]
-
-                val_list['hdd'] = [[65], [60], [57], [55], [50]]
-                val_list['cdd'] = [[55], [57], [60], [65], [70]]
-                for tbl in ['gdd', 'corn']:
-                    val_list[tbl]=[]
-                    for base in base_list[tbl]:
-                        for ch in ['M', 'S']:
-                            val_list[tbl].append([base, ch])
-
                 if kwargs['el_type'] == 'hc':
                     table_list = ['hdd', 'cdd']
                 elif kwargs['el_type'] == 'g':
@@ -329,13 +618,13 @@ def Sodsumm(**kwargs):
                         dd_acc+=dd_month
 
                         if table in ['gdd', 'corn']:
-                            val_list[table][2*base_idx].append(dd_month)
-                            val_list[table][2*base_idx+1].append(dd_acc)
+                            val_list_d[table][2*base_idx].append(dd_month)
+                            val_list_d[table][2*base_idx+1].append(dd_acc)
                         else:
-                            val_list[table][base_idx].append(dd_month)
-                    for val_l in val_list[table]:
-                        results[i][table].append(val_l)
-
+                            val_list_d[table][base_idx].append(dd_month)
+                    if cat_idx == 12:
+                        for val_l in val_list_d[table]:
+                            results[i][table].append(val_l)
     return results
 
 '''
@@ -436,17 +725,15 @@ def Sodpad(**kwargs):
                             continue
                         nprsnt+=1
                         if sumpcpn[yr] > thresh:
-                            #sumthr[ithr]+=1
                             sumthr+=1
                     aveobs = sumobs/float(idur)
                     if nprsnt != 0:
-                        pcthr = 100.0 * sumthr/float(nprsnt)
+                        pcthr = 100.0 * sumthr/float(nprsnt+1)
                     results[i][doy][icount][ithr] = '%.1f' % pcthr
                 if aveobs != 0:
                     avepre = sumpre / aveobs
                     results[i][doy][icount][19] = '%.2f' % avepre
                 icount+=1
-
     return results
 
 '''

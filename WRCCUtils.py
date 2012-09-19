@@ -210,8 +210,11 @@ def get_element_list(form_input, program):
             elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
         elif form_input['element'] in ['hc', 'g']:
             elements = ['maxt', 'mint']
-    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr']:
-        elements = ['%s' % form_input['element']]
+    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun']:
+        if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'rang':
+            elements = ['maxt', 'mint']
+        else:
+            elements = ['%s' % form_input['element']]
     elif program == 'Sodpad':
         elements = ['pcpn']
     elif program == 'Sodthr':
