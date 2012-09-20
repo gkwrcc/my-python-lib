@@ -357,11 +357,13 @@ def Sodsumm(**kwargs):
         for table in tables:
             results[i][table] = []
             if table == 'temp':
-                results[i]['temp'].append(['Time__','Max___', 'Min___', 'Mean__', 'High____', 'Date____', 'Low_____', 'Date____', 'High____', 'Yr____', 'Low_____', 'Yr____', '>=90__', '<=32__', '<=32__', '<=0___'])
+                results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=90', '<=32', '<=32', '<=0'])
             elif table == 'prsn':
-                results[i]['prsn'].append(['Time__','Mean__', 'High__', 'Yr____', 'Low__', 'Yr____', '1-Day Max', 'Date____','Mean__', 'High__', 'Yr____', '>=0.01__', '>=0.10__', '>=0.50__', '>=1.00__'])
-            elif table in ['hdd', 'cdd', 'gdd', 'corn']:
-                results[i][table].append(['Base__', 'Jan___', 'Feb___', 'Mar__', 'Apr___', 'May___', 'Jun___', 'Jul___', 'Aug___', 'Sep___', 'Oct___', 'Nov___', 'Dec___', 'Ann___'])
+                results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date','Mean', 'High', 'Yr', '>=0.01', '>=0.10', '>=0.50', '>=1.00'])
+            elif table in ['hdd', 'cdd']:
+                results[i][table].append(['Base', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann'])
+            elif table in ['gdd', 'corn']:
+                results[i][table].append(['Base', 'M/S','Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann'])
         num_yrs = len(kwargs['data'][i])
         start_year = dates[0][0:4]
         end_year = dates[-1][0:4]
