@@ -119,6 +119,8 @@ def get_sod_data(form_input, program):
         if program == 'Soddyrec':
             yr_list = [[['#', '#', '#', '#', '#'] for k in range(366)] for el in elements]
             datadict[i] = yr_list
+        elif program in ['Sodrun', 'Sodrunr']:
+            datadict[i] = []
         else:
             datadict[i] = [[] for el in elements]
 
