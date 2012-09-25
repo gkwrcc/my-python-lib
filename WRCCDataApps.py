@@ -627,9 +627,7 @@ def Sodsumm(**kwargs):
                     if el == 'pcpn':
                         val_list.append('%.2f' %prec_low)
                         val_list.append(yr_low)
-
-                    #2) Daily Prec max
-                    if el_data['pcpn']:
+                        #2) Daily Prec max
                         prec_max = max(el_data['pcpn'])
                         idx_max = el_data['pcpn'].index(prec_max)
                         date_max = el_dates['pcpn'][idx_max]
