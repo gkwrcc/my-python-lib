@@ -7,6 +7,136 @@ from collections import defaultdict
 import WRCCUtils
 import numpy
 import sys
+
+'''
+Sodpct
+This program determines percentiles of distributions of
+climate elements.  These elements include max, min and
+mean temperature, degree days, daily temperature range
+precipitation, snowfall and snowdepth.  The user selects
+the starting and ending year.  Distributions are
+empirical rather than fitted to theoretical distributions.
+Separate values are calculated for each day of the year.
+The values for any given day are determined from the next
+1 to 30 days, starting on that day (a user-selectable
+quantity).  (The use of additional days increases the
+sample size, and smooths the day-to-day variations.)
+Furthermore, these values can be based on individual
+daily values, or on averages (or sums, for some elements)
+for the next (n) days.
+'''
+
+def Sodpct(**kwargs):
+    results = defaultdict(list)
+    dates = kwargs['dates']
+    start_year = int(dates[0][0:4])
+    end_year = int(dates[0][0:4])
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        elements = kwargs['elements']
+        el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range), hdd, cdd, gdd, pcpn, snow or snwd
+        if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
+            el_data = kwargs['data'][i]
+            num_yrs = len(el_data[0])
+        else:
+            el_data = kwargs['data'][i][0]
+            num_yrs = len(el_data)
+        #el_data[el_idx][yr] ; if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
+        #Check for empty data
+        if not any(el_data[j] for j in range(len(el_data))):
+            results[i] = []
+            continue
+        #for each yr in record and each dy of year find values for percentile caculation
+        yr_doy_data = [[99999.0 for doy in range(366)] for yr in range(num_yrs)]
+        results[i] = [[] for doy in range(366)] #results[i][doy] will have 21 entries: 15 thresholds and some html info
+        for yr in range(num_yrs):
+            for doy in range(366):
+                val = None
+                #check if we have to compute values from maxt, mint
+                if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
+                    dat_x = el_data[0][yr][doy]
+                    dat_n = el_data[1][yr][doy]
+                    val_x, flag_x = WRCCUtils.strip_data(dat_x)
+                    val_n, flag_n = WRCCUtils.strip_data(dat_n)
+                    if flag_x == 'M' or flag_n == 'M':
+                        continue
+                    try:
+                        nval_x = int(val_x)
+                        nval_n = int(val_n)
+                    except:
+                        continue
+
+                    if el_type == 'dtr':
+                        val = nval_x - nval_n
+                    elif el_type == 'avgt':
+                        val = (nval_x + nval_n)/2.0
+                    elif el_type in ['hdd','cdd']:
+                        ave = val = (nval_x + nval_n)/2.0
+                        if el_type == 'hdd':
+                            val = kwargs['base_temperature'] - ave
+                        else:
+                            val = ave - kwargs['base_temperature']
+                        if val < 0:
+                            val = 0
+                    elif el_type == 'gdd':
+                        high = nval_x
+                        low = nval_n
+                        if high > kwargs['max_temperature']:
+                            high = kwargs['max_temperature']
+                        if low < kwargs['min_temperature']:
+                            low = kwargs['min_temperature']
+                        val = (high + low)/2.0 - kwargs['base_temperature']
+                else:
+                    dat = el_data[yr][doy]
+                    val, flag = WRCCUtils.strip_data(dat)
+                    if flag == 'M':
+                        continue
+                if val:
+                    yr_doy_data[yr][doy] = val
+        #Prepare method of looping, if seasoal accumulations are required
+        monlo = 1
+        monhi = 12
+        if kwargs['accumulate_over_season'] is not None:
+            end_yr = end_year - 1
+            if el_type == 'hdd':
+                monlo = 7
+                nonhi = 18
+            else:
+                monlo = kwargs['begin_month']
+                monhi = monlo + 12
+        #Loop over months and days
+        for mondum in range(monlo,monhi):
+            mon = mondum
+            if mon > 12: mon-=12
+            #python indices start with 0 not 1!
+            mon_idx = mon - 1
+            for day_idx in range(mon_lens[mon - 1]):
+                nfrst = 0
+                if kwargs['accumulate_over_season'] is not None and day_idx == 0 and mon == monlo:
+                    nfrst = 1
+                doy = WRCCUtils.compute_doy(str(mon),str(day_idx+1))
+                number = 0
+
+                #Loop over individual years
+                for yr_idx in range(num_yrs):
+                    nyeart = yr_idx
+                    ndoyt = doy -1
+                    leap = 0
+                    valsum = 0
+                    valcnt = 0
+                    ndoym1 = doy -1 # used to check for 'S' flags
+                    nyearm = yr_idx
+                    if ndoym1 == 60 and not WRCCUtils.is_leap_year(start_year+yr_idx):
+                        ndoym1-=1
+                    if ndoym1 < 0:
+                        ndoym1+=366
+                        nyearm-=1
+                    nyrm = nyearm
+
+                    #Loop over number of days to look ahead for each year
+
+    return results
+
 '''
 Sodrun and Sodrunr
 THESE PROGRAMS FIND ALL RUNS OF CONSECUTIVE DAYS WHERE REQUESTED THRESHOLD
@@ -980,6 +1110,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                 el_data_list2[j] = [['0.0','0.0','0'] for day in range(366)]
         #el_data_list_f = [[] for el in elements] #filtered data
         results[i] = [[] for el in elements]
+        #Check for empty data
         if data[i] == [[],[],[]]:
             continue
         for j,el in enumerate(elements):
@@ -1041,7 +1172,10 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                 if sms > 0:
                     ave = sm/n
                     if sms > 1.5:
-                        std = float(numpy.sqrt((sms-(sm*sm)/n)/(n - 1)))
+                        try:
+                            std = float(numpy.sqrt((sms-(sm*sm)/n)/(n - 1)))
+                        except:
+                            std = 0.0
                     else:
                         std = 0.0
                 elif abs(sms - 0) < 0.05:

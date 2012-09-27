@@ -86,6 +86,16 @@ def compute_doy(mon,day):
         ndoy = sum(mon_len[0:nmon - 1]) + nday
     return ndoy
 
+def compute_doy_leap(mon, day):
+    mon_len = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    nmon = int(mon.lstrip('0'))
+    nday = int(day.lstrip('0'))
+    if nmon == 1:
+        ndoy = nday
+    else:
+        ndoy = sum(mon_len[0:nmon - 1]) + nday
+    return ndoy
+
 #reverse of compute_doy but counting every feb as having 29 days
 def compute_mon_day(doy):
     ndoy = int(doy)
@@ -211,8 +221,13 @@ def get_element_list(form_input, program):
         elif form_input['element'] in ['hc', 'g']:
             elements = ['maxt', 'mint']
     elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun']:
-        if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'rang':
+        if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'range':
             elements = ['maxt', 'mint']
+        elif program == 'Sodpct':
+            if form_input['element'] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
+                elements = ['maxt', 'mint']
+            else:
+                elements = ['%s' % form_input['element']]
         else:
             elements = ['%s' % form_input['element']]
     elif program == 'Sodpad':

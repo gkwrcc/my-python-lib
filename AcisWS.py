@@ -112,7 +112,7 @@ def get_sod_data(form_input, program):
         coop_station_ids =[]
     #sort station id in ascending order
     coop_station_ids = WRCCUtils.strip_n_sort(coop_station_ids)
-    station_names=['No Name' for i in range(len(coop_station_ids))]
+    station_names=['No Name found' for i in range(len(coop_station_ids))]
     #Since Acis may not return results for some stations, we need to initialize output dictionary
     datadict = defaultdict(list)
     for i, stn in enumerate(coop_station_ids):
@@ -142,7 +142,7 @@ def get_sod_data(form_input, program):
             groupby="year") for el in elements]
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
-    elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm']:
+    elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     elif program in ['Sodlist', 'Sodcnv']:
@@ -150,8 +150,11 @@ def get_sod_data(form_input, program):
         elems=[dict(name=el,add='t')for el in elements])
     else:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elements)
-
     request = MultiStnData(params)
+    if not request:
+        print 'Bad request! Params: %s'  % params
+        sys.exit(1)
+
     try:
         request['data']#list of data for the stations
     except:
@@ -182,12 +185,13 @@ def get_sod_data(form_input, program):
                         datadict[index] = stn_data['smry']
                     except:
                         datadict[index] = []
-                elif program in ['Soddynorm', 'Soddd']:
+                #sort data by element
+                elif program in ['Soddynorm', 'Soddd', 'Sodpct']:
                     try:
                         stn_data['data']
                         for yr, el_data in enumerate(stn_data['data']):
-                            for element, dat in enumerate(el_data):
-                                datadict[index][element].append(dat)
+                            for el_idx, dat in enumerate(el_data):
+                                datadict[index][el_idx].append(dat)
                     except:
                         pass
                 else:
