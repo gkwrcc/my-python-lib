@@ -47,7 +47,8 @@ def Sodpct(**kwargs):
             results[i] = []
             continue
         #for each yr in record and each dy of year find values for percentile caculation
-        yr_doy_data = [[99999.0 for doy in range(366)] for yr in range(num_yrs)]
+        yr_doy_data = [[9999.0 for doy in range(366)] for yr in range(num_yrs)]
+        accum = [9999.0 for yr in range(num_yrs)]
         results[i] = [[] for doy in range(366)] #results[i][doy] will have 21 entries: 15 thresholds and some html info
         for yr in range(num_yrs):
             for doy in range(366):
@@ -86,13 +87,30 @@ def Sodpct(**kwargs):
                         if low < kwargs['min_temperature']:
                             low = kwargs['min_temperature']
                         val = (high + low)/2.0 - kwargs['base_temperature']
+                elif el_type in ['snow', 'snwd', 'pcpn']: #Deal with T,S,A flags
+                    dat = el_data[yr][doy]
+                    val, flag = WRCCUtils.strip_data(dat)
+                    if flag == 'T':
+                        val = 0.001
+                    if kwargs['ia'] == 'a': #if kwargs['ia'] == 'i', S,A flags are treated as missing
+                        if flag == 'S':
+                            val+=2000.0
+                        elif flag == 'A':
+                            val+=3000.0
+                    try:
+                        float(val)
+                    except:
+                        continue
                 else:
                     dat = el_data[yr][doy]
                     val, flag = WRCCUtils.strip_data(dat)
                     if flag == 'M':
                         continue
-                if val:
-                    yr_doy_data[yr][doy] = val
+                    try:
+                        float(val)
+                    except:
+                        continue
+                yr_doy_data[yr][doy] = float(val)
         #Prepare method of looping, if seasoal accumulations are required
         monlo = 1
         monhi = 12
@@ -103,24 +121,24 @@ def Sodpct(**kwargs):
                 nonhi = 18
             else:
                 monlo = kwargs['begin_month']
-                monhi = monlo + 12
-        #Loop over months and days
-        for mondum in range(monlo,monhi):
+                monhi = monlo + 11
+        for mondum in range(monlo,monhi + 1):
             mon = mondum
             if mon > 12: mon-=12
             #python indices start with 0 not 1!
             mon_idx = mon - 1
-            for day_idx in range(mon_lens[mon - 1]):
+            for day_idx in range(mon_lens[mon_idx]):
+                nda = day_idx +1
                 nfrst = 0
                 if kwargs['accumulate_over_season'] is not None and day_idx == 0 and mon == monlo:
                     nfrst = 1
-                doy = WRCCUtils.compute_doy(str(mon),str(day_idx+1))
+                doy = WRCCUtils.compute_doy_leap(str(mon),str(day_idx+1))
                 number = 0
-
+                array={}
                 #Loop over individual years
                 for yr_idx in range(num_yrs):
                     nyeart = yr_idx
-                    ndoyt = doy -1
+                    ndoyt = doy -1 #will be added back shortly
                     leap = 0
                     valsum = 0
                     valcnt = 0
@@ -134,7 +152,128 @@ def Sodpct(**kwargs):
                     nyrm = nyearm
 
                     #Loop over number of days to look ahead for each year
+                    breaker = False
+                    for icom in range(kwargs['number_days_ahead']):
+                        ndoyt+=1
+                        if ndoyt > 365:
+                            ndoyt-=365
+                            nyeart+=1
+                        if nyeart > num_yrs -1: #finished with year loop
+                            breaker = True
+                            break
 
+                        #Check to see if really a leap year if on Feb29
+                        if ndoyt == 60:
+                            if WRCCUtils.is_leap_year(start_year + nyeart):
+                                leap =1
+                            else:
+                                if doy == 60:ndoyt+=1
+                        nyrt = nyeart
+                        val = yr_doy_data[nyrt][ndoyt]
+                        if val > 9998.0: #skip this year
+                            breaker = True
+                            break
+                        if kwargs['ia'] == 'i' and el_type in ['pcpn', 'snow', 'snwd'] and val > 1999.0: #skip this year
+                            breaker = True
+                            break
+                        number+=1
+                        array[number - 1] = val
+                        if kwargs['ia'] == 'a':
+                            if el_type in ['pcpn', 'snow', 'snwd']:
+                                if icom == 0:
+                                    if yr_idx == 0 and doy == 1:
+                                        if val > 1999.0: #skip this year if flag 'S' or 'A'
+                                            breaker = True
+                                            break
+                                    else: #Check to see if prior was 'S', if so skip that year
+                                        valm = yr_doy_data[nyrm][ndoym1]
+                                        if valm > 1999.0 and valm < 2999.0:
+                                            breaker = True
+                                            break
+                                if icom == kwargs['number_days_ahead'] - 1: #end of days_ahead loop
+                                    #Check if last day is 'S', if so skip that year
+                                    if val > 1999.0 and val < 2999.0:
+                                        breaker = True
+                                        break
+                                if val > 2999.0:val-=3000.0
+                                if val > 1999.0:val-=2000.0
+
+                            if kwargs['threshold'] is not None:
+                                if kwargs['threshold_ab'] == 'A':
+                                    if val > kwargs['threshold']:
+                                        val = 1
+                                    else:
+                                        val = 0
+                                else:
+                                    if val < kwargs['threshold']:
+                                        val = 1
+                                    else:
+                                        val = 0
+                            valsum+=val
+                            valcnt+=1
+                    #End of icom loop
+                    #Check if we chould skip this year
+                    if breaker:
+                        continue
+
+                    if kwargs['ia'] == 'a':
+                        if el_type in ['maxt', 'mint', 'dtr', 'avgt'] and valcnt >0:
+                            valsum = valsum/valcnt
+                        number+=1
+                        array[number] =  valsum
+                    if kwargs['accumulate_over_season'] is not None:
+                        if nfrst == 1: accum[yr_idx] = 0.0
+                        if accum[yr_idx] > 9998.0:continue
+                        accum[yr_idx]+=val
+                #End of year loop
+                if kwargs['accumulate_over_season'] is not None:
+                    number = 0
+                    for acc_idx in range(len(accum)):
+                        if accum[acc_idx] > 9998.0:
+                            continue
+                        number+=1
+                        array[number]=accum[acc_idx]
+                out = [9999.0 for k in range(17)] # low, high and 15 percentages
+                if number >= 10:
+                    pctile, sort = WRCCUtils.pctil(array, number, 10)
+                    out[2] = pctile[0]
+                    out[3] = pctile[1]
+                    out[5] = pctile[2]
+                    out[7] = pctile[3]
+                    out[8] = pctile[4]
+                    out[9] = pctile[5]
+                    out[11] = pctile[6]
+                    out[13] = pctile[7]
+                    out[14] = pctile[8]
+                if number >= 20:
+                    pctile, sort = WRCCUtils.pctil(array, number, 20)
+                    out[1] = pctile[0]
+                    out[15] = pctile[18]
+                if number >= 4:
+                    pctile, sort = WRCCUtils.pctil(array, number, 4)
+                    out[4] = pctile[0]
+                    out[8] = pctile[1]
+                    out[12] = pctile[2]
+                if number > 3:
+                    pctile, sort = WRCCUtils.pctil(array, number, 3)
+                    out[6] = pctile[0]
+                    out[10] =  pctile[1]
+                    out[0] = sort[0]
+                    out[16] = sort[number-1]
+
+                results[i][doy-1] = [str(mon), str(day_idx + 1), str(kwargs['number_days_ahead']), str(kwargs['ia']), str(number)]
+                for pct_idx,pct in enumerate(out):
+                    if pct >= 9998.0:
+                        results[i][doy-1].append('*')
+                        continue
+
+                    if el_type == 'pcpn':
+                        if pct > 0.0 and pct < 0.0499:
+                            results[i][doy-1].append('T')
+                        else:
+                            results[i][doy-1].append('%.2f' % pct)
+                    else:
+                        results[i][doy-1].append('%.1f' % pct)
     return results
 
 '''
