@@ -253,16 +253,17 @@ def pctil(data, number, npctil):
     #npctil number of percentiles
     #pctile percentiles in ascending order
     #xmed median of distribution
-    xmax = -1.0
+    xmax = -100000000.0
     dummy = [data[i] for i in range(number)]
     sort = [0.0 for i in range(number)]
     pctile = [0.0 for i in range(npctil-1)]
-    try:
-        xmax = max([xmax] + dummy)
-    except:
-        pass
+    for i in range(number):
+        try:
+            xmax = max(xmax,dummy[i])
+        except:
+            pass
     for islow in range(number):
-        xmin = 1.0
+        xmin = 100000000.0
         # For each element of sort, find lowest of the vaues
         iskip = None
         for ifast in range(number):
@@ -275,18 +276,18 @@ def pctil(data, number, npctil):
             dummy[iskip] = xmax + 1
     #Find the median:
     if number % 2  == 0:
-        xmed = (sort[number/2] + sort[(number/2) + 1]) / 2
+        xmed = (sort[number/2 - 1 ] + sort[(number/2)]) / 2
     else:
-        xmed = sort[(number/2) + 1]
+        xmed = sort[(number/2)]
 
     #Find percentiles
     frac = float(number) /  float(npctil)
 
     # Note that there are one less percentile separators than percentiles
     for i in range(npctil -1 ):
-        dum = frac * float(i) + 0.5
+        dum = frac * float(i+1) + 0.5
         idum = int(dum)
-        pctile[i] = sort[idum] + (dum - float(idum)) * (sort[idum +1] ) - sort[idum]
+        pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
 
     return pctile, sort
 

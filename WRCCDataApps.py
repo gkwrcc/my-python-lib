@@ -122,6 +122,7 @@ def Sodpct(**kwargs):
             else:
                 monlo = kwargs['begin_month']
                 monhi = monlo + 11
+        #Loop over months and days
         for mondum in range(monlo,monhi + 1):
             mon = mondum
             if mon > 12: mon-=12
@@ -132,17 +133,17 @@ def Sodpct(**kwargs):
                 nfrst = 0
                 if kwargs['accumulate_over_season'] is not None and day_idx == 0 and mon == monlo:
                     nfrst = 1
-                doy = WRCCUtils.compute_doy_leap(str(mon),str(day_idx+1))
+                doy = WRCCUtils.compute_doy_leap(str(mon),str(day_idx+1)) - 1
                 number = 0
                 array={}
                 #Loop over individual years
                 for yr_idx in range(num_yrs):
                     nyeart = yr_idx
-                    ndoyt = doy -1 #will be added back shortly
+                    ndoyt = doy - 1 #will be added back shortly
                     leap = 0
                     valsum = 0
                     valcnt = 0
-                    ndoym1 = doy -1 # used to check for 'S' flags
+                    ndoym1 = doy - 1 # used to check for 'S' flags
                     nyearm = yr_idx
                     if ndoym1 == 60 and not WRCCUtils.is_leap_year(start_year+yr_idx):
                         ndoym1-=1
@@ -173,9 +174,11 @@ def Sodpct(**kwargs):
                         if val > 9998.0: #skip this year
                             breaker = True
                             break
-                        if kwargs['ia'] == 'i' and el_type in ['pcpn', 'snow', 'snwd'] and val > 1999.0: #skip this year
-                            breaker = True
-                            break
+                        if kwargs['ia'] == 'i':
+                            if el_type in ['pcpn', 'snow', 'snwd', 'hdd', 'cdd', 'gdd']:
+                                if val > 1999.0: #skip this year
+                                    breaker = True
+                                    break
                         number+=1
                         array[number - 1] = val
                         if kwargs['ia'] == 'a':
@@ -215,12 +218,11 @@ def Sodpct(**kwargs):
                     #Check if we chould skip this year
                     if breaker:
                         continue
-
                     if kwargs['ia'] == 'a':
                         if el_type in ['maxt', 'mint', 'dtr', 'avgt'] and valcnt >0:
                             valsum = valsum/valcnt
                         number+=1
-                        array[number] =  valsum
+                        array[number-1] =  valsum
                     if kwargs['accumulate_over_season'] is not None:
                         if nfrst == 1: accum[yr_idx] = 0.0
                         if accum[yr_idx] > 9998.0:continue
@@ -254,26 +256,26 @@ def Sodpct(**kwargs):
                     out[4] = pctile[0]
                     out[8] = pctile[1]
                     out[12] = pctile[2]
-                if number > 3:
+                if number >= 3:
                     pctile, sort = WRCCUtils.pctil(array, number, 3)
                     out[6] = pctile[0]
                     out[10] =  pctile[1]
                     out[0] = sort[0]
                     out[16] = sort[number-1]
 
-                results[i][doy-1] = [str(mon), str(day_idx + 1), str(kwargs['number_days_ahead']), str(kwargs['ia']), str(number)]
+                results[i][doy] = [str(mon), str(day_idx + 1), str(kwargs['number_days_ahead']), str(kwargs['ia']), str(number)]
                 for pct_idx,pct in enumerate(out):
                     if pct >= 9998.0:
-                        results[i][doy-1].append('*')
+                        results[i][doy].append('*')
                         continue
 
                     if el_type == 'pcpn':
-                        if pct > 0.0 and pct < 0.0499:
-                            results[i][doy-1].append('T')
+                        if pct > 0.0 and pct < 0.00499:
+                            results[i][doy].append('T')
                         else:
-                            results[i][doy-1].append('%.2f' % pct)
+                            results[i][doy].append('%.2f' % pct)
                     else:
-                        results[i][doy-1].append('%.1f' % pct)
+                        results[i][doy].append('%.1f' % pct)
     return results
 
 '''
