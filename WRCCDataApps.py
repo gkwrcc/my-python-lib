@@ -9,6 +9,238 @@ import numpy
 import sys
 
 '''
+This program can be used to find the latest spring and   '/
+earliest fall frost (or other temperature(s)) each year. '/
+However, it is written much more generally to allow      '/
+finding the latest or earliest occurrence above or below '/
+a threshold value, for a period up to 12-months long,    '/
+which may extend from one year into the next (for example,'/
+the winter season from July thru June), for up to 10 sets '/
+of values.  Furthermore, the "midpoint" of the period can '/
+be set anywhere between the starting and ending dates.    '/
+For example, July 31 can be used as mid-year, rather than '/
+June 30 (is a frost on July 2 the "last frost" of  spring,'/
+or the "first frost" of autumn??)  A time series of the   '/
+values for each half of the interval is formed, and the   '/
+probability of exceedance is calculated, using only those '/
+years with less missing data than the user specifies as a '/
+minimum.
+'''
+def Sodthr(**kwargs):
+    results = defaultdict(dict)
+    dates = kwargs['dates']
+    start_year = int(dates[0][0:4])
+    end_year = int(dates[0][0:4])
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        elements = kwargs['elements']
+        el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
+        if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
+            el_data = kwargs['data'][i]
+            num_yrs = len(el_data)
+        else:
+            el_data = kwargs['data'][i]
+            num_yrs = len(el_data)
+        #el_data[el_idx][yr] ; if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
+
+        #Check for empty data
+        if not any(el_data[j] for j in range(len(el_data))):
+            #three result tables
+            results[i][0] = []
+            results[i][1] = []
+            results[i][2] = []
+            continue
+        #Set analysis parameters
+        if kwargs['custom_tables']:
+            most = kwargs['interval_start'][0:2]; ndyst = kwargs['interval_start'][2:4]
+            moen = kwargs['interval_end'][0:2]; ndyen = kwargs['interval_end'][2:4]
+            momid = kwargs['midpoint'][0:2]; ndymid = kwargs['midpoint'][2:4]
+            thresholds = kwargs['thresholds']
+            time_series = kwargs['time_series']
+            ab = kwargs['ab']
+            le_1 = kwargs['le_1']; le_2 = kwargs['le_2']
+            misdat = kwargs['miss_days_1']; misdif = kwargs['miss_days_2']
+        else:
+            most = '01'; ndyst='01'
+            moen = '12'; ndyen = '31'
+            momid = '07'; ndymid = '31'
+            if kwargs['el_type'] == 'mint':thresholds = [36.5, 32.5, 28.5, 24.5, 20.5]; ab = 'b'
+            if kwargs['el_type'] == 'maxt':thresholds = [70.5, 74.5, 78.5, 82.5, 86.5]; ab = 'a'
+            if kwargs['el_type'] == 'avgt':thresholds = [45.5, 49.5, 53.5, 57.5, 61.5]; ab = 'a'
+            if kwargs['el_type'] == 'dtr':thresholds = [20.0, 30.0, 40.0, 50.0, 60.0]; ab = 'a'
+            time_series = [False, False, False, False, False]
+            le_1 = 'l';le_2 = 'e'
+            misdat = 10; misdif = 10
+        numthr = len(thresholds)
+        #Initialize data arrays
+        yr_doy_data = [[999.9 for doy in range(366)] for yr in range(num_yrs)]
+        ndiff = [[999 for j in range(2)] for yr in range(num_yrs)]
+        nts =[[[999 for k in range(3)]for j in range(2)]for yr in range(num_yrs)]
+        thrpct = [[[999.9 for k in range(3)] for j in range(11)]for l in range(10)]
+
+        #Populate yr_doy_data dealing with flags on original data
+        for yr in range(num_yrs):
+            for doy in range(366):
+                if el_type in ['dtr','avgt']:
+                    dat_x = el_data[yr][0][doy]
+                    dat_n = el_data[yr][1][doy]
+                    val_x, flag_x = WRCCUtils.strip_data(dat_x)
+                    val_n, flag_n = WRCCUtils.strip_data(dat_n)
+                    if flag_x == 'M' or flag_n == 'M':
+                        continue
+                    try:
+                        nval_x = int(val_x)
+                        nval_n = int(val_n)
+                    except:
+                        continue
+
+                    if el_type == 'dtr':
+                        val = nval_x - nval_n
+                    elif el_type == 'avgt':
+                        val = (nval_x + nval_n)/2.0
+                else:
+                    dat = el_data[yr][doy]
+                    val, flag = WRCCUtils.strip_data(dat)
+                    if flag == 'M':
+                        continue
+                    try:
+                        float(val)
+                    except:
+                        continue
+                yr_doy_data[yr][doy] = float(val)
+
+        #Get day of year of start, mid and endpoint
+        ndoyst = WRCCUtils.Catoju(most, ndyst)
+        ndoyen = WRCCUtils.Catoju(moen, ndyen)
+        ndoymd = WRCCUtils.Catoju(momid, ndymid)
+
+        midm1 = ndoymd - 1
+        if midm1 == 0: midm1 = 366
+
+        if le_1 == 'e': nel1 = 1
+        if le_1 == 'l': nel1 = 2
+        if le_2 == 'e': nel2 = 1
+        if le_2 == 'l': nel2 = 2
+        if ab == 'a': nab = 1
+        if ab == 'b': nab = 2
+
+        #Loop over thresholds
+        for ithr in range(1, numthr +1):
+            if time_series[ithr - 1]:
+                pass
+                #Kelly's out put messages here?? --> new mssg out or headers in results
+            #Loop over years
+            for yr in range(num_yrs):
+                nyear = yr #double check this, should be yr +1??
+                nyeart = nyear
+
+                #Loop over period 1 and 2
+                for period in range(1,3):
+                    last  = 0 #= 1 if last day of period
+                    miss1 = 0 #Missing days for midpoint
+                    miss2 = 0 #Missing days away from midpoint
+                    metthr = 0 #= 1 if threshold has been met already
+
+                    if period == 1:
+                        if le_1 == 'e': ndoyt = ndoyst - 1
+                        if le_1 == 'l': ndoyt = ndoymd
+                    else:
+                        if le_1 == 'e': ndoyt = ndoytmd - 1
+                        if le_1 == 'l': ndoyt = ndoyen + 1
+
+                    while last != 1:
+                        #Set start day and year
+                        #See whether earliest or latest is required
+                        if period == 1:
+                            le = le_1; end = midm1; start = ndoyst
+                        if period == 2:
+                            le  = le_2; end = ndoyen; start = ndoymd
+
+                        if le == 'e':
+                            ndoyt+=1
+                            if ndoyt > 366:
+                                ndoyt = 1
+                                nyeart = nyear + 1
+                            if ndoyt == end: last = 1
+                        elif le == 'l':
+                            ndoyt-=1
+                            if ndoyt == 0:
+                                ndoyt = 366
+                                nyeart = nyear -1
+                            if ndoyt == start: last = 1
+
+                        #skip non-leap day
+                        if ndoyt == 60 and not WRCCUtils.is_leap_year(start_year + nyeart):
+                            continue
+                        #Get appropriate dataob
+                        value = yr_doy_data[nyeart-1][ndoyt-1]
+                        #Check whether threshold is exceeded. If missing, add to proper counter.
+                        #miss1 and miss2 will depend on whether earliest or latest is desired
+                        if ab == 'a':
+                            if value > thresholds[ithr -1]:
+                                if abs(value - 999.9) < 0.1:
+                                    if metthr == 1:
+                                        if le == 'e':
+                                            miss1+=1
+                                        else:
+                                            miss2+=1
+                                    else:
+                                        if le == 'e':
+                                            miss2+=1
+                                        else:
+                                            miss1+=1
+                                else:
+                                    if metthr != 1:
+                                        nts[nyear - 1][period - 1][0] = ndoyt
+                                        metthr = 1
+                        elif ab == 'b':
+                            if value < thresholds[ithr - 1]:
+                                if metthr != 1:
+                                    nts[nyear - 1][period - 1][0] = ndoyt
+                                    metthr = 1
+                            if abs(value - 999.9) < 0.1:
+                                if metthr == 1:
+                                    if le == 'e':
+                                        if period ==1:
+                                            miss1+=1
+                                        else:
+                                            miss2+=1
+                                    else:
+                                        if period ==1:
+                                            miss2+=1
+                                        else:
+                                            miss1+=1
+                                else:
+                                    if le == 'e':
+                                        if period ==1:
+                                            miss2+=1
+                                        else:
+                                            miss1+=1
+                                    else:
+                                        if period ==1:
+                                            miss1==1
+                                        else:
+                                            miss2+=1
+                        if last != 1: continue
+                        #Done assigning values
+                        if metthr == 0:
+                            if le == 'e':
+                                nts[nyear -1][period -1][0] = 367
+                            else:
+                                nts[nyear - 1][period - 1][0] = -1
+                    #end of while loop
+                    nts[nyear -1 ][period - 1][1] = miss1
+                    nts[nyear - 1][period - 1][2] = miss1
+
+                    #Leap year check loop
+                    #Reset Counters
+                    #The following code is merely to find whether the period selected contains a leap year
+                    #Possibilities:
+                    #1)Period starts before or after Feb 29
+                    #2)Midpoint is before or after Feb 29
+                    #3)Date of occurrence is before or after Feb 29
+
+    return results
+'''
 Sodpct
 This program determines percentiles of distributions of
 climate elements.  These elements include max, min and
@@ -168,17 +400,22 @@ def Sodpct(**kwargs):
                             if WRCCUtils.is_leap_year(start_year + nyeart):
                                 leap =1
                             else:
-                                if doy == 60:ndoyt+=1
+                                #if start date (ndoy) id Feb 29, use only Feb 29's
+                                if doy != 60:ndoyt+=1
                         nyrt = nyeart
                         val = yr_doy_data[nyrt][ndoyt]
+
                         if val > 9998.0: #skip this year
                             breaker = True
                             break
+
                         if kwargs['ia'] == 'i':
                             if el_type in ['pcpn', 'snow', 'snwd', 'hdd', 'cdd', 'gdd']:
                                 if val > 1999.0: #skip this year
                                     breaker = True
                                     break
+                           # number+=1
+                           # array[number - 1] = val
                         number+=1
                         array[number - 1] = val
                         if kwargs['ia'] == 'a':
@@ -218,11 +455,13 @@ def Sodpct(**kwargs):
                     #Check if we chould skip this year
                     if breaker:
                         continue
+
                     if kwargs['ia'] == 'a':
                         if el_type in ['maxt', 'mint', 'dtr', 'avgt'] and valcnt >0:
                             valsum = valsum/valcnt
                         number+=1
                         array[number-1] =  valsum
+
                     if kwargs['accumulate_over_season'] is not None:
                         if nfrst == 1: accum[yr_idx] = 0.0
                         if accum[yr_idx] > 9998.0:continue
@@ -762,8 +1001,12 @@ def Sodsumm(**kwargs):
                     data_list = []
                     dates_list = []
                     for yr in range(num_yrs):
-                        idx_start = time_cats_lens[cat_idx] * yr
-                        idx_end = idx_start + time_cats_lens[cat_idx]
+                        if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                            cat_l = 28
+                        else:
+                            cat_l = time_cats_lens[cat_idx]
+                        idx_start = cat_l * yr
+                        idx_end = idx_start + cat_l
                         if cat_idx < 12 and x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
                         data_list.extend(el_data[el][idx_start:idx_end])
@@ -867,8 +1110,14 @@ def Sodsumm(**kwargs):
                         #Omit data yrs where max_missing day threshold is not met
                         if cat_idx < 12 and x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
-                        idx_start = time_cats_lens[cat_idx] * yr
-                        idx_end = idx_start + time_cats_lens[cat_idx]
+                        if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                            cat_l = 28
+                        else:
+                            cat_l = time_cats_lens[cat_idx]
+                        idx_start = cat_l * yr
+                        idx_end = idx_start + cat_l
+                        #idx_start = time_cats_lens[cat_idx] * yr
+                        #idx_end = idx_start + time_cats_lens[cat_idx]
                         yr_dat = el_data[el][idx_start:idx_end]
                         sm = 0
                         for yr_dat_idx, dat in enumerate(yr_dat):
@@ -936,13 +1185,21 @@ def Sodsumm(**kwargs):
                 if cat_idx >=13:
                     continue
 
+
                 for table in table_list:
                     for base_idx, base in enumerate(base_list[table]):
                         dd_acc = 0
                         yr_dat = []
                         for yr in range(num_yrs):
-                            idx_start = time_cats_lens[cat_idx]*yr
-                            idx_end = idx_start + time_cats_lens[cat_idx]
+                            #Take care of leap years
+                            if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                                cat_l = 28
+                            else:
+                                cat_l = time_cats_lens[cat_idx]
+                            idx_start = cat_l * yr
+                            idx_end = idx_start + cat_l
+                            #idx_start = time_cats_lens[cat_idx]*yr
+                            #idx_end = idx_start + time_cats_lens[cat_idx]
                             dd_sum = 0
                             dd_cnt = 0
                             for idx in range(idx_start, idx_end):
@@ -969,7 +1226,7 @@ def Sodsumm(**kwargs):
 
                             #Make adjustments for missing hdd - replace with mean days
                             if table in ['hdd','cdd']:
-                                if dd_cnt > kwargs['max_missing_days']:
+                                if time_cats_lens[cat_idx] - dd_cnt <= kwargs['max_missing_days']:
                                     dd_sum = (dd_sum/dd_cnt)*float(time_cats_lens[cat_idx])
                             yr_dat.append(dd_sum)
                         try:
@@ -985,7 +1242,14 @@ def Sodsumm(**kwargs):
                                 dd_acc = sum(val_list_d[table][2*base_idx][2:])
                                 val_list_d[table][2*base_idx+1].append(dd_acc)
                         else:
-                            val_list_d[table][base_idx].append(dd_month)
+                            if cat_idx == 12:
+                                try:
+                                    val_list_d[table][base_idx].append(sum(val_list_d[table][base_idx][1:]))
+                                except:
+                                    val_list_d[table][base_idx].append(dd_month)
+                            else:
+                                val_list_d[table][base_idx].append(dd_month)
+
                     if cat_idx == 12:
                         for val_l in val_list_d[table]:
                             results[i][table].append(val_l)

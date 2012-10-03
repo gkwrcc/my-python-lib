@@ -25,6 +25,17 @@ def JulDay(year, mon, day):
     jd+=1
     return int(jd)
 
+def Catoju(mnth, dy):
+    month = int(mnth.lstrip('0'))
+    nday = int(dy.lstrip('0'))
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ndoy =0
+    for  mon in range(1,month+1):
+        if mon < month:ndoy+=mon_lens[mon]
+        if mon == month: ndoy+=nday
+    if month == -1 and nday == -1:ndoy = -1
+    return ndoy
+
 #Routine to compute binomial coefficients for Soddynorm
 #######################################################
 def bcof(n, normlz=True):
@@ -220,10 +231,10 @@ def get_element_list(form_input, program):
             elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
         elif form_input['element'] in ['hc', 'g']:
             elements = ['maxt', 'mint']
-    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun']:
+    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun', 'Sodthr']:
         if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'range':
             elements = ['maxt', 'mint']
-        elif program == 'Sodpct':
+        elif program in ['Sodpct', 'Sodthr']:
             if form_input['element'] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
                 elements = ['maxt', 'mint']
             else:
@@ -232,8 +243,6 @@ def get_element_list(form_input, program):
             elements = ['%s' % form_input['element']]
     elif program == 'Sodpad':
         elements = ['pcpn']
-    elif program == 'Sodthr':
-        elements = ['mint']
     elif program == 'Soddd':
         elements = ['maxt', 'mint']
     elif program in ['Sodmonline', 'Sodmonlinemy']:
