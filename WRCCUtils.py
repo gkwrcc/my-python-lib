@@ -25,6 +25,8 @@ def JulDay(year, mon, day):
     jd+=1
     return int(jd)
 
+#Routine  to convert calendar days to yearly Julian days,
+#All years are leap years, used in Sodthr
 def Catoju(mnth, dy):
     month = int(mnth.lstrip('0'))
     nday = int(dy.lstrip('0'))
@@ -35,6 +37,29 @@ def Catoju(mnth, dy):
         if mon == month: ndoy+=nday
     if month == -1 and nday == -1:ndoy = -1
     return ndoy
+
+#Routine to convert yearly Julian Days to Calenday days,
+#All years are leap years, used in Sodthr
+def Jutoca(ndoy):
+    jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
+    month = -1
+    for mon in range(12):
+        if mon < 11:
+            if  ndoy > jstart[mon] -1 and ndoy < jstart[mon+1]:
+                month = mon +1
+                break
+        else:
+            if ndoy > jstart[mon] - 1 and ndoy <= 367:
+                month = 12
+    if abs(month+1) < 0.01:
+        nday = -1
+    else:
+        if abs(ndoy - 367) < 0.01:
+            month = -1
+            nday = -1
+        else:
+            nday = ndoy - jstart[month - 1] + 1
+    return month , nday
 
 #Routine to compute binomial coefficients for Soddynorm
 #######################################################
@@ -256,7 +281,7 @@ def get_element_list(form_input, program):
     return elements
 
 #Routine to compute percentiles, needed for Sodpct
-def pctil(data, number, npctil):
+def pctil(app_name, data, number, npctil):
     #number  number of data elements
     #sort contains sorted values low to high
     #npctil number of percentiles
@@ -296,10 +321,20 @@ def pctil(data, number, npctil):
     for i in range(npctil -1 ):
         dum = frac * float(i+1) + 0.5
         idum = int(dum)
-        pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
 
-    return pctile, sort
-
+        if app_name == 'Sodthr':
+            if sort[idum - 1] < -0.5 or sort[idum] < -0.5:
+                pctile[i] = -1
+            elif sort[idum - 1] > 366.5 or sort[idum] > 366.5:
+                pctile[i] =  367
+            else:
+                pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
+        else:
+            pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
+    if app_name == 'Sodpct':
+        return pctile, sort
+    elif app_name == 'Sodthr':
+        return pctile, sort, xmed
 
 #Routine to filter out data according to window specification(sodlist)
 #######################################################################

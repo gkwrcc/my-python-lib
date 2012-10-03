@@ -44,7 +44,6 @@ def Sodthr(**kwargs):
 
         #Check for empty data
         if not any(el_data[j] for j in range(len(el_data))):
-            #three result tables
             results[i][0] = []
             results[i][1] = []
             results[i][2] = []
@@ -71,12 +70,13 @@ def Sodthr(**kwargs):
             le_1 = 'l';le_2 = 'e'
             misdat = 10; misdif = 10
         numthr = len(thresholds)
+        #Initialize result array
+        for table in range(3):
+            results[i][table] = [[999.9 for k in range(11)] for thresh in range(numthr)]
         #Initialize data arrays
         yr_doy_data = [[999.9 for doy in range(366)] for yr in range(num_yrs)]
         ndiff = [[999 for j in range(2)] for yr in range(num_yrs)]
         nts =[[[999 for k in range(3)]for j in range(2)]for yr in range(num_yrs)]
-        thrpct = [[[999.9 for k in range(3)] for j in range(11)]for l in range(10)]
-
         #Populate yr_doy_data dealing with flags on original data
         for yr in range(num_yrs):
             for doy in range(366):
@@ -227,10 +227,24 @@ def Sodthr(**kwargs):
                                 nts[nyear -1][period -1][0] = 367
                             else:
                                 nts[nyear - 1][period - 1][0] = -1
-                    #end of while loop
+                        #end of while loop
                     nts[nyear -1 ][period - 1][1] = miss1
                     nts[nyear - 1][period - 1][2] = miss1
+                    #End of period loop
 
+                #Now do differences in dates
+                ndoy1 = nts[nyear - 1][0][0]
+                ndoy2 = nts[nyear -1][1][0]
+                mo1, ndy1 = WRCCUtils.Jutoca(ndoy1)
+                mo2, ndy2 = WRCCUtils.Jutoca(ndoy2)
+
+                ndif = ndoy2 - ndoy1
+                if ndif < 0:ndif+=366
+
+                #If th event did not occur, set value to 367
+                if ndoy1 == -1 or ndoy1 == 367 or ndoy2 == -1 or ndoy2 == 367:
+                    ndif = 367
+                else:
                     #Leap year check loop
                     #Reset Counters
                     #The following code is merely to find whether the period selected contains a leap year
@@ -238,6 +252,97 @@ def Sodthr(**kwargs):
                     #1)Period starts before or after Feb 29
                     #2)Midpoint is before or after Feb 29
                     #3)Date of occurrence is before or after Feb 29
+                    leap = 0
+                    includ = 0
+                    nyyearl = nyear
+                    moda1 = 100 * mo1 + ndy1
+                    moda2 = 100 * mo2 + ndy2
+                    if ndoyst <= 60:
+                        if ndoymd < 60:
+                            if ndoy2 >= 60:
+                                includ =1
+                                nyearl = nyear
+                        else:
+                            if ndoy1 <= 60:
+                                includ = 1
+                                nyearl = nyear
+                    else: #Period starts after Feb 29
+                        if ndoymd <= 60:
+                            if ndoy2 >= 60:
+                                includ =1
+                                nyearl = nyear +1
+                        else:
+                            if nddoy1 < 60:
+                                includ =1
+                                nyearl = nyear +1
+
+                    if includ ==1:
+                        if WRCCUtils.is_leap_year(start_year + nyearl):
+                            leap = 1
+                        if leap == 0:
+                            ndif-=1 # end of check year loop
+
+                if ndoy1 == -1 or ndoy1 == 367:mo1 = -1;ndy1 = -1
+                if ndoy2 == -1 or ndoy2 == 367:mo2 = -1;ndy2 = -1
+                ndiff[nyear - 1 ][0] = ndif
+
+                #Find total number of missing dys for period 1 and 2
+                missyr = nts[nyear - 1][0][1] + nts[nyear - 1][0][2] + nts[nyear - 1][1][1] + nts[nyear - 1][1][2]
+                ndiff[nyear - 1][1] = missyr
+                #End of year loop
+            modast  = 100 * most + ndyst
+            modaen = 100 * moen + ndyen
+
+            #Now find percentiles for this threshold
+            #Find the lowest, highest and 10th through 90th percentile
+            #For 5 - 9 years, find 20th percentile and extremes
+
+            #Do 2 periods, first and secon table
+            thrpct = [[[999.9 for k in range(11)] for thresh in range(numthr)] for period in range(3)]
+            for period in range(3):
+                icount = 0
+                array = {}
+                for yr in range(num_yrs):
+                    if period == 2: #differences
+                        if ndiff[yr][1] < kwargs['miss_days_2']:
+                            icount+=1
+                        array[icount -1] = ndiff[yr][0]
+                    else:
+                        if nts[yr][period][1] + nts[yr][period][2] < kwargs['miss_days_1']:
+                            icount+=1
+                            array[icount -1] = nts[yr][period][0]
+                    #End year loop
+
+                if icount >= 5:
+                    pctile, sort, xmed = WRCCUtils.pctil('Sodthr', array, icount, 5)
+                    thrpct[period][ithr - 1][5] = xmed
+                    thrpct[period][ithr - 1][2] = pctile[0]
+                    thrpct[period][ithr - 1][4] = pctile[1]
+                    thrpct[period][ithr - 1][6] = pctile[2]
+                    thrpct[period][ithr - 1][8] = pctile[3]
+                    thrpct[period][ithr - 1][0] = sort[0]
+                    thrpct[period][ithr - 1][10] = sort[icount - 1]
+
+                if icount >= 10:
+                    pctile, sort, xmed = WRCCUtils.pctil('Sodthr', array, icount, 10)
+                    thrpct[period][ithr - 1][1] = pctile[0]
+                    thrpct[period][ithr - 1][3] = pctile[2]
+                    thrpct[period][ithr - 1][7] = pctile[6]
+                    thrpct[period][ithr - 1][9] = pctile[8]
+                    #End of period loop
+            #End threshold loop
+        #Populate results
+        for period in range(3):
+            for thresh in range(len(thrpct[period])):
+                if period < 2:
+                    icount = 0
+                    for k in range(11):
+                        ndoypc = int(round(thrpct[period][thresh][k]))
+                        nmopc, ndypc = WRCCUtils.Jutoca(ndoypc)
+                        results[i][period][thresh].append('%s %s' % (str(nmopc), str(ndypc)))
+                else:
+                    for k in range(11):
+                        results[i][period][thresh][k] = '%.1f' % thrpct[period][thresh][k]
 
     return results
 '''
@@ -476,7 +581,7 @@ def Sodpct(**kwargs):
                         array[number]=accum[acc_idx]
                 out = [9999.0 for k in range(17)] # low, high and 15 percentages
                 if number >= 10:
-                    pctile, sort = WRCCUtils.pctil(array, number, 10)
+                    pctile, sort = WRCCUtils.pctil('Sodpct', array, number, 10)
                     out[2] = pctile[0]
                     out[3] = pctile[1]
                     out[5] = pctile[2]
@@ -487,16 +592,16 @@ def Sodpct(**kwargs):
                     out[13] = pctile[7]
                     out[14] = pctile[8]
                 if number >= 20:
-                    pctile, sort = WRCCUtils.pctil(array, number, 20)
+                    pctile, sort = WRCCUtils.pctil('Sodpct', array, number, 20)
                     out[1] = pctile[0]
                     out[15] = pctile[18]
                 if number >= 4:
-                    pctile, sort = WRCCUtils.pctil(array, number, 4)
+                    pctile, sort = WRCCUtils.pctil('Sodpct', array, number, 4)
                     out[4] = pctile[0]
                     out[8] = pctile[1]
                     out[12] = pctile[2]
                 if number >= 3:
-                    pctile, sort = WRCCUtils.pctil(array, number, 3)
+                    pctile, sort = WRCCUtils.pctil('Sodpct', array, number, 3)
                     out[6] = pctile[0]
                     out[10] =  pctile[1]
                     out[0] = sort[0]
