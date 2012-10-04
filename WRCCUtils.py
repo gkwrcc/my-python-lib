@@ -47,39 +47,23 @@ def Jutoca(ndoy):
         if ndoy >= jstart[mon]:
             month = mon + 1
             if month == 12:
-                if ndoy != 367:
-                    nday = ndoy - 366 +1
+                if ndoy < 367:
+                    nday = ndoy - 336 +1
                 else:
                     month = -1
                     nday = -1
         else:
             nday = ndoy - jstart[month-1] +1
             break
+
+    nday = str(nday)
+    month = str(month)
+    if len(nday)== 1:
+        nday = '0%s' % nday
+    if len(month) == 1:
+        month = '0%s' % month
     return month, nday
 
-
-'''
-def Jutoca(ndoy):
-    jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
-    month = -1
-    for mon in range(12):
-        if mon < 11:
-            if  ndoy > jstart[mon] -1 and ndoy < jstart[mon+1]:
-                month = mon +1
-                break
-        else:
-            if ndoy > jstart[mon] - 1 and ndoy <= 367:
-                month = 12
-    if abs(month+1) < 0.01:
-        nday = -1
-    else:
-        if abs(ndoy - 367) < 0.01:
-            month = -1
-            nday = -1
-        else:
-            nday = ndoy - jstart[month - 1] + 1
-    return month , nday
-'''
 
 
 #Routine to compute binomial coefficients for Soddynorm

@@ -66,6 +66,7 @@ def Sodthr(**kwargs):
             le_1 = 'l';le_2 = 'e'
             misdat = 10; misdif = 10
         numthr = len(thresholds)
+        print thresholds
         #Initialize result array
         for table in range(3):
             results[i][table] = [[999.9 for k in range(12)] for thresh in range(numthr)]
@@ -73,6 +74,7 @@ def Sodthr(**kwargs):
         yr_doy_data = [[999.9 for doy in range(366)] for yr in range(num_yrs)]
         ndiff = [[999 for j in range(2)] for yr in range(num_yrs)]
         nts =[[[999 for k in range(3)]for j in range(2)]for yr in range(num_yrs)]
+        thrpct = [[[999.9 for k in range(11)] for thresh in range(numthr)] for period in range(3)]
         #Populate yr_doy_data dealing with flags on original data
         for yr in range(num_yrs):
             for doy in range(366):
@@ -126,7 +128,7 @@ def Sodthr(**kwargs):
                 #Kelly's out put messages here?? --> new mssg out or headers in results
             #Loop over years
             for yr in range(num_yrs):
-                nyear = yr #double check this, should be yr +1??
+                nyear = yr + 1 #double check this, should be yr +1??
                 nyeart = nyear
 
                 #Loop over period 1 and 2
@@ -140,8 +142,8 @@ def Sodthr(**kwargs):
                         if le_1 == 'e': ndoyt = ndoyst - 1
                         if le_1 == 'l': ndoyt = ndoymd
                     else:
-                        if le_1 == 'e': ndoyt = ndoytmd - 1
-                        if le_1 == 'l': ndoyt = ndoyen + 1
+                        if le_2 == 'e': ndoyt = ndoymd - 1
+                        if le_2 == 'l': ndoyt = ndoyen + 1
 
                     while last != 1:
                         #Set start day and year
@@ -294,7 +296,6 @@ def Sodthr(**kwargs):
             #For 5 - 9 years, find 20th percentile and extremes
 
             #Do 2 periods, first and secon table
-            thrpct = [[[999.9 for k in range(11)] for thresh in range(numthr)] for period in range(3)]
             for period in range(3):
                 icount = 0
                 array = {}
@@ -334,7 +335,14 @@ def Sodthr(**kwargs):
                     icount = 0
                     for k in range(1,12):
                         ndoypc = int(round(thrpct[period][thresh][k-1]))
-                        nmopc, ndypc = WRCCUtils.Jutoca(ndoypc)
+                        if ndoypc > 0:
+                            nmopc, ndypc = WRCCUtils.Jutoca(ndoypc)
+                        else:
+                            nmopc = -1; ndypc = -1
+                        '''
+                        if period == 1 and k == 2:
+                            print ndoypc, nmopc, ndypc
+                        '''
                         results[i][period][thresh][k] = '%s %s' % (str(nmopc), str(ndypc))
                 else:
                     for k in range(1,12):
