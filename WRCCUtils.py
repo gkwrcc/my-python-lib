@@ -42,6 +42,25 @@ def Catoju(mnth, dy):
 #All years are leap years, used in Sodthr
 def Jutoca(ndoy):
     jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
+    month = 0
+    for mon in range(12):
+        if ndoy >= jstart[mon]:
+            month = mon + 1
+            if month == 12:
+                if ndoy != 367:
+                    nday = ndoy - 366 +1
+                else:
+                    month = -1
+                    nday = -1
+        else:
+            nday = ndoy - jstart[month-1] +1
+            break
+    return month, nday
+
+
+'''
+def Jutoca(ndoy):
+    jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
     month = -1
     for mon in range(12):
         if mon < 11:
@@ -60,6 +79,8 @@ def Jutoca(ndoy):
         else:
             nday = ndoy - jstart[month - 1] + 1
     return month , nday
+'''
+
 
 #Routine to compute binomial coefficients for Soddynorm
 #######################################################

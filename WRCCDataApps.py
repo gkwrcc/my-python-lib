@@ -34,12 +34,8 @@ def Sodthr(**kwargs):
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
-        if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
-            el_data = kwargs['data'][i]
-            num_yrs = len(el_data)
-        else:
-            el_data = kwargs['data'][i]
-            num_yrs = len(el_data)
+        el_data = kwargs['data'][i]
+        num_yrs = len(el_data)
         #el_data[el_idx][yr] ; if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
 
         #Check for empty data
@@ -49,15 +45,15 @@ def Sodthr(**kwargs):
             results[i][2] = []
             continue
         #Set analysis parameters
-        if kwargs['custom_tables']:
-            most = kwargs['interval_start'][0:2]; ndyst = kwargs['interval_start'][2:4]
-            moen = kwargs['interval_end'][0:2]; ndyen = kwargs['interval_end'][2:4]
-            momid = kwargs['midpoint'][0:2]; ndymid = kwargs['midpoint'][2:4]
+        if kwargs['custom_tables'] == True:
+            most = str(kwargs['interval_start'])[0:2]; ndyst = str(kwargs['interval_start'])[2:4]
+            moen = str(kwargs['interval_end'][0:2]); ndyen = str(kwargs['interval_end'])[2:4]
+            momid = str(kwargs['midpoint'][0:2]); ndymid = str(kwargs['midpoint'][2:4])
             thresholds = kwargs['thresholds']
             time_series = kwargs['time_series']
-            ab = kwargs['ab']
-            le_1 = kwargs['le_1']; le_2 = kwargs['le_2']
-            misdat = kwargs['miss_days_1']; misdif = kwargs['miss_days_2']
+            ab = str(kwargs['ab'])
+            le_1 = str(kwargs['le_1']); le_2 = str(kwargs['le_2'])
+            misdat = int(kwargs['miss_days_1']); misdif = int(kwargs['miss_days_2'])
         else:
             most = '01'; ndyst='01'
             moen = '12'; ndyen = '31'
@@ -72,7 +68,7 @@ def Sodthr(**kwargs):
         numthr = len(thresholds)
         #Initialize result array
         for table in range(3):
-            results[i][table] = [[999.9 for k in range(11)] for thresh in range(numthr)]
+            results[i][table] = [[999.9 for k in range(12)] for thresh in range(numthr)]
         #Initialize data arrays
         yr_doy_data = [[999.9 for doy in range(366)] for yr in range(num_yrs)]
         ndiff = [[999 for j in range(2)] for yr in range(num_yrs)]
@@ -98,7 +94,7 @@ def Sodthr(**kwargs):
                     elif el_type == 'avgt':
                         val = (nval_x + nval_n)/2.0
                 else:
-                    dat = el_data[yr][doy]
+                    dat = el_data[yr][0][doy]
                     val, flag = WRCCUtils.strip_data(dat)
                     if flag == 'M':
                         continue
@@ -304,15 +300,14 @@ def Sodthr(**kwargs):
                 array = {}
                 for yr in range(num_yrs):
                     if period == 2: #differences
-                        if ndiff[yr][1] < kwargs['miss_days_2']:
+                        if ndiff[yr][1] < misdif:
                             icount+=1
                         array[icount -1] = ndiff[yr][0]
                     else:
-                        if nts[yr][period][1] + nts[yr][period][2] < kwargs['miss_days_1']:
+                        if nts[yr][period][1] + nts[yr][period][2] < misdat:
                             icount+=1
                             array[icount -1] = nts[yr][period][0]
                     #End year loop
-
                 if icount >= 5:
                     pctile, sort, xmed = WRCCUtils.pctil('Sodthr', array, icount, 5)
                     thrpct[period][ithr - 1][5] = xmed
@@ -334,15 +329,16 @@ def Sodthr(**kwargs):
         #Populate results
         for period in range(3):
             for thresh in range(len(thrpct[period])):
+                results[i][period][thresh][0] = thresholds[thresh]
                 if period < 2:
                     icount = 0
-                    for k in range(11):
-                        ndoypc = int(round(thrpct[period][thresh][k]))
+                    for k in range(1,12):
+                        ndoypc = int(round(thrpct[period][thresh][k-1]))
                         nmopc, ndypc = WRCCUtils.Jutoca(ndoypc)
-                        results[i][period][thresh].append('%s %s' % (str(nmopc), str(ndypc)))
+                        results[i][period][thresh][k] = '%s %s' % (str(nmopc), str(ndypc))
                 else:
-                    for k in range(11):
-                        results[i][period][thresh][k] = '%.1f' % thrpct[period][thresh][k]
+                    for k in range(1,12):
+                        results[i][period][thresh][k] = '%.1f' % thrpct[period][thresh][k -1]
 
     return results
 '''
