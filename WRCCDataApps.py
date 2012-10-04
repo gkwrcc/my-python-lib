@@ -373,9 +373,17 @@ def Sodpct(**kwargs):
     start_year = int(dates[0][0:4])
     end_year = int(dates[0][0:4])
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range), hdd, cdd, gdd, pcpn, snow or snwd
+    if kwargs['number_days_ahead']== 1:
+        ia = 'I'
+    else:
+        ia = kwargs['ia']
+    if kwargs['accumulate_over_season'] is not None:
+        ncom = 1
+    else:
+        ncom = kwargs['number_days_ahead']
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
-        el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range), hdd, cdd, gdd, pcpn, snow or snwd
         if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
             el_data = kwargs['data'][i]
             num_yrs = len(el_data[0])
@@ -433,7 +441,7 @@ def Sodpct(**kwargs):
                     val, flag = WRCCUtils.strip_data(dat)
                     if flag == 'T':
                         val = 0.001
-                    if kwargs['ia'] == 'a': #if kwargs['ia'] == 'i', S,A flags are treated as missing
+                    if ia == 'a': #if kwargs['ia'] == 'i', S,A flags are treated as missing
                         if flag == 'S':
                             val+=2000.0
                         elif flag == 'A':
@@ -460,6 +468,9 @@ def Sodpct(**kwargs):
             if el_type == 'hdd':
                 monlo = 7
                 nonhi = 18
+            elif el_type in ['cdd', 'gdd']:
+                monlo = 1
+                monhi = 12
             else:
                 monlo = kwargs['begin_month']
                 monhi = monlo + 11
@@ -474,6 +485,7 @@ def Sodpct(**kwargs):
                 nfrst = 0
                 if kwargs['accumulate_over_season'] is not None and day_idx == 0 and mon == monlo:
                     nfrst = 1
+                #Get day of typical year
                 doy = WRCCUtils.compute_doy_leap(str(mon),str(day_idx+1)) - 1
                 number = 0
                 array={}
@@ -495,7 +507,7 @@ def Sodpct(**kwargs):
 
                     #Loop over number of days to look ahead for each year
                     breaker = False
-                    for icom in range(kwargs['number_days_ahead']):
+                    for icom in range(ncom):
                         ndoyt+=1
                         if ndoyt > 365:
                             ndoyt-=365
@@ -518,7 +530,7 @@ def Sodpct(**kwargs):
                             breaker = True
                             break
 
-                        if kwargs['ia'] == 'I':
+                        if ia == 'I':
                             if el_type in ['pcpn', 'snow', 'snwd', 'hdd', 'cdd', 'gdd']:
                                 if val > 1999.0: #skip this year
                                     breaker = True
@@ -527,7 +539,7 @@ def Sodpct(**kwargs):
                             array[number - 1] = val
                         #number+=1
                         #array[number - 1] = val
-                        if kwargs['ia'] == 'A':
+                        if ia == 'A':
                             if el_type in ['pcpn', 'snow', 'snwd']:
                                 if icom == 0:
                                     if yr_idx == 0 and doy == 1:
@@ -539,7 +551,7 @@ def Sodpct(**kwargs):
                                         if valm > 1999.0 and valm < 2999.0:
                                             breaker = True
                                             break
-                                if icom == kwargs['number_days_ahead'] - 1: #end of days_ahead loop
+                                if icom == ncom - 1: #end of days_ahead loop
                                     #Check if last day is 'S', if so skip that year
                                     if val > 1999.0 and val < 2999.0:
                                         breaker = True
@@ -565,7 +577,7 @@ def Sodpct(**kwargs):
                     if breaker:
                         continue
 
-                    if kwargs['ia'] == 'A':
+                    if ia == 'A':
                         if el_type in ['maxt', 'mint', 'dtr', 'avgt'] and valcnt >0:
                             valsum = valsum/valcnt
                         number+=1
@@ -611,7 +623,7 @@ def Sodpct(**kwargs):
                     out[0] = sort[0]
                     out[16] = sort[number-1]
 
-                results[i][doy] = [str(mon), str(day_idx + 1), str(kwargs['number_days_ahead']), str(kwargs['ia']), str(number)]
+                results[i][doy] = [str(mon), str(day_idx + 1), str(ncom), str(ia), str(number)]
                 for pct_idx,pct in enumerate(out):
                     if pct >= 9998.0:
                         results[i][doy].append('*')
@@ -624,6 +636,14 @@ def Sodpct(**kwargs):
                             results[i][doy].append('%.2f' % pct)
                     else:
                         results[i][doy].append('%.1f' % pct)
+        #Resort data if monlo !=1
+        if monlo != 1:
+            doy_start = WRCCUtils.compute_doy_leap(str(monlo), '01')
+            doy_start-=1
+            results_temp = results[i][doy_start:]
+            for doy in range(doy_start):
+                results_temp.append(results[i][doy])
+            results[i] = results_temp
     return results
 
 '''
