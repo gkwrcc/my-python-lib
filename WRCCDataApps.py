@@ -385,7 +385,7 @@ def Sodpct(**kwargs):
         #el_data[el_idx][yr] ; if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
         #Check for empty data
         if not any(el_data[j] for j in range(len(el_data))):
-            results[i] = []
+            results[i] = {}
             continue
         #for each yr in record and each dy of year find values for percentile caculation
         yr_doy_data = [[9999.0 for doy in range(366)] for yr in range(num_yrs)]
@@ -518,16 +518,16 @@ def Sodpct(**kwargs):
                             breaker = True
                             break
 
-                        if kwargs['ia'] == 'i':
+                        if kwargs['ia'] == 'I':
                             if el_type in ['pcpn', 'snow', 'snwd', 'hdd', 'cdd', 'gdd']:
                                 if val > 1999.0: #skip this year
                                     breaker = True
                                     break
-                           # number+=1
-                           # array[number - 1] = val
-                        number+=1
-                        array[number - 1] = val
-                        if kwargs['ia'] == 'a':
+                            number+=1
+                            array[number - 1] = val
+                        #number+=1
+                        #array[number - 1] = val
+                        if kwargs['ia'] == 'A':
                             if el_type in ['pcpn', 'snow', 'snwd']:
                                 if icom == 0:
                                     if yr_idx == 0 and doy == 1:
@@ -548,7 +548,7 @@ def Sodpct(**kwargs):
                                 if val > 1999.0:val-=2000.0
 
                             if kwargs['threshold'] is not None:
-                                if kwargs['threshold_ab'] == 'A':
+                                if kwargs['threshold_ab'] == 'a':
                                     if val > kwargs['threshold']:
                                         val = 1
                                     else:
@@ -565,7 +565,7 @@ def Sodpct(**kwargs):
                     if breaker:
                         continue
 
-                    if kwargs['ia'] == 'a':
+                    if kwargs['ia'] == 'A':
                         if el_type in ['maxt', 'mint', 'dtr', 'avgt'] and valcnt >0:
                             valsum = valsum/valcnt
                         number+=1
