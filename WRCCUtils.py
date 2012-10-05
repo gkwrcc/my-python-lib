@@ -264,7 +264,7 @@ def get_element_list(form_input, program):
     elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun', 'Sodthr']:
         if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'range':
             elements = ['maxt', 'mint']
-        elif program in ['Sodpct', 'Sodthr']:
+        elif program in ['Sodpct', 'Sodthr', 'Sodxtrmts']:
             if form_input['element'] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
                 elements = ['maxt', 'mint']
             else:

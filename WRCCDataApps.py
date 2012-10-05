@@ -8,22 +8,76 @@ import WRCCUtils
 import numpy
 import sys
 
+
 '''
-This program can be used to find the latest spring and   '/
-earliest fall frost (or other temperature(s)) each year. '/
-However, it is written much more generally to allow      '/
-finding the latest or earliest occurrence above or below '/
-a threshold value, for a period up to 12-months long,    '/
-which may extend from one year into the next (for example,'/
-the winter season from July thru June), for up to 10 sets '/
-of values.  Furthermore, the "midpoint" of the period can '/
-be set anywhere between the starting and ending dates.    '/
-For example, July 31 can be used as mid-year, rather than '/
-June 30 (is a frost on July 2 the "last frost" of  spring,'/
-or the "first frost" of autumn??)  A time series of the   '/
-values for each half of the interval is formed, and the   '/
-probability of exceedance is calculated, using only those '/
-years with less missing data than the user specifies as a '/
+Sodxtrmts
+THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
+LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
+'''
+def Sodxtrmts(**kwargs):
+    results = defaultdict(list)
+    dates = kwargs['dates']
+    start_year = int(dates[0][0:4])
+    end_year = int(dates[0][0:4])
+    #Initialize analysis parameters
+    mischr = [' ','a','b','c','d','e','f','g','h','i','j',\
+            'k','l','m','n','o','p','q','r','s','t','u','v',\
+            'w','x','y','z','=','*']
+    #pnlist contains the list of numpn nonexceedance probabilities
+    pnlist = [.0001, .0002, .0003, .0004, .0005, .0010, .0020,\
+            .0025, .0033, .0040, .0050, .0100, .0200, .0250,\
+            .0333, .0400, .0500, .1000, .2000, .2500, .3000,\
+            .3333, .4000, .5000, .6000, .7000, .7500, .8000,\
+            .8333, .8750, .9000, .9500, .9600, .9666, .9750,\
+            .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
+            .9990, .9995, .9996, .9998, .9999]
+    #ppiii contains the list of nonexceedance probabilities read in from
+    #the file containing the values
+    piiili = [.0001, .0005, .0010, .0050, .0100, .0200, .0250,\
+            .0400, .0500, .1000, .2000, .3000, .4000, .5000,\
+            .6000, .7000, .8000, .9000, .9500, .9600, .9750,\
+            .9800, .9900, .9950, .9990, .9995, .9999]
+    probs = [0.001, 0.002, 0.005, 0.01, 0.02, 0.04, 0.50, 0.1, \
+            0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.96, 0.9666, \
+            0.975, 0.98, 0.99, 0.995, 0.996, 0.998, 0.999]
+    probss = probs
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        elements = kwargs['elements']
+        el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
+        el_data = kwargs['data'][i]
+        num_yrs = len(el_data)
+        #el_data[el_idx][yr] ;
+        #if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
+
+        #Check for empty data and initialize results directory
+        if not any(el_data[j] for j in range(len(el_data))):
+            results[i] = []
+            continue
+        results[i] = [[] for k in range(num_yrs + 6)]
+        for yr in range(num_yrs):
+            year = start_year + yr
+            results[i][yr] = [str(year)]
+        results[i][num_yrs] = ['MEAN'];results[i][num_yrs+1]=['S.D.']
+        results[i][num_yrs+2] = ['SKW10'];results[i][num_yrs+3]=['MAX']
+        results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YEARS']
+    return results
+'''
+Sodthr
+This program can be used to find the latest spring and
+earliest fall frost (or other temperature(s)) each year.
+However, it is written much more generally to allow
+finding the latest or earliest occurrence above or below
+a threshold value, for a period up to 12-months long,
+which may extend from one year into the next (for example,
+the winter season from July thru June), for up to 10 sets
+of values.  Furthermore, the "midpoint" of the period can
+be set anywhere between the starting and ending dates.
+For example, July 31 can be used as mid-year, rather than
+June 30 (is a frost on July 2 the "last frost" of  spring
+or the "first frost" of autumn??)  A time series of the
+values for each half of the interval is formed, and the
+probability of exceedance is calculated, using only those
+years with less missing data than the user specifies as a
 minimum.
 '''
 def Sodthr(**kwargs):
@@ -36,7 +90,8 @@ def Sodthr(**kwargs):
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
         el_data = kwargs['data'][i]
         num_yrs = len(el_data)
-        #el_data[el_idx][yr] ; if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
+        #el_data[el_idx][yr] ;
+        #if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
 
         #Check for empty data
         if not any(el_data[j] for j in range(len(el_data))):
@@ -66,7 +121,6 @@ def Sodthr(**kwargs):
             le_1 = 'l';le_2 = 'e'
             misdat = 10; misdif = 10
         numthr = len(thresholds)
-        print thresholds
         #Initialize result array
         for table in range(3):
             results[i][table] = [[999.9 for k in range(12)] for thresh in range(numthr)]
