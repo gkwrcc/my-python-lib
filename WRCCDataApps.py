@@ -15,6 +15,7 @@ THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
 LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
 '''
 def Sodxtrmts(**kwargs):
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(list)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
@@ -60,6 +61,132 @@ def Sodxtrmts(**kwargs):
         results[i][num_yrs] = ['MEAN'];results[i][num_yrs+1]=['S.D.']
         results[i][num_yrs+2] = ['SKW10'];results[i][num_yrs+3]=['MAX']
         results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YEARS']
+        #Read in Pearson III lookup tables/to be done
+        #PIII = []
+        table_1 = [[-9999.0 for mon in range(13)] for yr in range(num_yrs)]
+        table_2 = [[31 for mon in range(13)] for yr in range(num_yrs)]
+
+        xmiss = -9999.0
+        #Year loop
+        for yr in range(num_yrs):
+            annmin =  9999.0
+            annmax = -9999.0
+            annflg = [' ' for k in range(13)]
+            icount = 0
+            #Month loop
+            for monind in range(12):
+                nyeart = yr
+                mon =  monind + int(kwargs['start_month'].lstrip('0'))
+                if mon > 11:
+                    mon-=12
+                    nyeart==1
+                flag = ' '
+                sumda = 0
+                summ = 0
+                summ2 = 0
+                xmin = 9999.0
+                xmax = -9999.0
+                #Day loop
+                for nda in range(mon_lens[mon]):
+                    val = None
+                    if el_type in ['maxt', 'mint']:
+                        dat = el_data[yr][0][nda]
+                        val, flag = WRCCUtils.strip_data(dat)
+                        if flag == 'M':
+                            value = xmiss
+                        else:
+                            try:
+                                value = float(val)
+                            except:
+                                value = xmiss
+                    elif el_type in ['pcpn', 'snow', 'snwd']:
+                        if flag == 'M':
+                            value = xmiss
+                        elif flag == 'T':
+                            value = 0.001
+                        elif flag == 'S':
+                            value = 245.0
+                        elif flag == 'A':
+                            try:
+                                value = float(val)
+                                value = value +100
+                            except:
+                                value = xmiss
+                        else:
+                            try:
+                                value = float(val)
+                            except:
+                                value = xmiss
+                    else:
+                        #We have to compute values from maxt, mint
+                        dat_x = el_data[yr][0][nda]
+                        dat_n = el_data[yr][1][nda]
+                        val_x, flag_x = WRCCUtils.strip_data(dat_x)
+                        val_n, flag_n = WRCCUtils.strip_data(dat_n)
+                        if flag_x == 'M' or flag_n == 'M':
+                            value = xmiss
+                        else:
+                            try:
+                                nval_x = int(val_x)
+                                nval_n = int(val_n)
+
+                                if el_type == 'dtr':
+                                    value = nval_x - nval_n
+                                elif el_type == 'avgt':
+                                    value = (nval_x + nval_n)/2.0
+                                elif el_type in ['hdd','cdd']:
+                                    ave = (nval_x + nval_n)/2.0
+                                    if el_type == 'hdd':
+                                        value = kwargs['base_temperature'] - ave
+                                    else:
+                                        value = ave - kwargs['base_temperature']
+                                    if value < 0:
+                                        value = 0
+                                elif el_type == 'gdd':
+                                    value = (nval_x + nval_n)/2.0 - kwargs['base_temperature']
+                            except:
+                                value = xmiss
+                    if kwargs['analysis_type'] in ['mmax', 'mmin']:
+                        if value > -9998.0:
+                            sumda+=1
+                        else:
+                            if el_type == 'snow' and abs(value - 245.0) < 0.01: #S flag
+                                value = 0
+                            elif el_type == 'snow' and value > 99.99 and value < 240.0: #A flag
+                                value -=100.0
+
+                                if kwargs['analysis_type'] == 'mmax' and value > xmax:
+                                    xmax = value
+                                if kwargs['analysis_type'] == 'mmin' and value < xmin:
+                                    xmin = value
+                                annflag[mon] = 'A'
+
+                        if kwargs['analysis_type'] == 'mmax' and value > xmax:xmax = value
+                        if kwargs['analysis_type'] == 'mmin' and value < xmin:xmin = value
+
+                        if nda  == mon_lens[mon] -1:
+                            if kwargs['analysis_type'] == 'mmax':table_1[nyear][mon] = xmax
+                            if kwargs['analysis_type'] == 'mmin':table_1[nyear][mon] = xmin
+                            table_2[nyear][mon] = mon_lens[mon] - sumda
+                        continue
+
+                    if kwargs['analysis_type'] == ['mave']:
+                        if el_type == 'snow' and abs(value - 245.0) < 0.01: #S flag
+                            value = 0
+                        elif el_type == 'snow' and value > 99.99 and value < 240.0: #A flag
+                            value-=100.0
+
+                        if value > -9998.0:
+                            summ+=value
+                            sumda+=1
+                        if nda  == mon_lens[mon] -1:
+                            if sumda >= 0.5:
+                                table_1[nyear][mon] =summ/sumda
+                                table_2[nyear][mon] = mon_lens[mon] - sumda
+
+
+
+
     return results
 '''
 Sodthr
