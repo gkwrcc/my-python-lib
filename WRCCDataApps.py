@@ -7,7 +7,7 @@ from collections import defaultdict
 import WRCCUtils
 import numpy
 import sys
-
+import fileinput
 
 '''
 Sodxtrmts
@@ -17,6 +17,7 @@ LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
 def Sodxtrmts(**kwargs):
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(list)
+    fa_results = defaultdict(list)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
     end_year = int(dates[0][0:4])
@@ -42,6 +43,22 @@ def Sodxtrmts(**kwargs):
             0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.96, 0.9666, \
             0.975, 0.98, 0.99, 0.995, 0.996, 0.998, 0.999]
     probss = probs
+    #Read in piii table:
+    piii = [[] for k in range(181)]
+    count = 0
+    for line in fileinput.input(['piii.dat.2']):
+        count+=1
+        if count > 11 and count < 193:
+            piii[count - 12] = [int(line[5:10].lstrip()), int(line[10:15].lstrip()), int(line[15:20].lstrip()), \
+            int(line[20:25].lstrip()), int(line[25:30].lstrip()), int(line[30:35].lstrip()), \
+            int(line[35:40].lstrip()), int(line[40:45].lstrip()), int(line[45:50].lstrip()), int(line[50:55].lstrip()), \
+            int(line[55:60].lstrip()), int(line[60:65].lstrip()), int(line[65:70].lstrip()), int(line[70:75].lstrip())]
+
+        if count > 194:
+            piii[count - 195] + [int(line[5:10].lstrip()), int(line[10:15].lstrip()), int(line[15:20].lstrip()), \
+            int(line[20:25].lstrip()), int(line[25:30].lstrip()), int(line[30:35].lstrip()), \
+            int(line[35:40].lstrip()), int(line[40:45].lstrip()), int(line[45:50].lstrip()), \
+            int(line[50:55].lstrip()),int(line[55:60].lstrip()), int(line[60:65].lstrip()), int(line[65:70].lstrip())]
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
@@ -53,8 +70,10 @@ def Sodxtrmts(**kwargs):
         #Check for empty data and initialize results directory
         if not any(el_data[j] for j in range(len(el_data))):
             results[i] = []
+            fa_results[i] = []
             continue
         results[i] = [[] for k in range(num_yrs + 6)]
+        fa_results[i] = ['Pnoxc']
         for yr in range(num_yrs):
             year = start_year + yr
             results[i][yr] = [str(year)]
@@ -417,22 +436,103 @@ def Sodxtrmts(**kwargs):
                 else:
                     mon = monind
 
+                intgr = int(table_2[yr][mon])
+                if intgr > 26:intgr = 26
+                #Special for accumulations or subsequents
+                outchr[monind] = mischr[intgr]
+                if annsav[yr][mon] != ' ':outchr[monind] = annsav[yr][mon]
+
                 if kwargs['departures_from_averages']  == 'F':
-                    results[i][yr].append('%.2f' % table_1[yr][mon])
+                    results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
                 else:
-                    results[i][yr].append('%.2f' % (table_1[yr][mon] - mean_out[monind]))
+                    results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
                 if table_1[yr][mon] < -9998.0:results[i][yr][-1] = 9999.0
                 if table_1[yr][mon] > 9998.5:
                     if kwargs['analysis_type'] == 'msum' and el_type == 'hdd':
                         continue
                     else:
                         results[i][yr][-1] = 9999.0
-                intgr = int(table_2[yr][mon])
-                if intgr > 26:intgr = 26
-                #Special for accumulations or subsequents
-                outchr[monind] = mischr[intgr - 1]
-                if annsav[yr][mon] != ' ':outchr[monind] = annsav[yr][mon]
             #End month loop
+        #End of year loop
+
+        #Start for frequency analysis
+        #Initialize data arrays
+        proutp = [[0.0 for k in range(13)] for l in range(24)]
+        xdata = [0 for k in range(50000)]
+        xx = [0 for k in range(50000)]
+        if kwargs['frequency_analysis'] == 'T':
+            fa_type = kwargs['frequency_analysis_type']
+            #fa types: p = PearsonIII, g = Generalized Extreme values
+            #b =  Beta-P, c = Cnesored Gamma
+
+        for nmoind in range(13):
+            if nmoind <= 11:
+                nmo = nmoind + int(kwargs['start_month'].lstrip('0')) - 1
+                if nmo > 11:
+                    nmo-=12
+            else:
+                nmo =nmoind
+
+            numdat = 0
+            numnz = 0
+            last_year = num_yrs
+            if int(kwargs['start_month'].lstrip('0')) !=1:
+                last_year-=1
+            for nyear in range(last_year):
+
+                dat = table_1[nyear][nmo]
+                misng = table_2[nyear][nmo]
+                if abs(dat) < 9998.5:
+                    if int(misng) < kwargs['max_missing_days']:
+                        numdat+=1
+                        xdata[numdat] = dat
+                        if dat > 0.005:numnz+=1
+                        xx[numdat] = dat
+                        #Note that xmax, xmin were re-determinde in capiii
+                #End year loop
+            if numdat < 5:
+                fa_results[i].append('Not enough data to perfom frequency analysis')
+                break
+
+            #Set some bouns for certain types of analyses to avoid obvious
+            #problems like negative precip or threshold excedances.
+            #Also don't perform certain analyses for some element/analysis combinations.
+            if el_type in ['maxt', 'mint', 'avgt']:
+                vmin = -999.9
+                vmax = 999.0
+            elif el_type == 'dtr':
+                vmin = 0.0
+                vmax = 999.0
+            else:
+                vmin = 0.0
+                vmax = 99999.0
+
+            if kwargs['analysis_type'] == 'ndays':
+                vmin = 0.0
+                if nmo <= 11:
+                    vmax = float(mon_lens[nmo])
+                else:
+                    vmax = 365.24
+
+            #Frequency Analysis routines
+            if kwargs['frequency_analysis'] == 'p':
+                #NOTES: piii is loaded
+                #psd = WRCCUtils.capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
+                pass
+            elif kwargs['frequency_analysis'] == 'g':
+                #WRCCUtils.gev()
+                pass
+            elif kwargs['frequency_analysis'] == 'b':
+                #WRCCUtils.cabetap()
+                pass
+            elif kwargs['frequency_analysis'] == 'c':
+                #WRCCUtils.cagamma()
+                pass
+
+            #End nmonind loop
+
+
+
     return results
 '''
 Sodthr
