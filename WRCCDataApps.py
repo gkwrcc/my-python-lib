@@ -308,8 +308,8 @@ def Sodxtrmts(**kwargs):
                     sumann+=summon
 
                 elif kwargs['analysis_type'] in ['mave', 'ndays', 'msum']:
-                    if int(summon) <= kwargs['max_missing_days']:
-                        sumann+=summon
+                    if int(summon) <= int(kwargs['max_missing_days']):
+                        sumann+=valmon
                         count+=1
 
                 elif kwargs['analysis_type'] == 'sd':
@@ -327,13 +327,13 @@ def Sodxtrmts(**kwargs):
                 table_2[yr][12] = sumann
             elif kwargs['analysis_type'] == 'mave':
                 if count > 0.5:
-                    table_1[yr][12] = sumann/count
+                    table_1[yr][12] = float(sumann)/float(count)
                     table_2[yr][12] = 12.0 - count
             elif kwargs['analysis_type'] == 'sd':
                 table_1[yr][12] = 0.0
                 table_2[yr][12] = 12.0
             elif kwargs['analysis_type'] in ['ndays', 'msum']:
-                table_1[yr][12] = sumann
+                table_1[yr][12] = float(sumann)
                 table_2[yr][12] = 12.0 - count
             elif kwargs['analysis_type'] == 'rmon':
                 if el_type != 'dtr':
