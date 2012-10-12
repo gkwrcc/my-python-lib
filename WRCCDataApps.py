@@ -44,21 +44,37 @@ def Sodxtrmts(**kwargs):
             0.975, 0.98, 0.99, 0.995, 0.996, 0.998, 0.999]
     probss = probs
     #Read in piii table:
-    piii = [[] for k in range(181)]
+    piii = {}
     count = 0
-    for line in fileinput.input(['piii.dat.2']):
+    for line in fileinput.input(['/Users/bdaudert/DRI/my-python-lib/piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
-            piii[count - 12] = [int(line[5:10].lstrip()), int(line[10:15].lstrip()), int(line[15:20].lstrip()), \
-            int(line[20:25].lstrip()), int(line[25:30].lstrip()), int(line[30:35].lstrip()), \
-            int(line[35:40].lstrip()), int(line[40:45].lstrip()), int(line[45:50].lstrip()), int(line[50:55].lstrip()), \
-            int(line[55:60].lstrip()), int(line[60:65].lstrip()), int(line[65:70].lstrip()), int(line[70:75].lstrip())]
-
+            skew = line[1:4].lstrip()
+            if skew[0] == '-':
+                if skew[1] == '0' and skew[2] != '0':
+                    skew = '-%s' % skew[2]
+                elif skew[1] == '0' and skew[2] == '0':
+                    skew = 0
+            else:
+                if skew == '00':
+                    skew = 0
+                else:
+                    skew.lstrip('0')
+            skew = int(skew)
+            piii[skew] = []
+            for k in range(1,15):
+                piii[skew].append(int(line[5*k:5*k+5]))
         if count > 194:
-            piii[count - 195] + [int(line[5:10].lstrip()), int(line[10:15].lstrip()), int(line[15:20].lstrip()), \
-            int(line[20:25].lstrip()), int(line[25:30].lstrip()), int(line[30:35].lstrip()), \
-            int(line[35:40].lstrip()), int(line[40:45].lstrip()), int(line[45:50].lstrip()), \
-            int(line[50:55].lstrip()),int(line[55:60].lstrip()), int(line[60:65].lstrip()), int(line[65:70].lstrip())]
+            skew = line[1:4].lstrip()
+            if skew[0] == '-':
+                if skew[1] == '0':
+                    skew = '-%s' % skew[2]
+            else:
+                skew.lstrip('0')
+            skew = int(skew)
+            for k in range(1,14):
+                piii[skew].append(int(line[5*k:5*k+5]))
+
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
@@ -73,7 +89,13 @@ def Sodxtrmts(**kwargs):
             fa_results[i] = []
             continue
         results[i] = [[] for k in range(num_yrs + 6)]
-        fa_results[i] = ['Pnoxc']
+        #Initialize frequency analysis result arrays:
+        proutp = [[0 for k in range(13)] for l in range(len(probs))]
+        proutg = [[0 for k in range(13)] for l in range(len(probs))]
+        proutb = [[0 for k in range(13)] for l in range(len(probs))]
+        proutc = [[0 for k in range(13)] for l in range(len(probs))]
+        if 'frequency_analysis_type' in kwargs.keys():
+            fa_results[i] = [['%s %s' % (str(kwargs['frequency_analysis_type']), probss[k])] for k in range(len(probss))]
         for yr in range(num_yrs):
             year = start_year + yr
             results[i][yr] = [str(year)]
@@ -456,10 +478,8 @@ def Sodxtrmts(**kwargs):
         #End of year loop
 
         #Start for frequency analysis
-        #Initialize data arrays
-        proutp = [[0.0 for k in range(13)] for l in range(24)]
-        xdata = [0 for k in range(50000)]
-        xx = [0 for k in range(50000)]
+        xdata = {}
+        xx = {}
         if kwargs['frequency_analysis'] == 'T':
             fa_type = kwargs['frequency_analysis_type']
             #fa types: p = PearsonIII, g = Generalized Extreme values
@@ -485,9 +505,9 @@ def Sodxtrmts(**kwargs):
                 if abs(dat) < 9998.5:
                     if int(misng) < kwargs['max_missing_days']:
                         numdat+=1
-                        xdata[numdat] = dat
+                        xdata[numdat-1] = dat
                         if dat > 0.005:numnz+=1
-                        xx[numdat] = dat
+                        xx[numdat-1] = dat
                         #Note that xmax, xmin were re-determinde in capiii
                 #End year loop
             if numdat < 5:
@@ -515,25 +535,31 @@ def Sodxtrmts(**kwargs):
                     vmax = 365.24
 
             #Frequency Analysis routines
-            if kwargs['frequency_analysis'] == 'p':
-                #NOTES: piii is loaded
-                #psd = WRCCUtils.capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
-                pass
-            elif kwargs['frequency_analysis'] == 'g':
+            if fa_type == 'p': #Pearson III
+                (psd, ave, stdev, sk, cv, xmax, xmin) = WRCCUtils.Capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
+                for k in range(len(probss)): #len(probss) = 24
+                    for j in range(len(pnlist)):  #len(pnlist) = 47
+                        if (pnlist[j] - probss[k]) < 0.00001:
+                            print k,monind
+                            proutp[k][monind] = ave + stdev*psd[j]
+                            if proutp[k][monind] < vmin:proutp[k][monind] = vmin
+                            if proutp[k][monind] > vmax:proutp[k][monind] = vmax
+                            fa_results[i][k].append('%.2f' % proutp[k][monind])
+
+            elif fa_type == 'g':
                 #WRCCUtils.gev()
                 pass
-            elif kwargs['frequency_analysis'] == 'b':
+            elif fa_type == 'b':
                 #WRCCUtils.cabetap()
                 pass
-            elif kwargs['frequency_analysis'] == 'c':
+            elif fa_type == 'c':
                 #WRCCUtils.cagamma()
                 pass
 
             #End nmonind loop
 
 
-
-    return results
+    return results, fa_results
 '''
 Sodthr
 This program can be used to find the latest spring and

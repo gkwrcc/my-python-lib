@@ -408,3 +408,162 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
             add_data = data[start_indices[j]:end_indices[j]+1]
             windowed_data = windowed_data + add_data
     return windowed_data
+
+
+##################
+#Sodxrmts routines
+##################
+'''
+Pintp3
+This routine interpolates in the piii table
+Inputs:
+prnoex = probability of non-exceedance
+averag = average of the distribution
+stdev = standard deviation of the distribution
+skew = skewness of the distribution
+piii = input array of PearsonIII frequency distribution
+piiili = list of probabilities in piii array
+npiili = len(piiili)
+Output:
+psdout = probability of non-exceedance expressed in standard deviations
+'''
+def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
+    if skew > 9.0:skew = 9.0
+    if skew < -9.0:skew = -9.0
+
+    nsklo = int(10.0*skew)
+    if nsklo < -90:nsklo = -90
+    nskhi = nsklo + 1
+    if nskhi > 90: snkhi = 90
+    #Index if non-exceedace probabilty
+    inonpr = 0
+    while inonpr <= 27:
+        inonpr+=1
+        test = piiili[inonpr - 1]
+        if test > prnoex:
+            npnolo = inonpr - 2
+            npnohi = inonpr - 1
+            if inonpr != 1:
+                pnoxlo = piiili[npnolo]
+                pnoxhi = piiili[npnohi]
+            else:
+                npnolo = inonpr - 1 #Check this, cant find what IRETRN is
+                npohi = inonpr #Check this, cant find what IRETRN is
+                pnoxlo = piiili[inonpr-1] - 0.00001
+                pnoxhi = piiili[inonpr-1]
+        else:
+            if inonpr != 27:
+                continue
+            else:
+                npnolo = 25 # Check this whole section, Kelly's does not make sense to me
+                npnohi = 26
+                pnoxlo = piiili[25]
+                pnoxhi = piiili[26]
+
+        if nsklo < -90:
+            y1 = piii[-90][npnolo]
+            y2 = piii[-90][npnolo]
+            y3 = piii[-90][npnohi]
+            y4 = piii[-90][npnohi]
+        elif nskhi > 90:
+            y1 = piii[90][npnolo]
+            y2 = piii[90][npnolo]
+            y3 = piii[90][npnohi]
+            y4 = piii[90][npnohi]
+        else:
+            y1 = piii[nsklo][npnolo]
+            y2 = piii[nskhi][npnolo]
+            y3 = piii[nskhi][npnohi]
+            y4 = piii[nsklo][npnohi]
+
+        if abs(pnoxhi - pnoxlo) > 0.000001:
+            t = (prnoex - pnoxlo) / (pnoxhi - pnoxlo)
+        else:
+            t = 0.0
+
+        nskhi = nsklo +1
+        u = (10.0 * skew - float(nsklo)) / (float(nskhi) - float(nsklo))
+        a1 = u * (y2 - y1) + y1
+        a2 = u * (y3 - y4) + y4
+        psdout = t * (a2 - a1) + a1
+
+        return psdout
+'''
+Capiii
+Subroutine adapted from old Fortran program, mixture of cases thus results.
+Finds values of the Pearson III distribution from lookup tables calculated
+by Jim Goodridge.  For non-exceedance probabilities not in these tables,
+simple linear interpolation is used.
+Reference:  Selection of Frequency Distributions, with tables for
+Pearson Type III, Log-Normal, Weibull, Normal and Gumbel
+Distributions.  Baolin Wu and Jim Goodridge, June 1976,
+California Department of Water Resources, 85 pp.
+data is a large array (n=50000) containing the data
+numdat is the actual number of data points in the array 'data'
+pnlist is an array with the list of nonexceedance probabilities desired
+piii is a 2-dimensional array containing the Pearson III look-up tables
+piiili is an array containing the npiili nonexceedance values in the tables
+npiili is the number (27) of values in piiili
+ave is the average
+sk is the skewness
+cv is the coefficient of variation
+xmax is the max value
+xmin is the min value
+psd is an array containing the numpn nonexceedance values
+'''
+def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
+    xmax = -9999.0
+    xmin = 9999.0
+    summ = 0.0
+    summ2 = 0.0
+    summ3 = 0.0
+    count = 0.0
+    print xdata
+    #loop over the number of values in the array
+    for ival in range(numdat):
+        value = xdata[ival]
+        if value >= -9998.0:
+            summ+=value
+            summ2+=value*value
+            summ3+=value*value*value
+            count+=1
+            if value > xmax:xmax = value
+            if value < xmin:xmin = value
+        if count > 0.5:
+            ave = summ / count
+        else:
+            ave = 0.0
+        if count > 1.5:
+            try:
+                stdev = numpy.sqrt((summ2 - summ*summ/count)/(count - 1.0))
+            except:
+                stdev = 0.0
+        else:
+            stdev = 0.0
+        if abs(ave) > 0.00001:
+            cv = stdev / ave
+        else:
+            cv = 0
+        if count > 1.5:
+            h1 = summ / count
+            h2 = summ2 / count
+            h3 = summ3 /count
+            xm2 = h2 - h1*h1
+            xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
+            if abs(xm2) > 0.000001:
+                try:
+                    sk = xm3 / (xm2*numpy.sqrt(xm2))
+                except:
+                    sk = 0.0
+            else:
+                sk = 0.0
+        else:
+            sk = 0.0
+
+        #loop over the desired non-exceedance probabilities
+        psd = [0 for k in range(numpn)]
+        for ipn in range(numpn):
+            prnoex  = pnlist[ipn]
+            psd[ipn] = Pintp3(prnoex, piii, piiili, npiili, ave, stdev, sk)
+
+        return psd, ave, stdev, sk, cv, xmax, xmin
