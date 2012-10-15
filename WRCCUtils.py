@@ -7,6 +7,7 @@ Module WRCCUtils
 import datetime
 import time
 import sys
+import numpy
 ############################################################################################
 #Utils
 ############################################################################################
@@ -261,10 +262,10 @@ def get_element_list(form_input, program):
             elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
         elif form_input['element'] in ['hc', 'g']:
             elements = ['maxt', 'mint']
-    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpii', 'Sodrunr', 'Sodrun', 'Sodthr']:
+    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpiii', 'Sodrunr', 'Sodrun', 'Sodthr']:
         if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'range':
             elements = ['maxt', 'mint']
-        elif program in ['Sodpct', 'Sodthr', 'Sodxtrmts']:
+        elif program in ['Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
             if form_input['element'] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
                 elements = ['maxt', 'mint']
             else:
@@ -413,6 +414,11 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
 ##################
 #Sodxrmts routines
 ##################
+
+####################################
+#PearsonIII routines: Pintp3, Capiii
+####################################
+
 '''
 Pintp3
 This routine interpolates in the piii table
@@ -437,7 +443,7 @@ def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
     if nskhi > 90: snkhi = 90
     #Index if non-exceedace probabilty
     inonpr = 0
-    while inonpr <= 27:
+    while inonpr <= 26:
         inonpr+=1
         test = piiili[inonpr - 1]
         if test > prnoex:
@@ -448,46 +454,45 @@ def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
                 pnoxhi = piiili[npnohi]
             else:
                 npnolo = inonpr - 1 #Check this, cant find what IRETRN is
-                npohi = inonpr #Check this, cant find what IRETRN is
-                pnoxlo = piiili[inonpr-1] - 0.00001
-                pnoxhi = piiili[inonpr-1]
+                npohi = inonpr - 1 #Check this, cant find what IRETRN is
+                pnoxlo = piiili[npnolo] - 0.00001
+                pnoxhi = piiili[npnohi]
         else:
             if inonpr != 27:
                 continue
             else:
                 npnolo = 25 # Check this whole section, Kelly's does not make sense to me
                 npnohi = 26
-                pnoxlo = piiili[25]
-                pnoxhi = piiili[26]
+                pnoxlo = piiili[npnolo]
+                pnoxhi = piiili[npnohi]
 
-        if nsklo < -90:
-            y1 = piii[-90][npnolo]
-            y2 = piii[-90][npnolo]
-            y3 = piii[-90][npnohi]
-            y4 = piii[-90][npnohi]
-        elif nskhi > 90:
-            y1 = piii[90][npnolo]
-            y2 = piii[90][npnolo]
-            y3 = piii[90][npnohi]
-            y4 = piii[90][npnohi]
-        else:
-            y1 = piii[nsklo][npnolo]
-            y2 = piii[nskhi][npnolo]
-            y3 = piii[nskhi][npnohi]
-            y4 = piii[nsklo][npnohi]
+    if nsklo < -90:
+        y1 = piii[-90][npnolo]
+        y2 = piii[-90][npnolo]
+        y3 = piii[-90][npnohi]
+        y4 = piii[-90][npnohi]
+    elif nskhi > 90:
+        y1 = piii[90][npnolo]
+        y2 = piii[90][npnolo]
+        y3 = piii[90][npnohi]
+        y4 = piii[90][npnohi]
+    else:
+        y1 = piii[nsklo][npnolo]
+        y2 = piii[nskhi][npnolo]
+        y3 = piii[nskhi][npnohi]
+        y4 = piii[nsklo][npnohi]
 
-        if abs(pnoxhi - pnoxlo) > 0.000001:
-            t = (prnoex - pnoxlo) / (pnoxhi - pnoxlo)
-        else:
-            t = 0.0
-
-        nskhi = nsklo +1
-        u = (10.0 * skew - float(nsklo)) / (float(nskhi) - float(nsklo))
-        a1 = u * (y2 - y1) + y1
-        a2 = u * (y3 - y4) + y4
-        psdout = t * (a2 - a1) + a1
-
-        return psdout
+    if abs(pnoxhi - pnoxlo) > 0.000001:
+        t = (prnoex - pnoxlo) / (pnoxhi - pnoxlo)
+    else:
+        t = 0.0
+    nskhi = nsklo +1
+    u = (10.0 * skew - float(nsklo)) / (float(nskhi) - float(nsklo))
+    a1 = u * (y2 - y1) + y1
+    a2 = u * (y3 - y4) + y4
+    psdout = t * (a2 - a1) + a1
+    #psdout =  (1.0 - t)*(1.0 - u)*y1 + t*(1.0 - u)*y2 + t*u*y3 + (1.0 - t)*u*y4
+    return psdout
 '''
 Capiii
 Subroutine adapted from old Fortran program, mixture of cases thus results.
@@ -518,7 +523,6 @@ def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
     summ2 = 0.0
     summ3 = 0.0
     count = 0.0
-    print xdata
     #loop over the number of values in the array
     for ival in range(numdat):
         value = xdata[ival]
@@ -529,41 +533,233 @@ def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
             count+=1
             if value > xmax:xmax = value
             if value < xmin:xmin = value
-        if count > 0.5:
-            ave = summ / count
-        else:
-            ave = 0.0
-        if count > 1.5:
-            try:
-                stdev = numpy.sqrt((summ2 - summ*summ/count)/(count - 1.0))
-            except:
-                stdev = 0.0
-        else:
+    if count > 0.5:
+        ave = summ / count
+    else:
+        ave = 0.0
+    if count > 1.5:
+        try:
+            stdev = numpy.sqrt((summ2 - summ*summ/count)/(count - 1.0))
+        except:
             stdev = 0.0
-        if abs(ave) > 0.00001:
-            cv = stdev / ave
-        else:
-            cv = 0
-        if count > 1.5:
-            h1 = summ / count
-            h2 = summ2 / count
-            h3 = summ3 /count
-            xm2 = h2 - h1*h1
-            xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
-            if abs(xm2) > 0.000001:
-                try:
-                    sk = xm3 / (xm2*numpy.sqrt(xm2))
-                except:
-                    sk = 0.0
-            else:
+    else:
+        stdev = 0.0
+
+    if abs(ave) > 0.00001:
+        cv = stdev / ave
+    else:
+        cv = 0
+    if count > 1.5:
+        h1 = summ / count
+        h2 = summ2 / count
+        h3 = summ3 /count
+        xm2 = h2 - h1*h1
+        xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
+        if abs(xm2) > 0.000001:
+            try:
+                sk = xm3 / (xm2*numpy.sqrt(xm2))
+            except:
                 sk = 0.0
         else:
             sk = 0.0
+    else:
+        sk = 0.0
+    #loop over the desired non-exceedance probabilities
+    psd = [0 for k in range(numpn)]
+    for ipn in range(numpn):
+        prnoex  = pnlist[ipn]
+        psd[ipn] = Pintp3(prnoex, piii, piiili, npiili, ave, stdev, sk)
 
-        #loop over the desired non-exceedance probabilities
-        psd = [0 for k in range(numpn)]
-        for ipn in range(numpn):
-            prnoex  = pnlist[ipn]
-            psd[ipn] = Pintp3(prnoex, piii, piiili, npiili, ave, stdev, sk)
+    return psd, ave, stdev, sk, cv, xmax, xmin
 
-        return psd, ave, stdev, sk, cv, xmax, xmin
+###########################################################################
+#GEV routines: Samlmr Gev, Quantgev, Cdfgev, Lmrgev, Pelgev, Quagev, Reglmr, Salmr,
+#Ampwm, Derf, Diagmd, Dlgama, Durand, Gamind, Quastn, Sort
+##########################################################################
+#Obtained from Jim Angel @ MrCC in Champaign, Illinois
+
+#Samlmr
+#SAMPLE L-MOMENTS OF A DATA ARRAY
+#
+#  PARAMETERS OF ROUTINE:
+#  X      * INPUT* ARRAY OF LENGTH N. CONTAINS THE DATA, IN ASCENDING
+#                  ORDER.
+#  N      * INPUT* NUMBER OF DATA VALUES
+#  XMOM   *OUTPUT* ARRAY OF LENGTH NMOM. ON EXIT, CONTAINS THE SAMPLE
+#                  L-MOMENTS L-1, L-2, T-3, T-4, ... .
+#  NMOM   * INPUT* NUMBER OF L-MOMENTS TO BE FOUND. AT MOST MAX(N,20).
+#  A      * INPUT* ) PARAMETERS OF PLOTTING
+#  B      * INPUT* ) POSITION (SEE BELOW)
+#
+#  FOR UNBIASED ESTIMATES (OF THE LAMBDA'S) SET A=B=ZERO. OTHERWISE,
+#  PLOTTING-POSITION ESTIMATORS ARE USED, BASED ON THE PLOTTING POSITION
+#  (J+A)/(N+B)  FOR THE J'TH SMALLEST OF N OBSERVATIONS. FOR EXAMPLE,
+#  A=-0.35D0 AND B=0.0D0 YIELDS THE ESTIMATORS RECOMMENDED BY
+#  HOSKING ET AL. (1985, TECHNOMETRICS) FOR THE GEV DISTRIBUTION.
+def Samlmr(x, n, nmom, a, b):
+    summ = [0.0 for k in range(nmom)]
+    xmom = [0.0 for k in range(nmom)]
+
+    #if a <= -1 or a > b:
+    #    xmom = [-99999 for k in range(nmom)]
+
+    if a != 0 or b != 0:
+        #Plotting-Position estimates of PWM's
+        for i in range(n):
+            ppos = (i+1 + a) / (n + b)
+            term = x[i]
+            summ[0]+=term
+            for j in range(1,nmom):
+                term*=ppos
+                summ[j]+=term
+        for j in range(nmom):
+            summ[j] = summ[j] /n
+
+    else: #a and b are zero
+        #Unbiased estimates of of pwm's
+        for i in range(n):
+            z = i+1
+            term = x[i]
+            summ[0]+=term
+            for j in range(1,nmom):
+                z-=1
+                term*=z
+                summ[j]+=term
+        y = n
+        z = n
+        summ[0] = summ/z
+        for j in range(1,nmom):
+            y-=1
+            z*=y
+            summ[j] = summ[j]/z
+
+    #L-Moments
+    k = nmom
+    p0 = 1
+    if nmom - nmom / 2 * 2 == p0:p0 = -1
+    for kk in range(1,nmom):
+        ak = k
+        p0 = -p0
+        p =  p0
+        temp = p * summ[0]
+        for i in range(k-1):
+            ai = i+1
+            p = -p*(ak+ai-1) * (ak - ai) / (ai**2)
+            temp+=p*summ[i+1]
+        summ[k-1] = temp
+        k-=1
+    xmom[0] = summ[0]
+    xmom[1] = summ[1]
+    if abs(summ[1] - 0.0) > 0.001:
+        for k in range(2, nmom):
+            xmom[k] = summ[k] / summ[1]
+    return xmom
+
+#Dlgama: LOGARITHM OF GAMMA FUNCTION
+def Dlgama(x):
+    #c[0] - c[7] are the coeffs of the asymtotic expansion of dlgama
+    c = [0.91893, 0.83333, -0.27777, 0.79365, \
+        -0.59523, 0.84175, -0.19175, 0.64102]
+    s1 = -0.57721 #Euler constant
+    s2 = 0.82246  #pi**2/12
+    dlgama =  0
+    if x < 0 or x > 2.0e36:
+        pass
+    #Use small-x approximation if x is near 0,1 or 2
+    if abs(x - 2)  <= 1.0e-7:
+        dlgama = numpy.log(x - one)
+        xx = x - 2
+        dlgama+=xx*(s1+xx*s2)
+    elif abs(x - 1) <= 1.0e-7:
+        xx = x - 1
+        dlgama+=xx*(s1+xx*s2)
+    elif abs(x) <= 1.0e-7:
+        dlgama = -numpy.log(x) + s1*x
+    else:
+        #Reduce to dlgama(x+n) where x+n >= 13
+        sum1 = 0
+        y = x
+        if y <13:
+            z =1
+            while y < 13:
+                z*=y
+                y+=1
+            sum1+= - numpy.log(z)
+        #Use asymtotic expansion if y >=13
+        sum1+=(y - 0.5)* numpy.log(y) -y +c[0]
+        sum2 = 0
+        if y < 1.0e9:
+            z = 1 / y*y
+            sum2 = ((((((c[7]*z + c[6])*z + c[5])*z + c[4])*z + c[3])*z + c[2])*z +c[1]) / y
+
+        dlgama = sum1 + sum2
+    return dlgama
+
+#Pelgev
+#Parameter Estomation via L-Moments for the generalized extreme value distribution
+#XMOM   * INPUT* ARRAY OF LENGTH 3. CONTAINS THE L-MOMENTS LAMBDA-1,
+#LAMBDA-2, TAU-3.
+#PARA   *OUTPUT* ARRAY OF LENGTH 3. ON EXIT, CONTAINS THE PARAMETERS
+#IN THE ORDER XI, ALPHA, K (LOCATION, SCALE, SHAPE).
+#Uses Dlgama
+def Pelgev(xmom):
+    eu = 0.57721566
+    dl2 = 0.69314718
+    dl3 = 1.0986123
+    z0 = 0.63092975
+    c = [7.817740,2.930462,13.641492,17.206675]
+    maxit = 20
+    #Initial estimate of k
+    t3 = xmom[2]
+    if xmom[1] <= 0 or abs(t3) > 1:
+        para = [-9999, -9999, -9999]
+    else:
+        z = 2 /(t3 + 3) - z0
+        g = z*(c[0] + z*(c[1] + z*(c[2] + z*c[3])))
+
+        #Newton-Raphson, if required
+
+        if t3 < - 0.1 or t3 > 0.5:
+            if t3 < -0.9: g = 1 - numpy.log(1 + t3) / dl2
+            t0 = (t3 + 3) / 2
+            for it in range(1, maxit+1):
+                x2 = 2**(-g)
+                x3 = 3**(-g)
+                xx2 = 1 - x2
+                xx3 = 1 - x3
+                t = xx3 / xx2
+                deri = (xx2*x3*dl3 - xx3*x2*dl2) / (xx2*xx2)
+                gold = g
+                g = g - (t -t0) / deri
+                if abs(g - gold)< 1.0e-6: break
+                if g > 1 and abs(g - gold) <= 1.0e-6*g:break
+        para = [0, 0, 0]
+        if abs(g) >= 1.0e-5:
+            para[2] = g
+            gam = numpy.exp(Dlgama(1+g))
+            para[1] = xmom[1]*g / (gam*(1 - 2**(-g)))
+            para[0] = xmom[0] -para[1]*(1 - gam) / g
+        else:
+            para[2] = 0
+            para[1] = xmom[1] / dl2
+            para[0] = xmom[0] - eu * para[1]
+    return para
+
+
+
+
+#Gev
+#Subroutine to calculate the three parameters of the Gev
+def Gev(x, n):
+    x_sorted = []
+    x_sorted_keys = sorted(x, key=x.get)
+    for key in x_sorted_keys:
+        x_sorted.append(x[key])
+    nmom = 3
+    xmom = Samlmr(x_sorted, n, nmom, -0.35, 0)
+    para = Pelgev(xmom)
+    return para
+
+#######################################################################
+#beta-p routines
+########################################################################

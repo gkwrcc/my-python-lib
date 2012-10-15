@@ -9,6 +9,84 @@ import numpy
 import sys
 import fileinput
 
+
+'''
+Sodpiii
+THIS PROGRAM CALCULATES ANNUAL TIME SERIES OF EXTREME VALUES OF A CLIMATE
+VARIABLE
+'''
+def Sodpiii(**kwargs):
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    results = defaultdict(dict)
+    dates = kwargs['dates']
+    start_year = int(dates[0][0:4])
+    end_year = int(dates[-1][0:4])
+    start_month = int(dates[0][4:6])
+    end_month = int(dates[-1][4:6])
+    rtnlis = [.0001, .0002, .0003, .0004, .0005, .0010, .0020,\
+            .0025, .0033, .0040, .0050, .0100, .0200, .0250,\
+            .0333, .0400, .0500, .1000, .2000, .2500, .3000,\
+            .3333, .4000, .5000, .6000, .7000, .7500, .8000,\
+            .8333, .8750, .9000, .9500, .9600, .9666, .9750,\
+            .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
+            .9990, .9995, .9996, .9998, .9999]
+
+    ppiii = [.0001, .0002, .0003, .0004, .0005, .0010, .0020,\
+            .0025, .0033, .0040, .0050, .0100, .0200, .0250,\
+            .0333, .0400, .0500, .1000, .2000, .2500, .3000,\
+            .3333, .4000, .5000, .6000, .7000, .7500, .8000,\
+            .8333, .8750, .9000, .9500, .9600, .9666, .9750,\
+            .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
+            .9990, .9995, .9996, .9998, .9999]
+
+    #Read in piii table:
+    piii = {}
+    count = 0
+    for line in fileinput.input(['/Users/bdaudert/DRI/my-python-lib/piii.dat.2']):
+        count+=1
+        if count > 11 and count < 193:
+            skew = line[1:4].lstrip()
+            if skew[0] == '-':
+                if skew[1] == '0' and skew[2] != '0':
+                    skew = '-%s' % skew[2]
+                elif skew[1] == '0' and skew[2] == '0':
+                    skew = 0
+            else:
+                if skew == '00':
+                    skew = 0
+                else:
+                    skew.lstrip('0')
+            skew = int(skew)
+            piii[skew] = []
+            for k in range(1,15):
+                piii[skew].append(int(line[5*k:5*k+5]))
+        if count > 194:
+            skew = line[1:4].lstrip()
+            if skew[0] == '-':
+                if skew[1] == '0':
+                    skew = '-%s' % skew[2]
+            else:
+                skew.lstrip('0')
+            skew = int(skew)
+            for k in range(1,14):
+                piii[skew].append(int(line[5*k:5*k+5]))
+    #Loop over stations
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        elements = kwargs['elements']
+        el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
+        el_data = kwargs['data'][i]
+        num_yrs = len(el_data)
+        #el_data[el_idx][yr] ;
+        #if element_type is hdd, cdd, dtr or gdd: el_data[0] = maxt, el_data[1]=mint
+
+        #Check for empty data and initialize results directory
+        if not any(el_data[j] for j in range(len(el_data))):
+            results[i] = []
+            continue
+        for table in range(2):
+            results[i][table] = [[kwargs['value_missing'] for k in range(5)] for colm in range(47)]
+
+    return results
 '''
 Sodxtrmts
 THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
@@ -20,7 +98,7 @@ def Sodxtrmts(**kwargs):
     fa_results = defaultdict(list)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
-    end_year = int(dates[0][0:4])
+    end_year = int(dates[-1][0:4])
     #Initialize analysis parameters
     mischr = [' ','a','b','c','d','e','f','g','h','i','j',\
             'k','l','m','n','o','p','q','r','s','t','u','v',\
@@ -74,7 +152,7 @@ def Sodxtrmts(**kwargs):
             skew = int(skew)
             for k in range(1,14):
                 piii[skew].append(int(line[5*k:5*k+5]))
-
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
@@ -485,13 +563,13 @@ def Sodxtrmts(**kwargs):
             #fa types: p = PearsonIII, g = Generalized Extreme values
             #b =  Beta-P, c = Cnesored Gamma
 
-        for nmoind in range(13):
-            if nmoind <= 11:
-                nmo = nmoind + int(kwargs['start_month'].lstrip('0')) - 1
+        for monind in range(13):
+            if monind <= 11:
+                nmo = monind + int(kwargs['start_month'].lstrip('0')) - 1
                 if nmo > 11:
                     nmo-=12
             else:
-                nmo =nmoind
+                nmo =monind
 
             numdat = 0
             numnz = 0
@@ -537,18 +615,19 @@ def Sodxtrmts(**kwargs):
             #Frequency Analysis routines
             if fa_type == 'p': #Pearson III
                 (psd, ave, stdev, sk, cv, xmax, xmin) = WRCCUtils.Capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
+                #print psd
                 for k in range(len(probss)): #len(probss) = 24
                     for j in range(len(pnlist)):  #len(pnlist) = 47
                         if (pnlist[j] - probss[k]) < 0.00001:
-                            print k,monind
                             proutp[k][monind] = ave + stdev*psd[j]
                             if proutp[k][monind] < vmin:proutp[k][monind] = vmin
                             if proutp[k][monind] > vmax:proutp[k][monind] = vmax
-                            fa_results[i][k].append('%.2f' % proutp[k][monind])
+
+                    fa_results[i][k].append('%.2f' % proutp[k][monind])
 
             elif fa_type == 'g':
-                #WRCCUtils.gev()
-                pass
+                para = WRCCUtils.Gev(xx, numdat)
+                print para
             elif fa_type == 'b':
                 #WRCCUtils.cabetap()
                 pass
@@ -556,7 +635,7 @@ def Sodxtrmts(**kwargs):
                 #WRCCUtils.cagamma()
                 pass
 
-            #End nmonind loop
+            #End monind loop
 
 
     return results, fa_results
@@ -583,7 +662,8 @@ def Sodthr(**kwargs):
     results = defaultdict(dict)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
-    end_year = int(dates[0][0:4])
+    end_year = int(dates[-1][0:4])
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
@@ -920,7 +1000,7 @@ def Sodpct(**kwargs):
     results = defaultdict(list)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
-    end_year = int(dates[0][0:4])
+    end_year = int(dates[-1][0:4])
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range), hdd, cdd, gdd, pcpn, snow or snwd
     if kwargs['number_days_ahead']== 1:
@@ -931,6 +1011,7 @@ def Sodpct(**kwargs):
         ncom = 1
     else:
         ncom = kwargs['number_days_ahead']
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         elements = kwargs['elements']
         if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
@@ -1240,6 +1321,7 @@ def Sodrun(**kwargs):
     thresh = kwargs['thresh']
     min_run = kwargs['minimum_run']
     verbose = kwargs['verbose']
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         print "STATION:" + coop_station_ids[i]
         results[i] = []
@@ -1501,6 +1583,7 @@ def Sodlist(**kwargs):
     coop_station_ids = kwargs['coop_station_ids']
     elements = kwargs['elements']
     dates = kwargs['dates']
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         stn_data = kwargs['data'][i]
         #first format data to include dates
@@ -1522,6 +1605,7 @@ def Sodmonline(**kwargs):
     coop_station_ids = kwargs['coop_station_ids']
     elements = kwargs['elements']
     dates = kwargs['dates']
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         stn_data = kwargs['data'][i]
         #first format data to include dates
@@ -1529,6 +1613,7 @@ def Sodmonline(**kwargs):
             stn_data[k].insert(0,date)
         results[i]=stn_data
     return results
+
 '''
 Sodsumm
 THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
@@ -1544,6 +1629,7 @@ def Sodsumm(**kwargs):
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     #results[i][table]
     results = defaultdict(dict)
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         #Check for empty data
         flag_empty = False
@@ -1941,6 +2027,7 @@ THRESHOLD AMOUNTS WAS EQUALLED, FOR A RANGE OF DURATIONS.
 '''
 def Sodpad(**kwargs):
     results = defaultdict(dict)
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         num_yrs = len(kwargs['data'][i])
         el_data = kwargs['data'][i]
@@ -2063,6 +2150,7 @@ def Soddd(**kwargs):
     #if output_type daily long-term ave:
     #results[stn_id][doy]=[doy, Jan_ave, Jan_yrs, Feb_ave, Feb_yrs, ..., Dec_ave, Dec_yrs]
     results = defaultdict(list)
+    #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         yrs = max(len(kwargs['data'][i][j]) for j in range(len(kwargs['elements'])))
         dd = [[-9999 for day in range(366)] for yr in range(yrs)]
@@ -2180,7 +2268,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
     #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
     #results[stn_id] = [[doy =1, mon=1, day=1, maxt_ave, yrs, mint_ave, yrs, pcpn_ave, yrs, sd_maxt, sd_mint],[doy=2, ...]...]
     results = defaultdict(list)
-    #for each station and element compute normals
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         #Find long-term daily averages of each element
         #for each day of the year, el_data_list will hold [average, yrs_in record, standard deviation]
@@ -2365,6 +2453,7 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     #result[stn_id][el] = [[month=1, day=1, ave, no, high_or_low, yr], [month=1, day=2, ave,..]..]
     #for all 365 days a year
     results = defaultdict(dict)
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         for j,el in enumerate(elements):
             results[i][j] = []
@@ -2396,6 +2485,7 @@ OR FOR ALL OF THE ABOVE LISTED.
 
 def Sodsum(data, elements, coop_station_ids, station_names):
     results = defaultdict(dict)
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         results[i]['coop_station_id'] = coop_station_ids[i]
         results[i]['station_name'] = station_names[i]
@@ -2501,6 +2591,7 @@ def SodsumMulti(data, dates, elements, coop_station_ids, station_names):
     #element in elements correspond to data values in data, i.e data[i][j] is value corresponding to elements[j]
     #Results.keys()=[coop_station_id, stn_name, start, end, pcpn, snow, snwd, maxt, mint, tobs, evap, wdmv, wesf, posbl, prsnt, lngpr, missg, lngms]
     results = defaultdict(dict)
+    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         results[i]['coop_station_id'] = coop_station_ids[i]
         results[i]['station_name'] = station_names[i]
