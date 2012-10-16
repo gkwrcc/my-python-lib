@@ -19,10 +19,13 @@ def Sodpiii(**kwargs):
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(dict)
     dates = kwargs['dates']
-    start_year = int(dates[0][0:4])
-    end_year = int(dates[-1][0:4])
-    start_month = int(dates[0][4:6])
-    end_month = int(dates[-1][4:6])
+    start_year = int(dates[0][0:4]) + 1
+    end_year = int(dates[-1][0:4]) -1
+    start_month = int(dates[0][5:7])
+    end_month = int(dates[-1][5:7])
+    #Initialize fixed data arrays
+    lisdur = [99, 99, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,15, 20, 25, 30]
+    mxmis = [0 for k in range(len(lisdur))]
     rtnlis = [.0001, .0002, .0003, .0004, .0005, .0010, .0020,\
             .0025, .0033, .0040, .0050, .0100, .0200, .0250,\
             .0333, .0400, .0500, .1000, .2000, .2500, .3000,\
@@ -38,7 +41,15 @@ def Sodpiii(**kwargs):
             .8333, .8750, .9000, .9500, .9600, .9666, .9750,\
             .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
             .9990, .9995, .9996, .9998, .9999]
-
+    #Areal Statistics, taken from climate.dri.edu:/wrcc2/krwrcc/sep11/arealstats.dat
+    amean = [1.00, 1.50, 2.00, 3.00, 4.00, 5.00, 6.00, 7.00, \
+             9.00, 10.00, 11.00, 12.00, 14.00, 16.00, 18.00, 20.00]
+    apctan = [.024, .032, .040, .064, .077, .087, .098, .107, \
+             .116, .125, .131, .138, .171, .199, .226, .253]
+    ask = [1.20, 1.10, .92, .92, .95, 1.07, .94, .85, \
+          .80, .75, .70, .64, .46, .45, .43, .32]
+    acv = [.26, .26, .26, .27, .27, .26, .25, .24, \
+          .24, .24, .23, .23, .23, .23, .22, .21]
     #Read in piii table:
     piii = {}
     count = 0
@@ -84,7 +95,254 @@ def Sodpiii(**kwargs):
             results[i] = []
             continue
         for table in range(2):
-            results[i][table] = [[kwargs['value_missing'] for k in range(5)] for colm in range(47)]
+            results[i][table] = [[kwargs['value_missing'] for colm in range(5)] for row in range(47)]
+
+        #Initialize data array
+        ndata = [[[kwargs['value_missing'] for day in range(31)] for mon in range(12)] for yr in range(num_yrs)]
+        stats = [[0.0 for numdur in range(14)] for k in range(7)]
+        #Populate data array ndata
+        for yr in range(num_yrs):
+            for mon in range(12):
+            #for mon in range(start_month, end_month +1):
+                if yr == 0 and mon + 1 < start_month:
+                    continue
+                if yr == num_yrs - 1 and mon +1 > end_month:
+                    continue
+
+                if mon == 1  and not WRCCUtils.is_leap_year(start_year + yr):
+                    mon_len = 28
+                else:
+                    mon_len = mon_lens[mon]
+
+                for day in range(mon_len):
+                    #find the right data
+                    doy = WRCCUtils.compute_doy(str(mon + 1), str(day + 1))
+                    if kwargs['el_type'] == 'avgt':
+                        dat_x = el_data[yr][0][doy -1]
+                        dat_n = el_data[yr][1][doy -1]
+                        val_x, flag_x = WRCCUtils.strip_data(dat_x)
+                        val_n, flag_n = WRCCUtils.strip_data(dat_n)
+                        if flag_x == 'M' or flag_n == 'M':
+                            pass
+                        else:
+                            try:
+                                value = (int(dat_x) + int(dat_n)) / 2.0
+                                ndata[yr][mon][day] = value
+                            except:
+                                pass
+                    else:
+                        dat = el_data[yr][0][doy-1]
+                        val, flag = WRCCUtils.strip_data(dat)
+                        if flag == 'M' or flag == 'A':
+                            pass
+                        elif flag == 'T':
+                            ndata[yr][mon][day] = 0.0
+                        elif flag == 'S':
+                            ndata[yr][mon][day] = kwargs['value_subsequent']
+                        else:
+                            try:
+                                value = float(val)
+                                ndata[yr][mon][day] = value
+                            except:
+                                pass
+        numdur = 0
+        annser = [[[0.0 for j in range(14)] for k in range(3)] for yr in range(num_yrs)]
+        for yr in range(num_yrs):
+            for j in range(14):
+                annser[yr][0][j] = -9999.0
+
+        while numdur < 14: #14 = NDIMDR
+            numdur+=1
+            ndur = lisdur[numdur -1]
+            if 'days' in kwargs.keys():
+                if kwargs['days'] == 'i':
+                    if ndur < kwargs['number_of_days']:
+                        continue
+                    elif ndur > kwargs['number_of_days']:
+                        break
+                    else:
+                        numdu1 = numdur
+                elif kwargs['days'] == '5':
+                    if ndur >= 6:
+                        break
+
+            maxmis = mxmis[numdur -1]
+            #Year loop
+            n732 = [kwargs['value_missing'] for k in range(733)]
+            #Year loop
+            for iyear in range(num_yrs):
+                mont = start_month - 2
+                iyeart = iyear
+                mcount = 0
+                idycnt = 0
+                #Special consideration to last day of previous year
+                #Need to later check for accumulations beginning previous day
+                iyearl = iyear
+                monl = start_month - 1
+                if monl == 0 and iyear > 0:
+                    monl = 11
+                    iyearl = iyear - 1
+                ndayl = mon_lens[monl]
+                n732[0] = ndata[iyearl][monl][ndayl - 1]
+
+                while mont < end_month - 1:
+                    mont+=1
+                    if mont == 12:mont = 0
+                    mcount+=1
+                    if mcount == 25:break
+                    if mont == 0 and mcount != 1:
+                        iyeart+=1
+                    if iyeart > num_yrs -1:break
+                    if mont == 1 and not WRCCUtils.is_leap_year(start_year + iyeart):
+                        length = 28
+                    else:
+                        length = mon_lens[mont]
+                    for iday in range(length):
+                        idycnt+=1
+                        n732[idycnt] = ndata[iyeart][mont][iday]
+                #end while loop
+                xmax = -9999.0
+                xmin = 9999.0
+                xdate = 0
+                ndate = 0
+                nummis = 0
+                #Day loop:
+                break_flag = False
+                for idoy in range(366):
+                    summ = 0
+                    sumobs = 0
+                    naccum = 0
+                    numacc = 0
+                    #ndur loop
+                    for iplus in range(ndur): #NOTE: Kellys also goes from 0  to ndur -1
+                        if iplus == 0:
+                            #Skip periods that begon with previous accumulation
+                            if abs(n732[idoy] - kwargs['value_subsequent']) < 0.001:
+                                nummis+=1
+                                break_flag = True
+                                break
+                            #ntrip is set to 0 when iplus is 0
+                            #when nummis is added to, ntrip is tripped to 1, after which
+                            #nummis cannot be incremented for that day
+                            if iplus == 0:ntrip = 0
+                            iday = idoy + iplus
+                            val = n732[iday]
+
+                            if abs(val - kwargs['value_missing']):
+                                if idoy <= 364 and ntrip == 0:
+                                    nummis+=1
+                                    #Trip the switch
+                                    ntrip = 1
+                                if nummis > maxmis:
+                                    break_flag = True
+                                    break
+                            elif abs(val - kwargs['value_subsequent']):
+                                naccum = 1
+                                numacc+=1
+                            else:
+                                sumobs+=1
+                                summ+=val
+                                if naccum ==1:naccum=0
+                    #End ndur loop
+                    if break_flag:break
+                    if sumobs > 0.5:
+                        if el_type in ['snwd', 'maxt', 'mint', 'avgt']:
+                            summ = summ / sumobs
+                    #Do not use averages if all days are not there
+                    if el_type in ['snwd', 'maxt', 'mint', 'avgt']:
+                        if sumobs < ndur:
+                            if el_type == 'avgt':
+                                if kwargs['mean_temperatures'] == 'b':
+                                    summ = 9999.0
+                                else:
+                                    summ = -9999.0
+                            elif el_type in ['snwd', 'maxt']:
+                                summ = -9999.0
+                            else:
+                                summ = 9999.0
+                    if naccum == 1:
+                        nummis+=numacc
+                        numacc = 0
+
+                    if el_type in ['pcpn', 'snow', 'snwd', 'maxt']:
+                        if summ > xmax:
+                            xmax = summ
+                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            xdate = float(idate)
+                    elif el_type == 'mint':
+                        if summ < xmin:
+                            xmin = summ
+                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            xdate = float(idate)
+                    elif el_type == 'avgt':
+                        if (kwargs['mean_temperatures'] == 'a' and summ > xmax) or (kwargs['mean_temperatures'] == 'b' and summ < xmin):
+                            xmax = summ
+                            xmin = summ
+                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            xdate = float(idate)
+                #End of day loop
+                xmismo = float(nummis)
+                if el_type == 'mint':
+                    x = xmin
+                else:
+                    x = xmax
+                annser[iyear][0][numdur - 1] = x
+                annser[iyear][1][numdur - 1] = xdate
+                annser[iyear][2][numdur - 1] = nummis # In Kellys this is set to mysterios "xmisno"
+            #End of year loop!
+            #Find Statistics
+            xmaxx = -9999.0
+            xminn = 9999.0
+            summ = 0.0
+            summ2 = 0.0
+            summ3 = 0.0
+            count = 0.0
+            #Year loop
+            for nyear in range(num_yrs):
+                value = annser[nyear][0][numdur - 1]
+                if value >= -9998.0:
+                    summ+=value
+                    summ2+=value*value
+                    summ3+=value*vaue*value
+                    count+=1
+                    if value > xmaxx:xmaxx = value
+                    if value < xminn:xminn = value
+            if count > 0.5:
+                average = summ / count
+            else:
+                average = 0.0
+
+            if count > 1.5:
+                try:
+                    stdev = numpy.sqrt((summ2 - summ*summ/ count) /  (count - 1.0))
+                except:
+                    stdev = 0.0
+            else:
+                stdev = 0.0
+
+            if abs(average) >= 0.00001:
+                cv = stdev / average
+            else:
+                cv = 0.0
+
+            if count > 1.5:
+                h1 = summ / count
+                h2 = summ2 / count
+                h3 = summ3 / count
+                xm2 = h2 - h1*h1
+                xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
+                if abs(xm2) > 0.000001:
+                    sk = xm3 / (xm2*numpy.sqrt(xm2))
+                else:
+                    sk = 0.0
+            stats[0][numdur] = average
+            stats[1][numdur] = stdev
+            stats[2][numdur] = cv
+            stats[3][numdur] = sk
+            stats[4][numdur] = xminn
+            stats[5][numdur] = xmaxx
+            stats[6][numdur] = count
+        #End numdur loop... Phew...
 
     return results
 '''

@@ -65,7 +65,34 @@ def Jutoca(ndoy):
         month = '0%s' % month
     return month, nday
 
+#Routine to find the month and day given the day of the year,
+#the start month and the year of the starting month
+#Used in WRCCDataApps.Sodpiii
+def Doymd(idoy, most, iyear):
+    lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    #n732 has no blank spaces so we set February to have length 28
+    iidoy = idoy
+    iyeart = iyear
+    imo = most
+    while imo < 13:
+        if imo == 2 and is_leap_year(iyeart):
+            length = 29
+        else:
+            length = lens[imo - 1]
 
+        if iidoy <= length:
+            imon = imo
+            iday = iidoy
+        else:
+            iidoy = iidoy - length
+            imo+=1
+            if imo == 13:
+                imo = 1
+                iyear+=1
+            continue
+
+        idate = 100 * imon + iday
+        return idate
 
 #Routine to compute binomial coefficients for Soddynorm
 #######################################################

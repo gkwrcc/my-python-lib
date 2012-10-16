@@ -89,6 +89,12 @@ def get_us_meta():
 #data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
 def get_sod_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    '''
+    if program in ['Sodpiii']:
+        #get an extra year of data previos and after s_date, e_date
+        s_date = str(int(s_date[0:4]) - 1) + s_date[4:]
+        e_date = str(int(e_date[0:4]) + 1) + e_date[4:]
+    '''
     dates = WRCCUtils.get_dates(s_date, e_date, program)
     elements = WRCCUtils.get_element_list(form_input, program)
     els = [dict(name='%s' % el) for el in elements]
@@ -143,6 +149,8 @@ def get_sod_data(form_input, program):
 
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
     elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
+        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
+        elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     elif program in ['Sodlist', 'Sodcnv']:
