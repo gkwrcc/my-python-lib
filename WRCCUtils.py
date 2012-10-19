@@ -463,29 +463,28 @@ psdout = probability of non-exceedance expressed in standard deviations
 def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
     if skew > 9.0:skew = 9.0
     if skew < -9.0:skew = -9.0
-
     nsklo = int(10.0*skew)
     if nsklo < -90:nsklo = -90
     nskhi = nsklo + 1
-    if nskhi > 90: snkhi = 90
+    if nskhi > 90:nskhi = 90
     #Index if non-exceedace probabilty
-    inonpr = 0
-    while inonpr <= 26:
-        inonpr+=1
-        test = piiili[inonpr - 1]
+    iretrn = 0
+    while iretrn <= 26:
+        iretrn+=1
+        test = piiili[iretrn - 1]
         if test > prnoex:
-            npnolo = inonpr - 2
-            npnohi = inonpr - 1
-            if inonpr != 1:
+            npnolo = iretrn - 2
+            npnohi = iretrn - 1
+            if iretrn != 1:
                 pnoxlo = piiili[npnolo]
                 pnoxhi = piiili[npnohi]
             else:
-                npnolo = inonpr - 1 #Check this, cant find what IRETRN is
-                npohi = inonpr - 1 #Check this, cant find what IRETRN is
+                npnolo = iretrn - 1 #Check this, cant find what IRETRN is
+                npohi = iretrn - 1 #Check this, cant find what IRETRN is
                 pnoxlo = piiili[npnolo] - 0.00001
                 pnoxhi = piiili[npnohi]
         else:
-            if inonpr != 27:
+            if iretrn != 27:
                 continue
             else:
                 npnolo = 25 # Check this whole section, Kelly's does not make sense to me

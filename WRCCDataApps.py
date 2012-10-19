@@ -17,7 +17,11 @@ VARIABLE
 '''
 def Sodpiii(**kwargs):
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    results_0 = defaultdict(dict)
     results = defaultdict(dict)
+    averages = {}
+    skews= {}
+    stdevs = {}
     dates = kwargs['dates']
     start_year = int(dates[0][0:4]) + 1
     end_year = int(dates[-1][0:4]) -1
@@ -34,22 +38,23 @@ def Sodpiii(**kwargs):
             .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
             .9990, .9995, .9996, .9998, .9999]
 
-    ppiii = [.0001, .0002, .0003, .0004, .0005, .0010, .0020,\
-            .0025, .0033, .0040, .0050, .0100, .0200, .0250,\
-            .0333, .0400, .0500, .1000, .2000, .2500, .3000,\
-            .3333, .4000, .5000, .6000, .7000, .7500, .8000,\
-            .8333, .8750, .9000, .9500, .9600, .9666, .9750,\
-            .9800, .9900, .9950, .9960, .9966, .9975, .9980,\
-            .9990, .9995, .9996, .9998, .9999]
+    ppiii = [.0001, .0005, .0010, .0050, .0100, .0200, .0250,\
+            .0400, .0500, .1000, .2000, .3000, .4000, .5000, \
+            .6000, .7000, .8000, .9000, .9500, .9600, .9750,\
+            .9800, .9900, .9950, .9990, .9995, .9999,]
     #Areal Statistics, taken from climate.dri.edu:/wrcc2/krwrcc/sep11/arealstats.dat
     amean = [1.00, 1.50, 2.00, 3.00, 4.00, 5.00, 6.00, 7.00, \
              9.00, 10.00, 11.00, 12.00, 14.00, 16.00, 18.00, 20.00]
     apctan = [.024, .032, .040, .064, .077, .087, .098, .107, \
              .116, .125, .131, .138, .171, .199, .226, .253]
-    ask = [1.20, 1.10, .92, .92, .95, 1.07, .94, .85, \
-          .80, .75, .70, .64, .46, .45, .43, .32]
-    acv = [.26, .26, .26, .27, .27, .26, .25, .24, \
-          .24, .24, .23, .23, .23, .23, .22, .21]
+    #ask = [1.20, 1.10, .92, .92, .95, 1.07, .94, .85, \
+          #.80, .75, .70, .64, .46, .45, .43, .32]
+    #acv = [.26, .26, .26, .27, .27, .26, .25, .24, \
+          #.24, .24, .23, .23, .23, .23, .22, .21]
+    ask = [2.00, 1.50, 1.00, .90, .85, .80, .75, .70, \
+          .65, .60, .55, .50, .45, .40, .35, .30]
+    acv = [.25, .25, .25, .25, .25, .25, .25, .25, \
+          .25, .25, .25, .25, .25, .25, .25, .25]
     #Read in piii table:
     piii = {}
     count = 0
@@ -92,14 +97,26 @@ def Sodpiii(**kwargs):
 
         #Check for empty data and initialize results directory
         if not any(el_data[j] for j in range(len(el_data))):
+            results_0[i] = []
             results[i] = []
             continue
-        for table in range(2):
-            results[i][table] = [[kwargs['value_missing'] for colm in range(5)] for row in range(47)]
+        if kwargs['days'] == 'i':
+            num_tables = 1
+        elif kwargs['days'] == '5':
+            num_tables = 5
+        else:
+            num_tables = 16
 
+        for tbl_idx in range(num_tables):
+            results_0[i][tbl_idx] = [[] for row in range(num_yrs)] # each row has length 4
+            results[i][tbl_idx] = [[] for row in range(47)] #each row has length 4
+            averages[tbl_idx] = 0.0
+            stdevs[tbl_idx] = 0.0
+            skews[tbl_idx] = 0.0
         #Initialize data array
         ndata = [[[kwargs['value_missing'] for day in range(31)] for mon in range(12)] for yr in range(num_yrs)]
-        stats = [[0.0 for numdur in range(14)] for k in range(7)]
+        stats = [[0.0 for numdur in range(len(lisdur))] for k in range(7)]
+        rtndur = [[0.0 for k in range(len(lisdur))] for l in range(len(rtnlis))]
         #Populate data array ndata
         for yr in range(num_yrs):
             for mon in range(12):
@@ -146,32 +163,33 @@ def Sodpiii(**kwargs):
                             except:
                                 pass
         numdur = 0
-        annser = [[[0.0 for j in range(14)] for k in range(3)] for yr in range(num_yrs)]
+        annser = [[[0.0 for j in range(16)] for k in range(3)] for yr in range(num_yrs)]
         for yr in range(num_yrs):
-            for j in range(14):
+            for j in range(len(lisdur)):
                 annser[yr][0][j] = -9999.0
-
-        while numdur < 14: #14 = NDIMDR
+        #BIG numdur loop
+        #Loop over all durations
+        while numdur < len(lisdur) - 1: #16 = len(lisdur)
             numdur+=1
-            ndur = lisdur[numdur -1]
+            ndur = lisdur[numdur -1] #number of days
             if 'days' in kwargs.keys():
                 if kwargs['days'] == 'i':
+                    numdu1 = numdur -1
                     if ndur < kwargs['number_of_days']:
                         continue
-                    elif ndur > kwargs['number_of_days']:
+                    elif ndur > kwargs['number_of_days'] and ndur != 99:
                         break
-                    else:
-                        numdu1 = numdur
+                    elif ndur == 99:
+                        continue
                 elif kwargs['days'] == '5':
                     if ndur >= 6:
                         break
-
             maxmis = mxmis[numdur -1]
             #Year loop
             n732 = [kwargs['value_missing'] for k in range(733)]
             #Year loop
             for iyear in range(num_yrs):
-                mont = start_month - 2
+                mont = start_month - 1
                 iyeart = iyear
                 mcount = 0
                 idycnt = 0
@@ -180,26 +198,26 @@ def Sodpiii(**kwargs):
                 iyearl = iyear
                 monl = start_month - 1
                 if monl == 0 and iyear > 0:
-                    monl = 11
+                    monl = 12
                     iyearl = iyear - 1
-                ndayl = mon_lens[monl]
-                n732[0] = ndata[iyearl][monl][ndayl - 1]
+                ndayl = mon_lens[monl -1]
+                n732[0] = ndata[iyearl][monl -1][ndayl - 1]
 
                 while mont < end_month - 1:
                     mont+=1
-                    if mont == 12:mont = 0
+                    if mont == 13:mont = 1
                     mcount+=1
                     if mcount == 25:break
-                    if mont == 0 and mcount != 1:
+                    if mont == 1 and mcount != 1:
                         iyeart+=1
                     if iyeart > num_yrs -1:break
-                    if mont == 1 and not WRCCUtils.is_leap_year(start_year + iyeart):
+                    if mont == 2 and not WRCCUtils.is_leap_year(start_year + iyeart):
                         length = 28
                     else:
-                        length = mon_lens[mont]
+                        length = mon_lens[mont -1]
                     for iday in range(length):
                         idycnt+=1
-                        n732[idycnt] = ndata[iyeart][mont][iday]
+                        n732[idycnt] = ndata[iyeart][mont-1][iday]
                 #end while loop
                 xmax = -9999.0
                 xmin = 9999.0
@@ -224,27 +242,27 @@ def Sodpiii(**kwargs):
                             #ntrip is set to 0 when iplus is 0
                             #when nummis is added to, ntrip is tripped to 1, after which
                             #nummis cannot be incremented for that day
-                            if iplus == 0:ntrip = 0
-                            iday = idoy + iplus
-                            val = n732[iday]
-
-                            if abs(val - kwargs['value_missing']):
-                                if idoy <= 364 and ntrip == 0:
-                                    nummis+=1
-                                    #Trip the switch
-                                    ntrip = 1
-                                if nummis > maxmis:
-                                    break_flag = True
-                                    break
-                            elif abs(val - kwargs['value_subsequent']):
-                                naccum = 1
-                                numacc+=1
-                            else:
-                                sumobs+=1
-                                summ+=val
-                                if naccum ==1:naccum=0
+                            ntrip = 0
+                        iday = idoy + iplus
+                        val = n732[iday]
+                        if abs(val - kwargs['value_missing']) < 0.001:
+                            if idoy <= 364 and ntrip == 0:
+                                nummis+=1
+                                #Trip the switch
+                                ntrip = 1
+                            if nummis > maxmis:
+                                break_flag = True
+                                break
+                        elif abs(val - kwargs['value_subsequent']) < 0.001:
+                            naccum = 1
+                            numacc+=1
+                        else:
+                            sumobs+=1
+                            summ+=val
+                            if naccum ==1:naccum=0
                     #End ndur loop
                     if break_flag:break
+
                     if sumobs > 0.5:
                         if el_type in ['snwd', 'maxt', 'mint', 'avgt']:
                             summ = summ / sumobs
@@ -267,18 +285,18 @@ def Sodpiii(**kwargs):
                     if el_type in ['pcpn', 'snow', 'snwd', 'maxt']:
                         if summ > xmax:
                             xmax = summ
-                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            idate = WRCCUtils.Doymd(idoy, start_month, iyear)
                             xdate = float(idate)
                     elif el_type == 'mint':
                         if summ < xmin:
                             xmin = summ
-                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            idate = WRCCUtils.Doymd(idoy, start_month, iyear)
                             xdate = float(idate)
                     elif el_type == 'avgt':
                         if (kwargs['mean_temperatures'] == 'a' and summ > xmax) or (kwargs['mean_temperatures'] == 'b' and summ < xmin):
                             xmax = summ
                             xmin = summ
-                            idate = WRCCUtils.Doymd(idoy, month_start, iyear)
+                            idate = WRCCUtils.Doymd(idoy, start_month, iyear)
                             xdate = float(idate)
                 #End of day loop
                 xmismo = float(nummis)
@@ -289,6 +307,15 @@ def Sodpiii(**kwargs):
                 annser[iyear][0][numdur - 1] = x
                 annser[iyear][1][numdur - 1] = xdate
                 annser[iyear][2][numdur - 1] = nummis # In Kellys this is set to mysterios "xmisno"
+                if kwargs['days'] == 'i':
+                    tbl_idx = 0
+                else:
+                    tbl_idx = numdur - 1
+                mon, day = WRCCUtils.compute_mon_day(idoy + 1)
+                results_0[i][tbl_idx][iyear].append('%i' %(start_year + iyear))
+                results_0[i][tbl_idx][iyear].append('%.3f' %x)
+                results_0[i][tbl_idx][iyear].append('%i%i' %(mon,day))
+                results_0[i][tbl_idx][iyear].append('%i' %nummis)
             #End of year loop!
             #Find Statistics
             xmaxx = -9999.0
@@ -303,7 +330,7 @@ def Sodpiii(**kwargs):
                 if value >= -9998.0:
                     summ+=value
                     summ2+=value*value
-                    summ3+=value*vaue*value
+                    summ3+=value*value*value
                     count+=1
                     if value > xmaxx:xmaxx = value
                     if value < xminn:xminn = value
@@ -332,19 +359,95 @@ def Sodpiii(**kwargs):
                 xm2 = h2 - h1*h1
                 xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
                 if abs(xm2) > 0.000001:
-                    sk = xm3 / (xm2*numpy.sqrt(xm2))
+                    try:
+                        sk = xm3 / (xm2*numpy.sqrt(xm2))
+                    except:
+                        sk = 0.0
                 else:
                     sk = 0.0
-            stats[0][numdur] = average
-            stats[1][numdur] = stdev
-            stats[2][numdur] = cv
-            stats[3][numdur] = sk
-            stats[4][numdur] = xminn
-            stats[5][numdur] = xmaxx
-            stats[6][numdur] = count
-        #End numdur loop... Phew...
+            else:
+                sk = 0.0
+            stats[0][numdur-1] = average
+            stats[1][numdur-1] = stdev
+            stats[2][numdur-1] = cv
+            stats[3][numdur-1] = sk
+            stats[4][numdur-1] = xminn
+            stats[5][numdur-1] = xmaxx
+            stats[6][numdur-1] = count
 
-    return results
+            if kwargs['days'] == 'i':
+                tbl_idx = 0
+            else:
+                tbl_idx = numdur - 1
+
+            averages[tbl_idx] = '%.2f' %average
+            stdevs[tbl_idx] = '%.2f' %stdev
+            skews[tbl_idx] = '%.2f' %sk
+        #End numdur while loop... Phew...
+        results_0[i][tbl_idx].append('MEAN %.2f' % average)
+        results_0[i][tbl_idx].append('S.D. %.2f' % stdev)
+        results_0[i][tbl_idx].append('C.V. %.2f' % cv)
+        results_0[i][tbl_idx].append('SKEW %.2f' % sk)
+        results_0[i][tbl_idx].append('MIN %.2f' % xminn)
+        results_0[i][tbl_idx].append('MAX %.2f' % xmaxx)
+        results_0[i][tbl_idx].append('%i' % int(count))
+
+        if kwargs['mean'] == 'am':stats[0] = amean
+        annpcp = 50.0 #from /Users/bdaudert/DRI/my-python-lib/arealstats.dat
+        if kwargs['pct_average'] == 'apct':
+            for idur in range(16):stats[1][idur] = apctan[idur]*annpcp
+
+        if kwargs['skew'] == 'as':
+            for idur in range(16):stats[3][idur] = ask[idur]
+
+        if kwargs['cv'] == 'acv':
+            for idur in range(16):stats[1][idur] = acv[idur] * stats[0][idur]
+        #Ration of 6 and 12 hr to one day (from /Users/bdaudert/DRI/my-python-lib/arealstats.dat)
+        r6to1 = 0.5
+        r12to1 = 0.75
+
+        for idur in range(len(lisdur)):
+            if kwargs['days'] == 'i':
+                if idur != numdu1 - 1:continue
+            elif kwargs['days'] == '5':
+                if idur >= 6:break
+            #print idur
+            ave = stats[0][idur]
+            sd = stats[1][idur]
+            sk = stats[3][idur]
+            #print idur, ave, sd, sk
+            for iretrn in range(len(rtnlis)):
+                pnoexc = rtnlis[iretrn]
+                psd = WRCCUtils.Pintp3(pnoexc, piii, ppiii,len(ppiii), ave, sd, sk)
+                rtndur[iretrn][idur] = psd / 1000.0
+            #End iretrn loop
+        #End idur loop
+        for idur in range(len(lisdur)):
+            if kwargs['days'] == 'i':
+                if idur != numdu1 - 1:continue
+                tbl_idx = 0
+            elif kwargs['days'] == '5':
+                if idur >= 5:break
+                tbl_idx = idur
+            else:
+                tbl_idx = idur
+            for iretrn in range(len(rtnlis)):
+                pnonex = rtnlis[iretrn]
+                pexc = 1.0 - pnonex
+                period = 1.0 / (pexc)
+                psd = rtndur[iretrn][idur]
+                if idur >=2:
+                    value = stats[0][idur] + stats[1][idur] * psd
+                elif idur == 0:
+                    value = r6to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
+                elif idur == 1:
+                    value = r12to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
+                results[i][tbl_idx][iretrn].append('PN = %.4f ' % pnonex)
+                results[i][tbl_idx][iretrn].append('P = %.4f ' % pexc)
+                results[i][tbl_idx][iretrn].append('T = %.4f ' % period)
+                results[i][tbl_idx][iretrn].append('PSD = %.4f ' % psd)
+                results[i][tbl_idx][iretrn].append('VALUE = %.4f ' % value)
+    return results_0, results, averages, stdevs, skews
 '''
 Sodxtrmts
 THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
@@ -885,7 +988,6 @@ def Sodxtrmts(**kwargs):
 
             elif fa_type == 'g':
                 para = WRCCUtils.Gev(xx, numdat)
-                print para
             elif fa_type == 'b':
                 #WRCCUtils.cabetap()
                 pass
