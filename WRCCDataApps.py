@@ -182,7 +182,7 @@ def Sodpiii(**kwargs):
             ndur = lisdur[numdur -1] #number of days
             if 'days' in kwargs.keys():
                 if kwargs['days'] == 'i':
-                    numdu1 = numdur -1
+                    numdu1 = numdur - 1
                     if ndur < kwargs['number_of_days']:
                         continue
                     elif ndur > kwargs['number_of_days'] and ndur != 99:
@@ -190,8 +190,8 @@ def Sodpiii(**kwargs):
                     elif ndur == 99:
                         continue
                 elif kwargs['days'] == '5':
-                    if ndur >= 6:
-                        break
+                    if ndur < 2:continue
+                    if ndur >= 7:break
             maxmis = mxmis[numdur -1]
             #Year loop
             n732 = [kwargs['value_missing'] for k in range(733)]
@@ -331,7 +331,6 @@ def Sodpiii(**kwargs):
                 results_0[i][tbl_idx][iyear].append('%.3f' %x)
                 results_0[i][tbl_idx][iyear].append('%s%s' %(mon,day))
                 results_0[i][tbl_idx][iyear].append('%i' %nummis)
-                print results_0[i][tbl_idx][iyear]
             #End of year loop!
             #Find Statistics
             xmaxx = -9999.0
@@ -367,7 +366,6 @@ def Sodpiii(**kwargs):
                 cv = stdev / average
             else:
                 cv = 0.0
-
             if count > 1.5:
                 h1 = summ / count
                 h2 = summ2 / count
@@ -398,7 +396,6 @@ def Sodpiii(**kwargs):
             averages[tbl_idx] = '%.2f' %average
             stdevs[tbl_idx] = '%.2f' %stdev
             skews[tbl_idx] = '%.2f' %sk
-            #End numdur while loop... Phew...
             results_0[i][tbl_idx][num_yrs].append('%.2f' % average)
             results_0[i][tbl_idx][num_yrs+1].append('%.2f' % stdev)
             results_0[i][tbl_idx][num_yrs+2].append('%.2f' % cv)
@@ -406,7 +403,7 @@ def Sodpiii(**kwargs):
             results_0[i][tbl_idx][num_yrs+4].append('%.2f' % xminn)
             results_0[i][tbl_idx][num_yrs+5].append('%.2f' % xmaxx)
             results_0[i][tbl_idx][num_yrs+6].append('%i' % int(count))
-
+        #End numdur while loop... Phew...
         if kwargs['mean'] == 'am':stats[0] = amean
         annpcp = 50.0 #from /Users/bdaudert/DRI/my-python-lib/arealstats.dat
         if kwargs['pct_average'] == 'apct':
@@ -425,13 +422,15 @@ def Sodpiii(**kwargs):
             if kwargs['days'] == 'i':
                 if idur != numdu1 - 1:continue
             elif kwargs['days'] == '5':
-                if idur >= 6:break
+                if idur <2: #idue 0,1 are 6hr, 12 hr
+                    continue
+                if idur >= 7:break
             ave = stats[0][idur]
             sd = stats[1][idur]
             sk = stats[3][idur]
             for iretrn in range(len(rtnlis)):
                 pnoexc = rtnlis[iretrn]
-                psd = WRCCUtils.Pintp3(pnoexc, piii, ppiii,len(ppiii), ave, sd, sk)
+                psd = WRCCUtils.Pintp3(pnoexc, piii, ppiii,len(ppiii),sk)
                 rtndur[iretrn][idur] = psd
             #End iretrn loop
         #End idur loop
@@ -455,6 +454,8 @@ def Sodpiii(**kwargs):
                     value = r6to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
                 elif idur == 1:
                     value = r12to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
+                #print idur, stats[0][idur], stats[1][idur], psd
+                #print value
                 results[i][tbl_idx][iretrn].append('PN = %.4f ' % pnonex)
                 results[i][tbl_idx][iretrn].append('P = %.4f ' % pexc)
                 results[i][tbl_idx][iretrn].append('T = %.4f ' % period)
@@ -951,7 +952,6 @@ def Sodxtrmts(**kwargs):
             if int(kwargs['start_month'].lstrip('0')) !=1:
                 last_year-=1
             for nyear in range(last_year):
-
                 dat = table_1[nyear][nmo]
                 misng = table_2[nyear][nmo]
                 if abs(dat) < 9998.5:
@@ -1000,13 +1000,32 @@ def Sodxtrmts(**kwargs):
 
             elif fa_type == 'g':
                 para = WRCCUtils.Gev(xx, numdat)
+                rsultsg = WRCCUtils.Quantgev(para, probs, len(probs))
+                for k in range(len(probs)):
+                    proutg[k][monind] = rsultsg[k]
+                    if proutg[k][monind] < vmin:proutg[k][monind] = vmin
+                    if proutg[k][monind] > vmax:proutg[k][monind] = vmax
+                    fa_results[i][k].append('%.2f' % proutg[k][monind])
             elif fa_type == 'b':
-                #WRCCUtils.cabetap()
-                pass
+                rsultb = WRCCUtils.Cabetap(xdata, numdat, probbs,len(probss))
+                for k in range(len(probbs)):
+                    proutb[k][monind] = rsultsb[k]
+                    if proutb[k][monind] < vmin:proutb[k][monind] = vmin
+                    if proutb[k][monind] > vmax:proutb[k][monind] = vmax
+                    fa_results[i][k].append('%.2f' % proutg[k][monind])
             elif fa_type == 'c':
-                #WRCCUtils.cagamma()
                 pass
-
+                # if numz >= 1:
+                    #rsultc = WRCCUtils.Cagamma(xdata, numdat, probss, len(probss))
+                    #for k in range(len(probbs)):
+                        #proutc[k][monind] = rsultsc[k]
+                        #if proutc[k][monind] < vmin:proutc[k][monind] = vmin
+                        #if proutc[k][monind] > vmax:proutc[k][monind] = vmax
+                        #fa_results[i][k].append('%.2f' % proutc[k][monind])
+                #else:
+                    #for k in range(len(probbs)):
+                        #proutc[k][monind] = 0.0
+                        #fa_results[i][k].append('%.2f' % proutc[k][monind])
             #End monind loop
 
 

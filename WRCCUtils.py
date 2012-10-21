@@ -460,10 +460,11 @@ npiili = len(piiili)
 Output:
 psdout = probability of non-exceedance expressed in standard deviations
 '''
-def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
+def Pintp3(prnoex, piii, piiili, npiili,skew):
     if skew > 9.0:skew = 9.0
     if skew < -9.0:skew = -9.0
-    nsklo = int(10.0*skew)
+    nsklo = int(round(10.0*skew))
+    print nsklo
     if nsklo < -90:nsklo = -90
     nskhi = nsklo + 1
     if nskhi > 90:nskhi = 90
@@ -473,16 +474,15 @@ def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
         iretrn+=1
         test = piiili[iretrn - 1]
         if test > prnoex:
-            npnolo = iretrn - 2
-            npnohi = iretrn - 1
-            if iretrn != 1:
-                pnoxlo = piiili[npnolo]
-                pnoxhi = piiili[npnohi]
-            else:
-                npnolo = iretrn - 1 #Check this, cant find what IRETRN is
-                npohi = iretrn - 1 #Check this, cant find what IRETRN is
+            if iretrn == 1:
+                npnolo = iretrn - 1
                 pnoxlo = piiili[npnolo] - 0.00001
-                pnoxhi = piiili[npnohi]
+            else:
+                npnolo = iretrn - 2
+                pnoxlo = piiili[npnolo]
+            npnohi = iretrn - 1
+            pnoxhi = piiili[npnohi]
+            break
         else:
             if iretrn != 27:
                 continue
@@ -491,7 +491,6 @@ def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
                 npnohi = 26
                 pnoxlo = piiili[npnolo]
                 pnoxhi = piiili[npnohi]
-
     if nsklo < -90:
         y1 = piii[-90][npnolo]
         y2 = piii[-90][npnolo]
@@ -507,7 +506,10 @@ def Pintp3(prnoex, piii, piiili, npiili, averag, stdev, skew):
         y2 = piii[nskhi][npnolo]
         y3 = piii[nskhi][npnohi]
         y4 = piii[nsklo][npnohi]
-
+    y1 = y1 / 1000.0
+    y2 = y2 / 1000.0
+    y3 = y3 / 1000.0
+    y4 = y4 / 1000.0
     if abs(pnoxhi - pnoxlo) > 0.000001:
         t = (prnoex - pnoxlo) / (pnoxhi - pnoxlo)
     else:
@@ -594,7 +596,7 @@ def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
     psd = [0 for k in range(numpn)]
     for ipn in range(numpn):
         prnoex  = pnlist[ipn]
-        psd[ipn] = Pintp3(prnoex, piii, piiili, npiili, ave, stdev, sk)
+        psd[ipn] = Pintp3(prnoex, piii, piiili, npiili, sk)
 
     return psd, ave, stdev, sk, cv, xmax, xmin
 
@@ -771,9 +773,33 @@ def Pelgev(xmom):
             para[0] = xmom[0] - eu * para[1]
     return para
 
+#Quantile function of the generalized extreme value distribiution
+def Quagev(f,para):
+    u = para[0]
+    a = para[1]
+    g = para[2]
+    if a > 0:
+        if f > 0 and f < 1:
+            y = -numpy.log(f)
+            if g != 0:
+                y = 1.0 - numpy.exp(-g*y) / g
+                quagev = u + a*y
+            else:
+                quagev = 0
+        else:
+            if (f == 0 and g < 0) or (f== 1 and g > 0):
+                quagev = u + a / g
+            else:
+                quagev = 0
+    else:
+        quagev = 0
+    return quagev
 
-
-
+def Quantgev(para, probs, nprobs):
+    results = [0.0 for iq in range(nprobs)]
+    for iq in range(nprobs):
+        results[iq] = Quagev(probs[iq], para)
+    return results
 #Gev
 #Subroutine to calculate the three parameters of the Gev
 def Gev(x, n):
@@ -789,3 +815,53 @@ def Gev(x, n):
 #######################################################################
 #beta-p routines
 ########################################################################
+#Not used right now
+def Sortb(rdata, n):
+    ra = rdata
+    l = n/2 + 1
+    ir = n
+    while l >1:
+        if l > 1:
+            l-=1
+            rra = ra[l-1]
+        else:
+            rra = ra[ir -1]
+            ra[ir-1] = ra[0]
+            ir-=1
+            if ir ==1:
+                ra[0] = rra
+                break
+        i = l
+        j = l + l
+        while j <= ir:
+            if j < ir:
+                if ra[j-1] < ra[j]:j+=1
+            if rra < ra[j-1]:
+                ra[i-1] = ra[j-1]
+                i = j
+                j+=j
+            else:
+                j = ir +1
+        ra[i-1] = rra
+    return ra
+
+#Maximum likelihood fit for the "Beta-P" distribution
+#Data x assumed to be sorted in ascending order.
+def Fitbetap(x, n, ndim):
+
+    return alpha, theta,beta, rll, itact
+
+def Pintbetap(alpha, beta, theta, prob)
+    return psd
+
+def Capetab(rdata, numdat, pnlist, numpn):
+    #rdata = Sortb(rdata, numdat)
+    r_sorted = []
+    r_sorted_keys = sorted(rdata, key=rdata.get)
+    for key in r_sorted_keys:
+        r_sorted.append(rdata[key])
+    alpha, theta, beta, rll, itact = Fitbetap(r_sorted, numdat, numdat)
+    psd = [0.0 for i in range(numpn)]
+    for i in range(numpn):
+        psd[i] = Pintbetab(alpha, beta, theta, pnlist[i])
+    return psd
