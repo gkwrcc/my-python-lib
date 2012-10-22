@@ -1007,9 +1007,9 @@ def Sodxtrmts(**kwargs):
                     if proutg[k][monind] > vmax:proutg[k][monind] = vmax
                     fa_results[i][k].append('%.2f' % proutg[k][monind])
             elif fa_type == 'b':
-                rsultb = WRCCUtils.Cabetap(xdata, numdat, probbs,len(probss))
-                for k in range(len(probbs)):
-                    proutb[k][monind] = rsultsb[k]
+                rsultb = WRCCUtils.Cabetap(xdata, numdat, probss,len(probss))
+                for k in range(len(probss)):
+                    proutb[k][monind] = rsultb[k]
                     if proutb[k][monind] < vmin:proutb[k][monind] = vmin
                     if proutb[k][monind] > vmax:proutb[k][monind] = vmax
                     fa_results[i][k].append('%.2f' % proutg[k][monind])
@@ -1017,7 +1017,7 @@ def Sodxtrmts(**kwargs):
                 pass
                 # if numz >= 1:
                     #rsultc = WRCCUtils.Cagamma(xdata, numdat, probss, len(probss))
-                    #for k in range(len(probbs)):
+                    #for k in range(len(probss)):
                         #proutc[k][monind] = rsultsc[k]
                         #if proutc[k][monind] < vmin:proutc[k][monind] = vmin
                         #if proutc[k][monind] > vmax:proutc[k][monind] = vmax

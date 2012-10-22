@@ -852,7 +852,7 @@ def Dda(alpha, theta, beta, n, x, ndim):
         xb = x[i]/beta
         if numpy.log(xb) <= 85.0/theta:
             xbt = float(xb)**theta
-            dda-= float(numpy.log()1.0 + xbt)
+            dda-= float(numpy.log(1.0 + xbt))
         else:
             dda-=theta*numpy.log(xb)
     return dda
@@ -871,7 +871,7 @@ def Ddt(alpha, theta, beta, n, x, ndim):
 
 def Ddb(alpha, theta, beta, n, x, ndim):
     rn = float(n)
-    ddb = -rb
+    ddb = -rn
     for i in range(n):
         xb = x[i]/beta
         if numpy.log(xb) <= 85.0/theta:
@@ -907,80 +907,128 @@ def Fitbetap(x, n, ndim):
     tbeta = 1.01*x[0]
     ig = int(round(0.8*float(n+1)))
     factor = -numpy.log(1.0 - 0.8)/numpy.log(x[ig-1]/tbeta)
+    alpha0 = 0.0
+    beta0 = 0.0
+    theta0 = 0.0
     for ith in range(13):
         tthet = pinit[ith]*100.0
-        talph = factor / tteth
-        test = Betapll(talph, tteth, tbeta, n , x, ndim)
+        talph = factor / tthet
+        test = Betapll(talph, tthet, tbeta, n , x, ndim)
         if test > trllbst:
             trllbst = test
             alpha0 = talph
             beta0 = tbeta
             theta0 = tthet
-        #200 continue
-        #Begin iterations
-        rll0 = Betapll(alpha0, theta0, beta0, n, x, ndim)
-        bestll = rll0
-        besta = alpha0
-        bestb = beta0
-        bestt = theta0
-        dlambda = 0.001
-        score = [0.0 for k in range(3)]
-        #finf = [[0.0 for j in range(3)] for k in range(3)]
-        finf = numpy.zeros(3,3)
-        adj = [0.0 for k in range(3)]
-        for it in range(itmax):
-            itact = it
-            ea = efd*alpha0
-            et = efd*theta0
-            eb = efd*beta
-            score[0] = Dda(alpha0, theta0, beta0, n, x, ndim)
-            score[1] = Ddt(alpha0, theta0, beta0, n, x, ndim)
-            score[2] = Ddb(alpha0, theta0, beta0, n, x, ndim)
+            break
+    #Begin iterations
+    rll0 = Betapll(alpha0, theta0, beta0, n, x, ndim)
+    bestll = rll0
+    besta = alpha0
+    bestb = beta0
+    bestt = theta0
+    dlambda = 0.001
+    score = [0.0 for k in range(3)]
+    #finf = [[0.0 for j in range(3)] for k in range(3)]
+    finf = numpy.zeros((3,3))
+    adj = [0.0 for k in range(3)]
+    for it in range(itmax):
+        itact = it
+        ea = efd*alpha0
+        et = efd*theta0
+        eb = efd*beta0
+        score[0] = Dda(alpha0, theta0, beta0, n, x, ndim)
+        score[1] = Ddt(alpha0, theta0, beta0, n, x, ndim)
+        score[2] = Ddb(alpha0, theta0, beta0, n, x, ndim)
 
-            finf[0][0] = (Dda(alpha0 + ea, theta0, beta0, n, x, ndim) -\
-                        Dda(alpha0-ea, theta0, beta0, n, x, ndim))/2.0*ea
-            finf[1][1] = (Ddt(alpha0, theta0 + et, beta0, n, x, ndim) -\
-                        Ddt(alpha0, theta0 -et, beta0, n, x, ndim))/2.0*et
-            finf[2][2] = (Ddb(alpha0, theta0, beta0 + eb, n, x, ndim) -\
-                        Ddb(alpha0, theta0, beta0 - eb, n, x, ndim))/2.0*eb
+        finf[0][0] = (Dda(alpha0 + ea, theta0, beta0, n, x, ndim) -\
+                    Dda(alpha0-ea, theta0, beta0, n, x, ndim))/2.0*ea
+        finf[1][1] = (Ddt(alpha0, theta0 + et, beta0, n, x, ndim) -\
+                    Ddt(alpha0, theta0 -et, beta0, n, x, ndim))/2.0*et
+        finf[2][2] = (Ddb(alpha0, theta0, beta0 + eb, n, x, ndim) -\
+                    Ddb(alpha0, theta0, beta0 - eb, n, x, ndim))/2.0*eb
 
-            finf[0][1] = (Dda(alpha0, theta0 + et, beta0, n, x, ndim) -\
-                        Dda(alpha0, theta0 + et, beta0, n, x, ndim))/4.0*et +\
-                        (Ddt(alpha0 + ea, theta0, beta0, n, x, ndim) -\
-                        Ddt(alpha0-ea, theta0, beta0, n, x, ndim))/4.0*ea
+        finf[0][1] = (Dda(alpha0, theta0 + et, beta0, n, x, ndim) -\
+                    Dda(alpha0, theta0 + et, beta0, n, x, ndim))/4.0*et +\
+                    (Ddt(alpha0 + ea, theta0, beta0, n, x, ndim) -\
+                    Ddt(alpha0-ea, theta0, beta0, n, x, ndim))/4.0*ea
 
-            finf[1][0] = finf[0][1]
+        finf[1][0] = finf[0][1]
 
-            finf[0][2] = (Ddb(alpha0 + ea, theta0, beta0, n, x, ndim) -\
-                        Ddb(alpha0 + ea, theta0, beta0, n, x, ndim))/4.0*ea +\
-                        (Dda(alpha0, theta0, beta0 + eb, n, x, ndim) -\
-                        Dda(alpha0, theta0, beta0 + eb, n, x, ndim))/4.0*eb
+        finf[0][2] = (Ddb(alpha0 + ea, theta0, beta0, n, x, ndim) -\
+                    Ddb(alpha0 + ea, theta0, beta0, n, x, ndim))/4.0*ea +\
+                    (Dda(alpha0, theta0, beta0 + eb, n, x, ndim) -\
+                    Dda(alpha0, theta0, beta0 + eb, n, x, ndim))/4.0*eb
 
-            finf[2][0] = find[0][2]
+        finf[2][0] = finf[0][2]
 
-            finf[1][2] = (Ddb(alpha0, theta0 + et, beta0, n, x, ndim) -\
-                        Ddb(alpha0, theta0 + et, beta0, n, x, ndim))/4.0*et +\
-                        (Ddt(alpha0, theta0, beta0 + eb, n, x, ndim) -\
-                        Ddt(alpha0, theta0, beta0 + eb, n, x, ndim))/4.0*eb
+        finf[1][2] = (Ddb(alpha0, theta0 + et, beta0, n, x, ndim) -\
+                    Ddb(alpha0, theta0 + et, beta0, n, x, ndim))/4.0*et +\
+                    (Ddt(alpha0, theta0, beta0 + eb, n, x, ndim) -\
+                    Ddt(alpha0, theta0, beta0 + eb, n, x, ndim))/4.0*eb
 
-            finf[2][1] = finf[1][2]
+        finf[2][1] = finf[1][2]
 
-            for i in range(3):
-                finf[i][i]*=(1.0 + dlambda)
+        for i in range(3):
+            finf[i][i]*=(1.0 + dlambda)
 
-            #invert
-            finv = numpy.linalg.inv(finf)
-            for i in range(3):
-                for j in range(3):
-                    adj[j] = adj[i] + finv[i][j]*score[j]
+        #invert
+        finv = numpy.linalg.inv(finf)
+        for i in range(3):
+            for j in range(3):
+                adj[j] = adj[i] + finv[i][j]*score[j]
+        alpha = abs(alpha0 - adj[0])
+        if alpha/alpha0 > 1.1:alpha = 1.1*alpha0
+        if alpha/alpha0< 0.9:alpha = 0.9*alpha0
+        beta = abs(beta0 - adj[2])
+        if beta/beta0 > 1.1:beta = 1.1*beta0
+        if beta/beta0< 0.9:beta = 0.9*beta0
+        theta = abs(theta0 - adj[1])
+        if theta/theta0 > 1.1:theta = 1.1*theta0
+        if theta/theta0< 0.9:theta = 0.9*theta0
 
+        #Try to ensuer that this is an improvement
+        iflag = 0
+        for iback in range(4):
+            rll = Betapll(alpha, theta, beta, n, x, ndim)
+            if rll > bestll:
+                bestll = rll
+                besta = alpha
+                bestb = beta
+                bestt = theta
 
+            if rll < rll0:
+                iflag = 1
+                alpha = (alpha + alpha0)/2
+                beta = (beta + beta0)/2
+                theta = (theta + theta0)/2
+                dlambda=dlambda*2
+            else:
+                if iflag == 0:
+                    dlambda = dlambda/2
+                    break
 
+        #Test for convergenceif no backing off the parameter estimates
+        #was necessary
+        if iflag == 0:
+            if abs((alpha -alpha0)/alpha0) >= epsilon or \
+            abs((beta -beta0)/beta0) >= epsilon or \
+            abs((theta -theta0)/theta0) >= epsilon:
+                alpha0 = alpha
+                theta0 = theta
+                beta0 = beta
+                ll0 = rll
+            else:
+                break
+    #end it loop
+    rll = bestll
+    alpha = besta
+    beta = bestb
+    theta = bestt
     return alpha, theta,beta, rll, itact
 
 def Pintbetap(alpha, beta, theta, prob):
     #Check for conditions that will lead to floating overflow
-    check1 = -1.0*nump.log(1.0 - prob)
+    check1 = -1.0*numpy.log(1.0 - prob)
     check2 = 31.0*alpha*numpy.log(2.0)
     if check1 < check2:
         psd = (1.0 - prob)**(-1.0/alpha)
@@ -991,7 +1039,7 @@ def Pintbetap(alpha, beta, theta, prob):
         psd = beta*((1.0 - prob)**power)
     return psd
 
-def Capetab(rdata, numdat, pnlist, numpn):
+def Cabetap(rdata, numdat, pnlist, numpn):
     #rdata = Sortb(rdata, numdat)
     r_sorted = []
     r_sorted_keys = sorted(rdata, key=rdata.get)
@@ -1000,5 +1048,5 @@ def Capetab(rdata, numdat, pnlist, numpn):
     alpha, theta, beta, rll, itact = Fitbetap(r_sorted, numdat, numdat)
     psd = [0.0 for i in range(numpn)]
     for i in range(numpn):
-        psd[i] = Pintbetab(alpha, beta, theta, pnlist[i])
+        psd[i] = Pintbetap(alpha, beta, theta, pnlist[i])
     return psd
