@@ -1068,7 +1068,7 @@ def Gammln(z):
     tmp = x + fpf
     tmp = (x + 0.5)*numpy.log(tmp) - tmp
     ser = 10
-    for j in range(6)
+    for j in range(6):
         x+=1.0
         ser+=cof[j]/x
     gammln = tmp + numpy.log(stp*ser)
@@ -1116,7 +1116,7 @@ def Gser(a,x):
             ap+=1
             dl*=x/ap
             summ+=dl
-            if abs dl < abs(summ)*eps:
+            if abs(dl) < abs(summ)*eps:
                 gamser = summ*numpy.exp(-x + a*numpy.log(x) -gln)
                 break
     return gamser
@@ -1138,7 +1138,7 @@ def Zbrent(beta, alpha, prob, x1, x2, tol):
     a = x1
     b = x2
     fa = Func(a, beta,alpha, prob)
-    fb = func(bm beta, alpha, prob)
+    fb = func(b, beta, alpha, prob)
     fc =  fb
     for it in range(itmax):
         if fb*fc > 0.0:
@@ -1270,10 +1270,11 @@ def D2ldab(nc,nw,scale, ff, d2fdab,dfdb):
 
 
 def Cengam(nc, nw, c, sumx, sumlnx):
-    fininv = [[0.0 for k in range(2)] for j in range(2)
+    fininv = [[0.0 for k in range(2)] for j in range(2)]
     score = [0.0 for k in range(2)]
     itmax = 1000
-    epsilon = 0.001, dp = 0.1
+    epsilon = 0.001
+    dp = 0.1
 
     #Initial parameter guesses
     if nc == 0:
@@ -1304,14 +1305,14 @@ def Cengam(nc, nw, c, sumx, sumlnx):
             oldll = Rloglike(nc, nw, sumx, sumlnx, shape, scale)
             a = D2lda2(nc,nw,shape, ff, d2fda2, dfda)
             b = D2ldab(nc,nw,scale, ff, d2fdab,dfdb)
-            d = D2ldb2(nc,nw,sumx,shape,scale,ff, d2fdb2, dfdb):
+            d = D2ldb2(nc,nw,sumx,shape,scale,ff, d2fdb2, dfdb)
             det = a*d - b**2
             fininv[0][1] = b/det
             fininv[1][0] = fininv[0][1]
             score[0] = Dlda(nc, nw, sumlnx, shape, scale, ff, dfda)
             score[1] = Dldb(nc,nw,sumx,shape,scalei, ff, dfdb)
             fininv[0][0] = d/det
-            fininv[1]]1] = a/det
+            fininv[1][1] = a/det
 
             shapen = shape - fininv[0][0]*score[1] - fininv[0][1]*score[1]
             if shapen < 0.001:shapen = 0.001
@@ -1320,7 +1321,7 @@ def Cengam(nc, nw, c, sumx, sumlnx):
 
         #Test whether this is an improvement
         ki = 0
-        while ki < 5
+        while ki < 5:
             if nc > 0.0:
                 ff,dfda,dfdb,d2fda2,d2fdb2,d2fdab,dp = Dcdf(c,shapen,scalen,0)
             if Rloglike(nc,nw,sumx,sumlnx,shapen,scalen) < oldll:
@@ -1328,7 +1329,7 @@ def Cengam(nc, nw, c, sumx, sumlnx):
                 scalen = (scale+scalen)/2.
                 shapen=(shape+shapen)/2.
         #Test for convergence
-        if(ki != 0 or abs(shape-shapen) > epsilon or abs(scale-scalen) > epsilon:
+        if ki != 0 or abs(shape-shapen) > epsilon or abs(scale-scalen) > epsilon:
             shape = shapen
             scale = scalen
             nocon = 1
