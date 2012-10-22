@@ -1050,3 +1050,329 @@ def Cabetap(rdata, numdat, pnlist, numpn):
     for i in range(numpn):
         psd[i] = Pintbetap(alpha, beta, theta, pnlist[i])
     return psd
+
+#Censored Gamma routines
+def Func(beta, alpha, p):
+    func = Gammp(alpha, x/beta) - p
+    return func
+
+def Gammln(z):
+    stp = 2.50662827465
+    cof = [76.18009173,-86.50532033,24.01409822, -1.231739516,.120858003e-2,-.536382e-5]
+    fpf = 5.5
+    if z < 1.0:
+        xx = z + 1.0
+    else:
+        xx = z
+    x = xx - 1.0
+    tmp = x + fpf
+    tmp = (x + 0.5)*numpy.log(tmp) - tmp
+    ser = 10
+    for j in range(6)
+        x+=1.0
+        ser+=cof[j]/x
+    gammln = tmp + numpy.log(stp*ser)
+    if z < 1.0:
+        gammln-=numpy.log(z)
+    return gammln
+
+def Gcf(a,x):
+    itmax = 100
+    eps = 3.0e-7
+    gln = Gammln(a)
+    gold = 0.0
+    a0 = 1.0
+    a1 = x
+    bo = 0.0
+    b1 = 1.0
+    fac = 1.0
+    for n in range(itmax):
+        an = float(n)
+        ana = an - a
+        a0 = (a1 + a0*ana)*fac
+        b0 = (b1 + b0*ana)*fac
+        anf = an*fac
+        a1 = x*a0 + anf*a1
+        b1 = x*b0 + anf*b1
+        if abs(a1) >  0.00001:
+            ffac = 1.0/a1
+            g = b1*fac
+            if abs((g - gold)/g) >= eps:
+                gold = g
+    gammfc = numpy.exp(-z + a*numpy.log(x) - gln)*g
+    return gammfc
+
+
+def Gser(a,x):
+    itmax = 100
+    eps = 3.0e-7
+    gln = Gammln(a)
+    gamser = 0.0
+    if x >= 0.0:
+        ap =a
+        summ = 1.0/a
+        dl = summ
+        for n in range(maxit):
+            ap+=1
+            dl*=x/ap
+            summ+=dl
+            if abs dl < abs(summ)*eps:
+                gamser = summ*numpy.exp(-x + a*numpy.log(x) -gln)
+                break
+    return gamser
+
+def Gammp(a,x):
+    if x < 0.0 or a <= 0.0:
+        gammp = 0.0
+    if x < a + 1:
+        gammp, gln = Gser(a,x)
+    else:
+        gammcf, gln = Gcf(a,x)
+        gammp = 1.0 - gammcf
+    return gammp
+
+
+def Zbrent(beta, alpha, prob, x1, x2, tol):
+    itmax = 100
+    eps = 3.0e-8
+    a = x1
+    b = x2
+    fa = Func(a, beta,alpha, prob)
+    fb = func(bm beta, alpha, prob)
+    fc =  fb
+    for it in range(itmax):
+        if fb*fc > 0.0:
+            c = a
+            fc = fa
+            d = b - a
+            e = d
+        if abs(fc) < abs(fb):
+            a = b
+            b = c
+            c = a
+            fa = fb
+            fb = fc
+            fc = fa
+        tol1 = 2.0*eps*abs(b) + 0.5*tol
+        xm = 0.5*(c-b)
+        if abs(xm) <= tol1 or fb == 0.0:
+            zbrent = b
+            break
+        if abs(e) > tol1 and abs(fa) > abs(fb):
+            s = fb/fa
+            if abs(a-c) < 0.00001:
+                p = 2.0*xm*s
+                q =  1.0 - s
+            else:
+                q = fa/fc
+                r = fb/fc
+                p = s*(2.0*xm*q*(q - r) - (b - a)*(r - 1.0))
+                q = (q - 1.0)*(r - 1.0)*(s - 1.0)
+            if p > 0.0:q = -q
+            p = abs(p)
+            if 2.0*p < min(3.0*xm*q - abs(tol1*q), abs(e*q)):
+                e = d
+                d = p/q
+            else:
+                d = xm
+                e = d
+        else:
+            d = xm
+            e = d
+        a = b
+        fa = fb
+        if abs(d) > tol1:
+            b+=d
+        else:
+            if xm < 0.0:
+                b-= tol1
+            else:
+                b+=tol1
+            fb = Func(b, beta, alpha, prob)
+
+    zbrent = b
+    return zbrent
+
+def Rloglike(nc, nw,sumx, sumlnx, a, b):
+    ff = Gammp(shape, c/scale)
+    rloglike = -nw*(a*numpy.log(b) + Gammln(a)) + (a - 1.0)*sumlnx - sumx/b
+    if nc > 0.0: rloglike+=float(nc)*numpy.log(ff)
+    return rloglike
+
+def Psi(shape):
+    z = shape
+    if z < 1.0:
+        a = z + 1.0
+    else:
+       a = z
+    psi = numpy.log(a)-1.0/(2.0*a)-1.0/(12.0*a**2)+1.0/(120.0*a**4) - \
+    1.0/(256.0*a**6)+1.0/(240.0*a**8)
+    return psi
+
+def Psipr(shape):
+    z = shape
+    if z < 1.0:
+        a = z + 1.0
+    else:
+       a = z
+    psipr=1.0/a+1.0/(2.0*a**2)+1.0/(6.0*a**3)-1.0/(30.0*a**5) + \
+    1.0/(42.0*a**7)-1.0/(30.0*a**9)
+    if z < 1.0:psipr+=1.0/z**2
+    return psipr
+
+def Dcdf(c, shape, scale, iflag):
+    dp = 0.1
+    ff = Gammp(shape, c/scale)
+    da = shape*dp
+    db = scale*dp
+
+    fp = f(c, shape + da, scale)
+    fm = f(c, shape - da, scale)
+    dfda = (fp - fm)/(2.0*da)
+    d2fda2 = (fp -2.0*ff + fm)/db**2
+
+    fp=f(c,shape,scale+db)
+    fm=f(c,shape,scale-db)
+    dfdb=(fp-fm)/(2.0*db)
+    d2fdb2=(fp-2.0*ff+fm)/db**2
+
+    fapbp = f(c,shape+da,scale+db)
+    fapbm=f(c,shape+da,scale-db)
+    fambp=f(c,shape-da,scale+db)
+    fambm=f(c,shape-da,scale-db)
+    d2fdab=(fapbp-fambp-fapbm+fambm)/(4.0*da*db)
+    return  ff,dfda,dfdb,d2fda2,d2fdb2,d2fdab,dp
+
+def Dlda(nc, nw, sumlnx, shape, scale, ff, dfda): #dfda, ff extra coming from Dcdf
+    dlda=sumlnx-float(nw)*(numpy.log(scale)+Psi(shape))
+    if nc < 0.0:dlda== float(nc)*dfda/ff
+    return dlda
+
+def Dldb(nc,nw,sumx,shape,scalei, ff, dfdb):
+    dldb=-shape*float(nw)/scale+sumx/(scale**2)
+    if nc < 0.0:dldb+=float(nc)*dfdb/ff
+    return dldb
+
+def D2lda2(nc,nw,shape, ff, d2fda2, dfda):#ff, d2fda2, dfda from Dcdf
+    d2lda2=-float(nw)*Psipr(shape)
+    if nc < 0.0: d2lda2+=float(nc)*(ff*d2fda2-dfda**2)/ff**2
+    return d2lda2
+
+def D2ldb2(nc,nw,sumx,shape,scale, ff, d2fdb2, dfdb):
+    d2ldb2=shape*float(nw)/scale**2-2.0*sumx/scale**3
+    if nc < 0.0:d2ldb2+=float(nc)*(ff*d2fdb2-dfdb**2)/ff**2
+    return d2ldb2
+
+def D2ldab(nc,nw,scale, ff, d2fdab,dfdb):
+    d2ldab=-float(nw)/scale
+    if nc < 0.1:d2ldab+=float(nc)*(ff*d2fdab-dfda*dfdb)/ff**2
+    return d2ldab
+
+
+def Cengam(nc, nw, c, sumx, sumlnx):
+    fininv = [[0.0 for k in range(2)] for j in range(2)
+    score = [0.0 for k in range(2)]
+    itmax = 1000
+    epsilon = 0.001, dp = 0.1
+
+    #Initial parameter guesses
+    if nc == 0:
+        sx = sumx
+        slx = sumlnx
+    else:
+        sx = sumx + float(nc)*c/10.0
+        slx = sumlnx + float(nc)*numpy.log(c/10)
+    amean = sx/float(nc + nw)
+    gmean = numpy.exp(slx/float(nc + nw))
+    y = numpy.log(amean/gmean)
+    if y > 17.0:
+        shape = 0.05
+    elif y <= 0:
+        shape = numpy.sqrt(amean)
+    elif y <= 0.5772:
+        shape = (.5000876+.1648852*y-.0544274*y**2)/y
+    else:
+        shape=(8.898919+9.05995*y+.9775373*y**2)/(y*(17.79728+11.968477*y+y**2))
+    scale = amean/shape
+
+    #Begin iterations
+    nocon = 0
+    for it in range(itmax):
+        ki = 0
+        if nc > 0:
+            ff,dfda,dfdb,d2fda2,d2fdb2,d2fdab,dp = Dcdf(c,shape,scale,1)
+            oldll = Rloglike(nc, nw, sumx, sumlnx, shape, scale)
+            a = D2lda2(nc,nw,shape, ff, d2fda2, dfda)
+            b = D2ldab(nc,nw,scale, ff, d2fdab,dfdb)
+            d = D2ldb2(nc,nw,sumx,shape,scale,ff, d2fdb2, dfdb):
+            det = a*d - b**2
+            fininv[0][1] = b/det
+            fininv[1][0] = fininv[0][1]
+            score[0] = Dlda(nc, nw, sumlnx, shape, scale, ff, dfda)
+            score[1] = Dldb(nc,nw,sumx,shape,scalei, ff, dfdb)
+            fininv[0][0] = d/det
+            fininv[1]]1] = a/det
+
+            shapen = shape - fininv[0][0]*score[1] - fininv[0][1]*score[1]
+            if shapen < 0.001:shapen = 0.001
+            scalen = scale - fininv[1][0]*score[1] - fininv[1][1]*score[1]
+            if scalen < 0.001:scalen = 0.001
+
+        #Test whether this is an improvement
+        ki = 0
+        while ki < 5
+            if nc > 0.0:
+                ff,dfda,dfdb,d2fda2,d2fdb2,d2fdab,dp = Dcdf(c,shapen,scalen,0)
+            if Rloglike(nc,nw,sumx,sumlnx,shapen,scalen) < oldll:
+                ki+=1
+                scalen = (scale+scalen)/2.
+                shapen=(shape+shapen)/2.
+        #Test for convergence
+        if(ki != 0 or abs(shape-shapen) > epsilon or abs(scale-scalen) > epsilon:
+            shape = shapen
+            scale = scalen
+            nocon = 1
+        else:
+            shape = shapen
+            scale = scalen
+            nocon = 0
+            break
+    return shape, scale, nocon
+
+
+
+
+
+    return shape, scale, nocon
+
+#Returns as x the value of the gamma distribution variate corresponding to the decimal
+#fraction pcentile
+def Gampctle(pcentile, beta, alpha):
+    x1 = 0
+    x2 = 100.0*beta
+    x = Zbrent(beta, alpha, pcentile, x1, x2, 1.0e-7)
+    return x
+
+def Cagamma(rdata, numdat, pnlist, numpn):
+    cen_level = 0.004
+    #Initialize counters
+    sumx = 0.0
+    sumlnx = 0.0
+    num_cen = 0
+    num_wet = 0
+
+    for I in range(numdat):
+        if rdata[i] > cen_level:
+            sumx+=rdata[i]
+            sumlnx+= numpy.log(rdata[i])
+            num_wet+=1
+        else:
+            num_cen+=1
+    #Calculate parameters
+    shape = -999
+    scale = -999
+    shape, scale, nocon = Cengam(num_cen, num_wet, cen_level, sumx, sumlx)
+    #Calculate values
+    for i in range(numpn):
+        psd[i] = Gampctle(pnlist[i], scale, shape)
+    return psd
