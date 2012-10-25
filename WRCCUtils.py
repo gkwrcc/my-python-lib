@@ -1194,7 +1194,10 @@ def Zbrent(beta, alpha, prob, x1, x2, tol):
     return zbrent
 
 def Rloglike(nc, nw,sumx, sumlnx, a, b):
-    ff = Gammp(shape, c/scale)
+    try:
+        ff = Gammp(a, nc/b)
+    except:
+        ff = 1.0
     rloglike = -nw*(a*numpy.log(b) + Gammln(a)) + (a - 1.0)*sumlnx - sumx/b
     if nc > 0.0: rloglike+=float(nc)*numpy.log(ff)
     return rloglike
@@ -1298,6 +1301,10 @@ def Cengam(nc, nw, c, sumx, sumlnx):
 
     #Begin iterations
     nocon = 0
+    shapen = 0.0
+    scale = 0.0
+    shapen = 0.0
+    scalen = 0.0
     for it in range(itmax):
         ki = 0
         if nc > 0:
@@ -1362,7 +1369,7 @@ def Cagamma(rdata, numdat, pnlist, numpn):
     num_cen = 0
     num_wet = 0
 
-    for I in range(numdat):
+    for i in range(numdat):
         if rdata[i] > cen_level:
             sumx+=rdata[i]
             sumlnx+= numpy.log(rdata[i])
@@ -1372,7 +1379,7 @@ def Cagamma(rdata, numdat, pnlist, numpn):
     #Calculate parameters
     shape = -999
     scale = -999
-    shape, scale, nocon = Cengam(num_cen, num_wet, cen_level, sumx, sumlx)
+    shape, scale, nocon = Cengam(num_cen, num_wet, cen_level, sumx, sumlnx)
     #Calculate values
     for i in range(numpn):
         psd[i] = Gampctle(pnlist[i], scale, shape)

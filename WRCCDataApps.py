@@ -8,7 +8,7 @@ import WRCCUtils
 import numpy
 import sys
 import fileinput
-
+from scipy import stats
 
 '''
 Sodpiii
@@ -641,7 +641,7 @@ def Sodxtrmts(**kwargs):
                                     value = nval_x - nval_n
                                 elif el_type == 'avgt':
                                     value = (nval_x + nval_n)/2.0
-                                elif el_type in ['hdd','cdd']:
+                                elif el_type in ['hdd','cdd', 'gdd']:
                                     ave = (nval_x + nval_n)/2.0
                                     if el_type == 'hdd':
                                         value = float(kwargs['base_temperature']) - ave
@@ -649,10 +649,9 @@ def Sodxtrmts(**kwargs):
                                         value = ave - float(kwargs['base_temperature'])
                                     if value < 0:
                                         value = 0
-                                elif el_type == 'gdd':
-                                    value = (nval_x + nval_n)/2.0 - float(kwargs['base_temperature'])
                             except:
                                 value = xmiss
+
                     if kwargs['analysis_type'] in ['mmax', 'mmin']:
                         if value > -9998.0:
                             sumda+=1
@@ -775,6 +774,7 @@ def Sodxtrmts(**kwargs):
                             table_2[yr][mon] = mon_len - sumda
                             if flag != ' ':annflg[mon] = flag
                     #End of day loop
+
                 #Need annual values later on
                 annsav[yr][mon] = annflg[mon]
                 #End of monind loop
@@ -929,7 +929,7 @@ def Sodxtrmts(**kwargs):
                         results[i][yr][-1] = 9999.0
             #End month loop
         #End of year loop
-
+        print results
         #Start for frequency analysis
         xdata = {}
         xx = {}
@@ -986,48 +986,59 @@ def Sodxtrmts(**kwargs):
                 else:
                     vmax = 365.24
 
+            xdata_list = [val for key, val in xdata.iteritems()]
+            xx_list = [val for key, val in xx.iteritems()]
             #Frequency Analysis routines
             if fa_type == 'p': #Pearson III
-                (psd, ave, stdev, sk, cv, xmax, xmin) = WRCCUtils.Capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
+                #(psd, ave, stdev, sk, cv, xmax, xmin) = WRCCUtils.Capiii(xdata, numdat, piii, piiili,len(piiili), pnlist,len(pnlist))
+                shape, loc, scale = stats.gamma.fit(xdata_list)
                 for k in range(len(probss)): #len(probss) = 24
+                    proutp[k][monind] = stats.gamma.ppf(probs[k],shape,loc=loc,scale=scale)
+                    if proutp[k][monind] < vmin:proutp[k][monind] = vmin
+                    if proutp[k][monind] > vmax:proutp[k][monind] = vmax
+                    '''
                     for j in range(len(pnlist)):  #len(pnlist) = 47
                         if (pnlist[j] - probss[k]) < 0.00001:
                             proutp[k][monind] = ave + stdev*psd[j]
                             if proutp[k][monind] < vmin:proutp[k][monind] = vmin
                             if proutp[k][monind] > vmax:proutp[k][monind] = vmax
-
+                    '''
                     fa_results[i][k].append('%.2f' % proutp[k][monind])
 
             elif fa_type == 'g':
-                para = WRCCUtils.Gev(xx, numdat)
-                rsultsg = WRCCUtils.Quantgev(para, probs, len(probs))
+                #para = WRCCUtils.Gev(xx, numdat)
+                shape, loc, scale = stats.genextreme.fit(xx_list)
+                #Compute Quantiles:
+                #rsultsg = WRCCUtils.Quantgev(para, probs, len(probs))
                 for k in range(len(probs)):
-                    proutg[k][monind] = rsultsg[k]
+                    proutg[k][monind] = stats.genextreme.ppf(probs[k],shape,loc=loc,scale=scale)
+                    #proutg[k][monind] = rsultsg[k]
                     if proutg[k][monind] < vmin:proutg[k][monind] = vmin
                     if proutg[k][monind] > vmax:proutg[k][monind] = vmax
                     fa_results[i][k].append('%.2f' % proutg[k][monind])
             elif fa_type == 'b':
-                rsultb = WRCCUtils.Cabetap(xdata, numdat, probss,len(probss))
+                #rsultb = WRCCUtils.Cabetap(xdata, numdat, probss,len(probss))
+                shape_a, shape_b, loc, scale = stats.beta.fit(xdata_list)
+                print shape_a, shape_b, loc, scale
                 for k in range(len(probss)):
-                    proutb[k][monind] = rsultb[k]
+                    #proutb[k][monind] = rsultb[k]
+                    proutb[k][monind] = stats.beta.ppf(probs[k],shape_a, shape_b, loc=loc, scale=scale )
                     if proutb[k][monind] < vmin:proutb[k][monind] = vmin
                     if proutb[k][monind] > vmax:proutb[k][monind] = vmax
                     fa_results[i][k].append('%.2f' % proutg[k][monind])
             elif fa_type == 'c':
-                pass
-                # if numz >= 1:
-                    #rsultc = WRCCUtils.Cagamma(xdata, numdat, probss, len(probss))
-                    #for k in range(len(probss)):
-                        #proutc[k][monind] = rsultsc[k]
-                        #if proutc[k][monind] < vmin:proutc[k][monind] = vmin
-                        #if proutc[k][monind] > vmax:proutc[k][monind] = vmax
-                        #fa_results[i][k].append('%.2f' % proutc[k][monind])
-                #else:
-                    #for k in range(len(probbs)):
-                        #proutc[k][monind] = 0.0
-                        #fa_results[i][k].append('%.2f' % proutc[k][monind])
+                if numnz >= 1:
+                    rsultc = WRCCUtils.Cagamma(xdata, numdat, probss, len(probss))
+                    for k in range(len(probss)):
+                        proutc[k][monind] = rsultsc[k]
+                        if proutc[k][monind] < vmin:proutc[k][monind] = vmin
+                        if proutc[k][monind] > vmax:proutc[k][monind] = vmax
+                        fa_results[i][k].append('%.2f' % proutc[k][monind])
+                else:
+                    for k in range(len(probbs)):
+                        proutc[k][monind] = 0.0
+                        fa_results[i][k].append('%.2f' % proutc[k][monind])
             #End monind loop
-
 
     return results, fa_results
 '''
