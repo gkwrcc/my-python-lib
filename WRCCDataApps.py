@@ -262,7 +262,6 @@ def Sodpiii(**kwargs):
                                 #Trip the switch
                                 ntrip = 1
                             if nummis > maxmis:
-                                break_flag = True
                                 break
                         elif abs(val - kwargs['value_subsequent']) < 0.001:
                             naccum = 1
@@ -304,17 +303,19 @@ def Sodpiii(**kwargs):
                             xmax = summ
                             xmin = summ
                             mon, day = WRCCUtils.compute_mon_day(idoy + 1)
-                    if not mon:mon = '-1'
-                    if not day:day = '-1'
-                    mon = str(mon)
-                    day = str(day)
-                    if len(mon) == 1:
-                        mon = '0%s' %mon
-                    if len(day) == 1:
-                        day = '0%s' %day
-                    idate = WRCCUtils.Doymd(idoy, start_month, iyear)
-                    xdate = float(idate)
+
                 #End of day loop
+                if not mon:mon = '-1'
+                if not day:day = '-1'
+                mon = str(mon)
+                day = str(day)
+                if len(mon) == 1:
+                    mon = '0%s' %mon
+                if len(day) == 1:
+                    day = '0%s' %day
+                idate = WRCCUtils.Doymd(idoy, start_month, iyear)
+                xdate = float(idate)
+
                 xmismo = float(nummis)
                 if el_type == 'mint':
                     x = xmin
