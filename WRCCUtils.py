@@ -464,7 +464,6 @@ def Pintp3(prnoex, piii, piiili, npiili,skew):
     if skew > 9.0:skew = 9.0
     if skew < -9.0:skew = -9.0
     nsklo = int(round(10.0*skew))
-    print nsklo
     if nsklo < -90:nsklo = -90
     nskhi = nsklo + 1
     if nskhi > 90:nskhi = 90

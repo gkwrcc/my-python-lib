@@ -221,7 +221,6 @@ def get_sod_data(form_input, program):
         groupby="year") for el in elements]
         params_x = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts_x)
         request_x = MultiStnData(params_x)
-        #print request_x['data'][0]['meta']
         try:
             request_x['data']#list of data for the stations
             #order results by stn id

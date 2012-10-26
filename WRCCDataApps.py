@@ -455,8 +455,6 @@ def Sodpiii(**kwargs):
                     value = r6to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
                 elif idur == 1:
                     value = r12to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
-                #print idur, stats[0][idur], stats[1][idur], psd
-                #print value
                 results[i][tbl_idx][iretrn].append('PN = %.4f ' % pnonex)
                 results[i][tbl_idx][iretrn].append('P = %.4f ' % pexc)
                 results[i][tbl_idx][iretrn].append('T = %.4f ' % period)
@@ -930,7 +928,6 @@ def Sodxtrmts(**kwargs):
                         results[i][yr][-1] = 9999.0
             #End month loop
         #End of year loop
-        print results
         #Start for frequency analysis
         xdata = {}
         xx = {}
@@ -1020,7 +1017,6 @@ def Sodxtrmts(**kwargs):
             elif fa_type == 'b':
                 #rsultb = WRCCUtils.Cabetap(xdata, numdat, probss,len(probss))
                 shape_a, shape_b, loc, scale = stats.beta.fit(xdata_list)
-                print shape_a, shape_b, loc, scale
                 for k in range(len(probss)):
                     #proutb[k][monind] = rsultb[k]
                     proutb[k][monind] = stats.beta.ppf(probs[k],shape_a, shape_b, loc=loc, scale=scale )
