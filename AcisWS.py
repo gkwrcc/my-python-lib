@@ -46,6 +46,98 @@ def StnData(params):
 def StnMeta(params):
     return make_request(base_url+'StnMeta',params)
 
+###############################
+#Southwest CSC DATA PORTAL modules
+#Used in Station Finder pages of SW CSC Data Portal
+def get_station_meta(by_type, val):
+    stn_list = []
+    if by_type == 'county':
+        params = dict(county=val)
+    elif by_type == 'climate_division':
+        params = dict(climdiv=val)
+    elif by_type == 'county_warning_area':
+        params = dict(cwa=val)
+    elif by_type == 'basin':
+        params = dict(basin=val)
+    elif by_type == 'state':
+        params = dict(state=val)
+    elif by_type == 'bounding_box':
+        params = dict(bbox=val)
+    elif by_type == 'id':
+        params = dict(sids=val)
+    else:
+        pass
+
+    request=StnMeta(params)
+    stn_meta_list = []
+    stn_json ={}
+    try:
+        request['meta']
+        for i, stn in enumerate(request['meta']):
+            stn_sids = []
+            sids = stn['sids']
+            for sid in sids:
+                sid_split = sid.split(' ')
+                stn_sids.append(str(sid_split[0]))
+
+            stn_dict = {"name":str(stn['name']), "uid":str(stn['uid']), "sids":stn_sids, "elevation":str(stn['elev']), \
+            "lat":str(stn['ll'][1]), "lon":str(stn['ll'][0]), "state":str(stn['state'])}
+
+            stn_meta_list.append(stn_dict)
+    except:
+        pass
+
+    stn_json["stations"] = stn_meta_list
+    stn_json = str(stn_json)
+    stn_json = stn_json.replace("\'", "\"")
+    f = open("/Users/bdaudert/DRI/dj-projects/my_acis/media/json/stn.json",'w+')
+    f.write(stn_json)
+    f.close()
+    return stn_json
+
+def mean_temp_prcp(state, end_date):
+    year = end_date[0:4]
+    mon = end_date[4:6]
+    day = end_date[6:8]
+    start_date = "1900%s%s" %( mon, day)
+    num_yrs = int(year) - 1900 - 1
+    state_ave_temp = [999 for yr in range(num_yrs)]
+    state_ave_pcpn = [999 for yr in range(num_yrs)]
+    params = {"state":state,"sdate":start_date,"edate":end_date, \
+    "elems":[{"name":"avgt","interval":[1,0,0],"duration":30,"reduce":"mean","smry":"mean"}, \
+    {"name":"avgt","interval":[1,0,0],"duration":30,"reduce":"mean","smry":"mean"}]}
+    request = MultiStnData(params)
+    if 'error' in request:
+        state_ave_temp = request['error']
+        state_ave_pcpn = request['error']
+    try:
+        for yr in num_years:
+            ave_temp_list = []
+            ave_pcp_list = []
+            for stn in request['data']:
+                try:
+                    ave_temp_list.append(float(stn['data'][yr][0]))
+                except:
+                    pass
+                try:
+                    ave_pcpn_list.append(float(stn['data'][yr][1]))
+                except:
+                    pass
+
+            if ave_temp_list:
+                state_ave_temp[yr] = numpy.mean(ave_temp_list)
+
+            if ave_pcpn_list:
+                state_ave_pcpn = numpy.mean(ave_pcpn_list)
+
+    except:
+        pass
+
+    return state_ave_temp, state_ave_pcpn
+
+#######################################
+#APPLICATION modules
+#######################################
 def get_station_list(by_type, val):
     stn_list = []
     if by_type == 'county':
@@ -60,6 +152,8 @@ def get_station_list(by_type, val):
         params = dict(state=val)
     elif by_type == 'bounding_box':
         params = dict(bbox=val)
+    elif type == 'id':
+        params = dict(sids=val)
     else:
         pass
     request=StnMeta(params)

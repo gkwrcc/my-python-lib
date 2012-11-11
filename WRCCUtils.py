@@ -310,7 +310,7 @@ def get_element_list(form_input, program):
     elif program == 'Sodcnv':
         elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
     else:
-        elements = []
+        elements = [str(el) for el in form_input['elements']]
     return elements
 
 #Routine to compute percentiles, needed for Sodpct
