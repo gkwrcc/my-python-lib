@@ -251,7 +251,8 @@ def get_sod_data(form_input, program):
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,add='t')for el in elements])
     else:
-        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elements)
+        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
+        elems=[dict(name=el)for el in elements])
     request = MultiStnData(params)
     if not request:
         print 'Bad request! Params: %s'  % params
