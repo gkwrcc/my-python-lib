@@ -135,6 +135,111 @@ def mean_temp_prcp(state, end_date):
 
     return state_ave_temp, state_ave_pcpn
 
+def get_point_data(form_input, program):
+    def get_stn_list(by_type, val):
+        stn_list = []
+        if by_type == 'county':
+            params = dict(county=val)
+        elif by_type == 'climate_division':
+            params = dict(climdiv=val)
+        elif by_type == 'county_warning_area':
+            params = dict(cwa=val)
+        elif by_type == 'basin':
+            params = dict(basin=val)
+        elif by_type == 'state':
+            params = dict(state=val)
+        elif by_type == 'bounding_box':
+            params = dict(bbox=val)
+        else:
+            pass
+        request=StnMeta(params)
+        try:
+            request['meta']
+            for k, stn in enumerate(request['meta']):
+                try:
+                    stn_list.append(str(stn['sids'][0].split(' ')[0]))
+                except:
+                    continue
+        except:
+            pass
+        return stn_list
+
+    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    dates = WRCCUtils.get_dates(s_date, e_date, program)
+    elements = WRCCUtils.get_element_list(form_input, program)
+    if 'station_id' in form_input.keys():
+        station_ids =[form_input['station_id']]
+    elif 'station_ids' in form_input.keys():
+        station_ids = form_input['station_ids']
+    elif 'county' in form_input.keys():
+        station_ids = get_stn_list('county', form_input['county'])
+    elif 'climate_division' in form_input.keys():
+        station_ids = get_stn_list('climate_division', form_input['climate_division'])
+    elif 'county_warning_area' in form_input.keys():
+        station_ids = get_stn_list('county_warning_area', form_input['county_warning_area'])
+    elif 'basin' in form_input.keys():
+        station_ids = get_stn_list('basin', form_input['basin'])
+    elif 'state' in form_input.keys():
+        station_ids = get_stn_list('state', form_input['state'])
+    elif 'bounding_box' in form_input.keys():
+        station_ids = get_stn_list('bounding_box', form_input['bounding_box'])
+    else:
+        station_ids =[]
+    print station_ids
+    datadict = defaultdict(list)
+    station_names = ['No Name found' for stn in station_ids]
+    for i, stn in enumerate(station_ids):
+        datadict[i] = [[] for el in elements]
+    params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
+    elems=[dict(name=el)for el in elements])
+    request = MultiStnData(params)
+    if not request:
+        print 'Bad request! Params: %s'  % params
+        sys.exit(1)
+
+    try:
+        request['data']#list of data for the stations
+    except:
+        if request['error']:
+            print '%s' % str(request['error'])
+            sys.exit(1)
+        else:
+            'Unknown error ocurred when getting data'
+            sys.exit(1)
+
+    for stn, stn_data in enumerate(request['data']):
+        try:
+            stn_data['meta']
+            index = None
+            sids = stn_data['meta']['sids']
+            for k,sid_tuple in enumerate(sids):
+                sid= sid_tuple.split(' ')[0]
+                if sid in station_ids:
+                    index = station_ids.index(sid)
+                    break
+                else:
+                    continue
+
+            if index is None:
+                continue
+            else:
+                station_names[index] = str(stn_data['meta']['name'])
+                try:
+                    stn_data['data']
+                    datadict[index] = stn_data['data']
+                except:
+                    datadict[index] = []
+        except:
+            pass
+    return datadict, dates, elements, station_ids, station_names
+
+def get_grid_data(**kwargs):
+    data = []
+    elements = kwargs['elements']
+    dates = []
+    latlons = []
+    return data, dates, elements, latlons
+
 #######################################
 #APPLICATION modules
 #######################################
