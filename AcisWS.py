@@ -46,6 +46,8 @@ def StnData(params):
 def StnMeta(params):
     return make_request(base_url+'StnMeta',params)
 
+def GridData(params):
+    return make_request(base_url+'GridData',params)
 ###############################
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
@@ -185,14 +187,16 @@ def get_point_data(form_input, program):
         station_ids = get_stn_list('bounding_box', form_input['bounding_box'])
     else:
         station_ids =[]
-    print station_ids
+
     datadict = defaultdict(list)
     station_names = ['No Name found' for stn in station_ids]
+
     for i, stn in enumerate(station_ids):
         datadict[i] = [[] for el in elements]
     params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
     elems=[dict(name=el)for el in elements])
     request = MultiStnData(params)
+
     if not request:
         print 'Bad request! Params: %s'  % params
         sys.exit(1)
@@ -233,12 +237,55 @@ def get_point_data(form_input, program):
             pass
     return datadict, dates, elements, station_ids, station_names
 
-def get_grid_data(**kwargs):
-    data = []
-    elements = kwargs['elements']
+def get_grid_data(form_input, program):
+    data_list = []
     dates = []
-    latlons = []
-    return data, dates, elements, latlons
+    lats = []
+    lons = []
+    elevs = []
+    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    #grid data calls do not except list of elements, need to be string of comma separated values
+    el_list = WRCCUtils.get_element_list(form_input, program)
+    elements = ','.join(el_list)
+
+    params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll, elev'}
+    if 'location' in form_input.keys():params['loc'] = form_input['location']
+    if 'state' in form_input.keys():params['state'] = form_input['state']
+    if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
+
+    request = GridData(params)
+    if not request:
+        print 'Bad request! Params: %s'  % params
+        sys.exit(1)
+
+    try:
+        #data_list[date_idx][0] = date
+        #data_list[date_idx][1] = el_1 data = [[grid_cell1_point_data], [grid_cell1_point_data], ...]
+        data_list = request['data']
+    except:
+        if request['error']:
+            print '%s' % str(request['error'])
+            sys.exit(1)
+        else:
+            'Unknown error ocurred when getting data'
+            sys.exit(1)
+
+    try:
+        for date_idx, date_vals in enumerate(request['data']):
+            dates.append(date_vals[0])
+    except:
+        pass
+
+    try:
+        #lats,lons = [[grid_cell1_lats/lons], [grid_cell2_lats/lons], ...]
+        #elevs = [[grid_cell1_elevs], [grid_cell2_elevs], ...]
+        lats = request['meta']['lat']
+        lons =  request['meta']['lon']
+        elevs = request['meta']['elev']
+    except:
+        pass
+
+    return data_list, dates, elements, lats, lons, elevs
 
 #######################################
 #APPLICATION modules
