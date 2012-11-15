@@ -155,6 +155,7 @@ def get_point_data(form_input, program):
         else:
             pass
         request=StnMeta(params)
+
         try:
             request['meta']
             for k, stn in enumerate(request['meta']):
@@ -204,7 +205,7 @@ def get_point_data(form_input, program):
     try:
         request['data']#list of data for the stations
     except:
-        if request['error']:
+        if 'error' in request.keys():
             print '%s' % str(request['error'])
             sys.exit(1)
         else:
@@ -235,20 +236,29 @@ def get_point_data(form_input, program):
                     datadict[index] = []
         except:
             pass
-    return datadict, dates, elements, station_ids, station_names
+    stn_ids_dict = {}
+    stn_names_dict = {}
+    dates_dict = {}
+    #convert to dict for easier handling in html
+    for k, name in enumerate(station_names):
+        stn_ids_dict[k] = station_ids[k]
+        stn_names_dict[k] = station_names[k]
+    for k, date in enumerate(dates):
+        dates_dict[k] = date
+
+    return dict(datadict), dates_dict, elements, stn_ids_dict, stn_names_dict
 
 def get_grid_data(form_input, program):
     data_list = []
-    dates = []
-    lats = []
-    lons = []
-    elevs = []
+    datadict = defaultdict(list)
+    #datadict[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
+    #[date2, lat2, ...], ...]
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
     el_list = WRCCUtils.get_element_list(form_input, program)
     elements = ','.join(el_list)
 
-    params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll, elev'}
+    params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll,elev'}
     if 'location' in form_input.keys():params['loc'] = form_input['location']
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
@@ -262,30 +272,38 @@ def get_grid_data(form_input, program):
         #data_list[date_idx][0] = date
         #data_list[date_idx][1] = el_1 data = [[grid_cell1_point_data], [grid_cell1_point_data], ...]
         data_list = request['data']
+        #lats,lons = [[grid_cell1_lats/lons], [grid_cell2_lats/lons], ...]
+        #elevs = [[grid_cell1_elevs], [grid_cell2_elevs], ...]
+        if 'location' in form_input.keys():
+            lats = [[request['meta']['lat']]]
+            lons = [[request['meta']['lon']]]
+            elevs = [[request['meta']['elev']]]
+        else:
+            lats = request['meta']['lat']
+            lons = request['meta']['lon']
+            elevs = request['meta']['elev']
     except:
-        if request['error']:
+        if 'error' in request.keys():
             print '%s' % str(request['error'])
             sys.exit(1)
         else:
-            'Unknown error ocurred when getting data'
+            print 'Unknown error ocurred when getting data'
             sys.exit(1)
+    for date_idx, date_vals in enumerate(request['data']):
+        datadict[date_idx] = []
+        for grid_idx, grid in enumerate(lats):
+            for lat_idx, lat in enumerate(grid):
+                el_vals = []
+                for el_idx in range(1,len(el_list) + 1):
+                    if 'location' in form_input.keys():
+                        el_vals.append(date_vals[el_idx])
+                    else:
+                        el_vals.append(date_vals[el_idx][grid_idx][lat_idx])
+                datadict[date_idx].append([str(date_vals[0]), lat, lons[grid_idx][lat_idx], \
+                elevs[grid_idx][lat_idx]] + el_vals)
 
-    try:
-        for date_idx, date_vals in enumerate(request['data']):
-            dates.append(date_vals[0])
-    except:
-        pass
 
-    try:
-        #lats,lons = [[grid_cell1_lats/lons], [grid_cell2_lats/lons], ...]
-        #elevs = [[grid_cell1_elevs], [grid_cell2_elevs], ...]
-        lats = request['meta']['lat']
-        lons =  request['meta']['lon']
-        elevs = request['meta']['elev']
-    except:
-        pass
-
-    return data_list, dates, elements, lats, lons, elevs
+    return datadict, el_list
 
 #######################################
 #APPLICATION modules
