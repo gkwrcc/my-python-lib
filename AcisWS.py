@@ -290,19 +290,26 @@ def get_grid_data(form_input, program):
             print 'Unknown error ocurred when getting data'
             sys.exit(1)
     for date_idx, date_vals in enumerate(request['data']):
-        datadict[date_idx] = []
-        for grid_idx, grid in enumerate(lats):
-            for lat_idx, lat in enumerate(grid):
-                el_vals = []
-                for el_idx in range(1,len(el_list) + 1):
-                    if 'location' in form_input.keys():
-                        el_vals.append(date_vals[el_idx])
-                    else:
-                        el_vals.append(date_vals[el_idx][grid_idx][lat_idx])
-                datadict[date_idx].append([str(date_vals[0]), lat, lons[grid_idx][lat_idx], \
-                elevs[grid_idx][lat_idx]] + el_vals)
-
-
+        if 'location' in form_input.keys():
+            datadict[date_idx] = []
+            datadict[date_idx].append(str(date_vals[0]))
+            datadict[date_idx].append(lons[0][0])
+            datadict[date_idx].append(lats[0][0])
+            datadict[date_idx].append(elevs[0][0])
+            for el_idx in range(1,len(el_list) + 1):
+                datadict[date_idx].append(str(date_vals[el_idx]).strip(' '))
+        else:
+            idx = -1
+            for grid_idx, lat_grid in enumerate(lats):
+                for lat_idx, lat in enumerate(lat_grid):
+                    idx+=1
+                    datadict[idx] = []
+                    datadict[idx].append(str(date_vals[0]))
+                    datadict[idx].append(lons[grid_idx][lat_idx])
+                    datadict[idx].append(lat)
+                    datadict[idx].append(elevs[grid_idx][lat_idx])
+                    for el_idx in range(1,len(el_list) + 1):
+                        datadict[idx].append(date_vals[el_idx][grid_idx][lat_idx])
     return datadict, el_list
 
 #######################################
