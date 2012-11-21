@@ -52,6 +52,8 @@ def GridData(params):
 ###############################
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
+
+#NOT SURE WHY THIS IS NOT WORKING
 def get_station_meta(by_type, val):
     stn_list = []
     if by_type == 'county':
@@ -71,33 +73,91 @@ def get_station_meta(by_type, val):
     else:
         pass
 
-    request=StnMeta(params)
+    if by_type == 'states':
+        request = StnMeta({"state":"az,ca"})
+    else:
+        request = StnMeta(params)
     stn_meta_list = []
     stn_json ={}
-    try:
-        request['meta']
+    if 'error' in request.keys():
+        stn_json['error'] = request['error']
+
+    if 'meta' in request.keys():
         for i, stn in enumerate(request['meta']):
             stn_sids = []
-            sids = stn['sids']
+            sids = stn['sids'] if 'sids' in stn.keys() else []
             for sid in sids:
                 sid_split = sid.split(' ')
-                stn_sids.append(str(sid_split[0]))
-
-            stn_dict = {"name":str(stn['name']), "uid":str(stn['uid']), "sids":stn_sids, "elevation":str(stn['elev']), \
-            "lat":str(stn['ll'][1]), "lon":str(stn['ll'][0]), "state":str(stn['state'])}
-
+                stn_sids.append(str(sid_split[0]).replace("\'"," "))
+            #Sanity check : Some Acis records are incomplete, leading to key error
+            if 'll' in stn.keys():
+                lat = str(stn['ll'][1])
+                lon = str(stn['ll'][0])
+            else:
+                continue
+            name = str(stn['name']).replace("\'"," ") if 'name' in stn.keys() else 'Name not listed'
+            print name
+            uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
+            elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
+            state_key = str(stn['state']) if 'state' in stn.keys() else 'State not listed'
+            stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,"state":state_key}
             stn_meta_list.append(stn_dict)
-    except:
-        pass
+    else:
+        stn_json['error'] = ['No meta data found']
 
     stn_json["stations"] = stn_meta_list
-    stn_json = str(stn_json)
-    stn_json = stn_json.replace("\'", "\"")
+    #double quotes needed for jquery json.load
+    stn_json_str = str(stn_json).replace("\'", "\"")
     f = open("/Users/bdaudert/DRI/dj-projects/my_acis/media/json/stn.json",'w+')
-    f.write(stn_json)
+    f.write(stn_json_str)
     f.close()
     return stn_json
 
+'''
+def get_station_meta(by_type, val):
+    stn_list = []
+    if by_type == 'county':
+        params = dict(county=val)
+    elif by_type == 'climate_division':
+        params = dict(climdiv=val)
+    elif by_type == 'county_warning_area':
+        params = dict(cwa=val)
+    elif by_type == 'basin':
+        params = dict(basin=val)
+    elif by_type in ['state', 'states']:
+        params = dict(state=val)
+    elif by_type == 'bounding_box':
+        params = dict(bbox=val)
+    elif by_type == 'id':
+        params = dict(sids=val)
+    else:
+        pass
+
+    request=StnMeta(params)
+    print len(request['meta'])
+    stn_meta_list = []
+    stn_json ={}
+    for i, stn in enumerate(request['meta']):
+        stn_sids = []
+        sids = stn['sids']
+        for sid in sids:
+            sid_split = sid.split(' ')
+            stn_sids.append(str(sid_split[0]))
+        try:
+            stn_dict = {"name":str(stn['name']), "uid":str(stn['uid']), "sids":stn_sids, "elevation":str(stn['elev']), \
+            "lat":str(stn['ll'][1]), "lon":str(stn['ll'][0]), "state":str(stn['state'])}
+            stn_meta_list.append(stn_dict)
+        except:
+            pass
+
+    print len(stn_meta_list)
+    stn_json["stations"] = stn_meta_list
+    stn_json_str = str(stn_json).replace("\'", "\"")
+    f = open("/Users/bdaudert/DRI/dj-projects/my_acis/media/json/stn.json",'w+')
+    f.write(stn_json_str)
+    f.close()
+    return stn_json
+'''
 #Rountine computes mean precip and temp for month given in end_date
 #for each year starting 1900 ending end_date[year] - 1
 #def mean_temp_pcpn(state, month, elements):
