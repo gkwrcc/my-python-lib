@@ -54,7 +54,7 @@ def GridData(params):
 #Used in Station Finder pages of SW CSC Data Portal
 
 #NOT SURE WHY THIS IS NOT WORKING
-def get_station_meta(by_type, val):
+def station_meta_to_json(by_type, val):
     stn_list = []
     if by_type == 'county':
         params = dict(county=val)
