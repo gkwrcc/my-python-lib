@@ -13,7 +13,51 @@ from scipy import stats
 ##########################################################################
 #######################CSC DATA PORTAL APPLICATIONS##########################
 ##########################################################################
+def monthly_aves(request, el_list):
+    #request['data'] = [[year1, [el1(366entries)], [el2(366entries)], ...],
+    #                   [year2, [el1(366entries)], [el2(366entries)], ...],...
+    #                   [lastyear, [el1(366entries)], [el2(366entries)], ...]]
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    results = defaultdict(dict)
+    #Loop over elements
+    for el_idx, el in enumerate(el_list):
+        results[el_idx]['element'] = el
+        results[el_idx]['data'] = []
 
+    #Loop over months and compute monthly stats
+    for mon_idx, mon in enumerate(months):
+        #Find indices for each time category
+        if mon_idx == 0:
+            idx_start = 0
+            idx_end = 31
+        else:
+            idx_start = sum(mon_lens[idx] for idx in range(mon_idx))
+            idx_end = idx_start + mon_lens[mon_idx]
+        #Loop over years and elements
+        for el_idx, el in enumerate(el_list):
+            yr_aves = []
+            for yr in range(len(request['data'])):
+                data = request['data'][yr][el_idx+1][idx_start:idx_end]
+                if el in ['pcpn', 'snow']: #want total monthly values
+                    summ = 0.0
+                    for dat in data:
+                        try:
+                            summ+=float(dat)
+                        except:
+                            pass
+                    yr_aves.append(summ)
+                else: #want averages of averages
+                    aves = []
+                    for dat in data:
+                        try:
+                            aves.append(float(dat))
+                        except:
+                            pass
+                    yr_aves.append(numpy.mean(aves))
+            results[el_idx]['data'].append(numpy.mean(yr_aves))
+
+    return results
 ##########################################################################
 #######################KELLY's DATA APPLICATIONS##########################
 ##########################################################################
@@ -943,6 +987,8 @@ def Sodxtrmts(**kwargs):
             fa_type = kwargs['frequency_analysis_type']
             #fa types: p = PearsonIII, g = Generalized Extreme values
             #b =  Beta-P, c = Cnesored Gamma
+        else:
+            fa_type = None
 
         for monind in range(13):
             if monind <= 11:

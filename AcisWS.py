@@ -53,7 +53,6 @@ def GridData(params):
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
 
-#NOT SURE WHY THIS IS NOT WORKING
 def station_meta_to_json(by_type, val):
     stn_list = []
     if by_type == 'county':
