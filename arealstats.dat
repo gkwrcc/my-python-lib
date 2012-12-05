@@ -1,0 +1,27 @@
+1C  AREAL PARAMETERS:  COEF VAR  MEAN  SKEW  PCT OF ANNUAL
+2 skew 6, 12 based on USFS REIM STUDY
+3
+4
+5 LAST OF 5 BUFFER LINES
+      DATA AMEAN   /
+  1.00  1.50  2.00  3.00  4.00  5.00  6.00  7.00  
+  9.00 10.00 11.00 12.00 14.00 16.00 18.00 20.00 
+
+ANNUAL PRECIPITATION F8.2
+  50.00
+      DATA APCTAN  /
+  .024  .032  .040  .064  .077  .087  .098  .107  
+  .116  .125  .131  .138  .171  .199  .226  .253  
+
+      DATA ASK     /
+  1.20  1.10   .92   .92   .95  1.07   .94   .85
+   .80   .75   .70   .64   .46   .45   .43   .32
+
+      DATA ACV 	   / 
+   .26   .26   .26   .27   .27   .26   .25   .24   
+   .24   .24   .23   .23   .23   .23   .22   .21 
+
+RATIO  6 HR  TO  1 DAY (OBS DAY) F6.2
+   .50
+RATIO 12 HR  TO  1 DAY (OBS DAY) F6.2
+   .75
