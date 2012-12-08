@@ -16,7 +16,7 @@ import sys
 from collections import defaultdict
 #############################################################################
 #WRCC specific modules
-import WRCCUtils
+import WRCCUtils, WRCCClasses
 ##############################################################################
 # import modules required by Acis
 import urllib2
@@ -49,6 +49,11 @@ def StnMeta(params):
 
 def GridData(params):
     return make_request(base_url+'GridData',params)
+
+def General(params):
+    return make_request(base_url+'General',params)
+
+
 ###############################
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
@@ -73,9 +78,11 @@ def station_meta_to_json(by_type, val):
         pass
 
     if by_type == 'states':
-        request = StnMeta({"state":"az,ca,co,nm,nv,ut"})
+        request = WRCCClasses.DataJob('StnMeta', {"state":"az,ca,co,nm,nv,ut"}).make_data_call()
+        #request = StnMeta({"state":"az,ca,co,nm,nv,ut"})
     else:
-        request = StnMeta(params)
+        request = WRCCClasses.DataJob('StnMeta', params).make_data_call()
+        #request = StnMeta(params)
     stn_meta_list = []
     stn_json ={}
     if 'meta' in request.keys():
@@ -85,6 +92,7 @@ def station_meta_to_json(by_type, val):
             for sid in sids:
                 sid_split = sid.split(' ')
                 stn_sids.append(str(sid_split[0]).replace("\'"," "))
+                stn_sids.append(sid_split[0])
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -95,6 +103,7 @@ def station_meta_to_json(by_type, val):
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']) if 'state' in stn.keys() else 'State not listed'
+
             stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,"state":state_key}
             stn_meta_list.append(stn_dict)
     else:
@@ -222,12 +231,13 @@ def get_point_data(form_input, program):
         datadict[i] = [[] for el in elements]
     params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
     elems=[dict(name=el)for el in elements])
-    request = MultiStnData(params)
-
+    #request = MultiStnData(params)
+    request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
+    '''
     if not request:
         print 'Bad request! Params: %s'  % params
         sys.exit(1)
-
+    '''
     try:
         request['data']#list of data for the stations
     except:
@@ -235,7 +245,7 @@ def get_point_data(form_input, program):
             print '%s' % str(request['error'])
             sys.exit(1)
         else:
-            'Unknown error ocurred when getting data'
+            print 'Unknown error ocurred when getting data'
             sys.exit(1)
 
     for stn, stn_data in enumerate(request['data']):
@@ -289,10 +299,8 @@ def get_grid_data(form_input, program):
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
 
-    request = GridData(params)
-    if not request:
-        print 'Bad request! Params: %s'  % params
-        sys.exit(1)
+    #request = GridData(params)
+    request = WRCCClasses.DataJob('GridData', params).make_data_call()
 
     try:
         #data_list[date_idx][0] = date

@@ -12,6 +12,34 @@ import numpy
 #Utils
 ############################################################################################
 '''
+This routine deals with meta data issues:
+1)jQuery does not like ' in station names
+2) unicode output can cause trouble
+'''
+def format_stn_meta(meta_dict):
+    #deal with meta data issues:
+    #1)jQuery does not like ' in station names
+    #2) unicode output can cause trouble
+    Meta = {}
+    for key, val in meta_dict.items():
+        if key == 'sids':
+            Val = []
+            for sid in val:
+                Val.append(str(sid).replace("\'"," "))
+        elif key == 'valid_daterange':
+            Val = []
+            for el_idx, rnge in enumerate(val):
+                start = str(rnge[0])
+                end = str(rnge[1])
+                dr = [start, end]
+                Val.append(dr)
+        else:
+            Val = str(val)
+        Meta[key] = Val
+    return Meta
+
+
+'''
 JulDay; Function utilized to check for gap in data
 This program is based on and algorithm presented in 'Sky And Telescope Magazine, March 1984.'
 It will correctly calculate any date A.D. to the correct Julian date through at least 3500 A.D.
