@@ -12,6 +12,86 @@ import numpy
 #Utils
 ############################################################################################
 '''
+Given a time unit (days, months or years),
+an end date and the number of days/months/years to
+go back, this routine calculates the start date.
+Leap years are taken into consideratiion. start date is given as
+string of length 8, eg: "20000115", the resulting end date is of same format
+'''
+def get_start_date(time_unit, start_date, number):
+    x = int(number)
+    yr = start_date[0:4]
+    mon = start_date[4:6]
+    day = start_date[6:8]
+    mon_int = int(mon.lstrip('0'))
+    day_int = int(day.lstrip('0'))
+    if time_unit == 'years':
+        yr_start = str(int(yr) - x)
+        mon_start = mon
+        day_start = day
+        #day_start = '0%s' %day if len(day) == 1 else day
+    elif time_unit == 'months':
+        day_start = day
+        if x == mon_int:
+            yr_start = str(int(yr) - 1)
+            mon_start = '12'
+        elif x < mon_int:
+            yr_start = yr
+            mon_start = str(mon_int - x)
+        elif x > mon_int and x < 12:
+            yr_start = str(int(yr) - 1)
+            mon_start =  str(12 + mon_int - x)
+        elif x > 12:
+            num_yrs = x/12
+            months_left = x%12
+            if months_left < mon_int:
+                yr_start = str(int(yr) - num_yrs)
+                mon_start = str(mon_int - months_left)
+            elif months_left == mon_int:
+                yr_start = str(int(yr) - num_yrs - 1)
+                mon_start = '12'
+            else:
+                yr_start = str(int(yr) - num_yrs - 1)
+                mon_start = str(12 + mon_int - months_left)
+    elif time_unit == 'days':
+        #find day of year
+        if is_leap_year(yr):
+            doy = compute_doy_leap(mon, day)
+        else:
+            doy = compute_doy(mon, day)
+        #find day of year of start date
+        if x == doy:
+            doy_start = 366 if is_leap_year(int(yr) - 1) else 365
+            num_yrs =1
+        elif x < doy:
+            doy_start = doy - x
+            num_yrs = 0
+        else:
+            #find number of years, month and day
+            x_left = x
+            x_test = x
+            num_yrs = 1
+            day_count = 0
+            flag = True
+            while flag:
+                days_in_year = 366 if is_leap_year(yr) else 355
+                x_test-=days_in_year
+                if x_test >0:
+                    day_count+=days_in_year
+                    x_left-=days_in_year
+                    num_yrs+=1
+                else:
+                    flag = False
+            doy_start = 366 + doy - x_left if is_leap_year(int(yr) - 1) else 365 + doy - x_left
+        mon_start, day_start = compute_mon_day(doy_start)
+        yr_start = str(int(yr) - num_yrs)
+        mon_start = str(mon_start)
+        day_start = str(day_start)
+    if len(mon_start) ==1:mon_start = '0%s' %mon_start
+    if len(day_start) ==1:day_start = '0%s' %day_start
+    start_date = '%s%s%s' % (yr_start, mon_start, day_start)
+    return start_date
+'''
 This routine deals with meta data issues:
 1)jQuery does not like ' in station names
 2) unicode output can cause trouble
@@ -220,13 +300,13 @@ def compute_mon_day(doy):
     return mon,day
 
 def is_leap_year(year):
-    if year % 100 != 0 and year % 4 == 0:
+    yr = int(year)
+    if yr % 100 != 0 and yr % 4 == 0:
         return True
-    elif year % 100 == 0 and year % 400 == 0:
+    elif yr % 100 == 0 and yr % 400 == 0:
         return True
     else:
         return False
-
 #This function is in place because Acis_WS's MultiStnCall does not return dates
 #it takes as arguments a start date and an end date (format yyyymmdd)
 #and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
