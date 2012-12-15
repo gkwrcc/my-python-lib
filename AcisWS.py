@@ -81,8 +81,8 @@ def station_meta_to_json(by_type, val):
         request = WRCCClasses.DataJob('StnMeta', {"state":"az,ca,co,nm,nv,ut"}).make_data_call()
         #request = StnMeta({"state":"az,ca,co,nm,nv,ut"})
     else:
-        request = WRCCClasses.DataJob('StnMeta', params).make_data_call()
-        #request = StnMeta(params)
+        #request = WRCCClasses.DataJob('StnMeta', params).make_data_call()
+        request = StnMeta(params)
     stn_meta_list = []
     stn_json ={}
     if 'meta' in request.keys():
@@ -92,7 +92,6 @@ def station_meta_to_json(by_type, val):
             for sid in sids:
                 sid_split = sid.split(' ')
                 stn_sids.append(str(sid_split[0]).replace("\'"," "))
-                stn_sids.append(sid_split[0])
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -286,8 +285,7 @@ def get_point_data(form_input, program):
 
 def get_grid_data(form_input, program):
     data_list = []
-    datadict = defaultdict(list)
-    #datadict[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
+    #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
     #[date2, lat2, ...], ...]
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
@@ -299,8 +297,8 @@ def get_grid_data(form_input, program):
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
 
-    #request = GridData(params)
-    request = WRCCClasses.DataJob('GridData', params).make_data_call()
+    request = GridData(params)
+    #request = WRCCClasses.DataJob('GridData', params).make_data_call()
 
     try:
         #data_list[date_idx][0] = date
@@ -323,28 +321,36 @@ def get_grid_data(form_input, program):
         else:
             print 'Unknown error ocurred when getting data'
             sys.exit(1)
+    if 'location' in form_input.keys():
+        datalist = [[] for i in range(len(request['data']))]
+    else:
+        length = len(request['data']) * len(lats)
+        datalist = [[] for i in range(length)]
+
     for date_idx, date_vals in enumerate(request['data']):
         if 'location' in form_input.keys():
-            datadict[date_idx] = []
-            datadict[date_idx].append(str(date_vals[0]))
-            datadict[date_idx].append(lons[0][0])
-            datadict[date_idx].append(lats[0][0])
-            datadict[date_idx].append(elevs[0][0])
+
+            datalist[date_idx].append(str(date_vals[0]))
+            datalist[date_idx].append(lons[0][0])
+            datalist[date_idx].append(lats[0][0])
+            datalist[date_idx].append(elevs[0][0])
+
             for el_idx in range(1,len(el_list) + 1):
-                datadict[date_idx].append(str(date_vals[el_idx]).strip(' '))
+                datalist[date_idx].append(str(date_vals[el_idx]).strip(' '))
         else:
             idx = -1
             for grid_idx, lat_grid in enumerate(lats):
                 for lat_idx, lat in enumerate(lat_grid):
                     idx+=1
-                    datadict[idx] = []
-                    datadict[idx].append(str(date_vals[0]))
-                    datadict[idx].append(lons[grid_idx][lat_idx])
-                    datadict[idx].append(lat)
-                    datadict[idx].append(elevs[grid_idx][lat_idx])
+
+                    datalist[idx].append(str(date_vals[0]))
+                    datalist[idx].append(lons[grid_idx][lat_idx])
+                    datalist[idx].append(lat)
+                    datalist[idx].append(elevs[grid_idx][lat_idx])
+
                     for el_idx in range(1,len(el_list) + 1):
-                        datadict[idx].append(date_vals[el_idx][grid_idx][lat_idx])
-    return datadict, el_list
+                        datalist[idx].append(date_vals[el_idx][grid_idx][lat_idx])
+    return datalist, el_list
 
 #######################################
 #APPLICATION modules

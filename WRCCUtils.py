@@ -8,9 +8,31 @@ import datetime
 import time
 import sys
 import numpy
+import re
 ############################################################################################
 #Utils
 ############################################################################################
+'''
+strips base temp xx from gddxx ( hddxx, cddxx)
+return element name gdd( hdd, cdd) and base temp xx
+'''
+def get_el_and_base_temp(el):
+    el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
+    b = el[-2:len(el)]
+    try:
+        base_temp = int(b)
+        element = el_strip
+    except:
+        if b == 'dd' and el in ['hdd', 'cdd']:
+            base_temp = '65'
+        elif b == 'dd' and el == 'gdd':
+            base_temp = '50'
+        else:
+            base_temp = None
+        element = el
+    return element, base_temp
+
+
 '''
 Given a time unit (days, months or years),
 an end date and the number of days/months/years to
@@ -417,6 +439,8 @@ def get_element_list(form_input, program):
         elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
     elif program == 'Sodcnv':
         elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
+    elif program == 'GPTimeSeries':
+        elements = [str(form_input['element'])]
     else:
         elements = [str(el) for el in form_input['elements']]
     return elements
