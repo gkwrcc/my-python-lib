@@ -50,6 +50,9 @@ def StnMeta(params):
 def GridData(params):
     return make_request(base_url+'GridData',params)
 
+def GridCalc(params):
+    return make_request(base_url+'GridCalc',params)
+
 def General(params):
     return make_request(base_url+'General',params)
 
@@ -324,9 +327,13 @@ def get_grid_data(form_input, program):
     if 'location' in form_input.keys():
         datalist = [[] for i in range(len(request['data']))]
     else:
-        length = len(request['data']) * len(lats)
+        lat_num = 0
+        for lat_idx, lat_grid in enumerate(request['meta']['lat']):
+           lat_num+=len(lat_grid)
+        length = len(request['data']) * lat_num
+        #length = len(request['data']) * len(lats)
         datalist = [[] for i in range(length)]
-
+    idx = -1
     for date_idx, date_vals in enumerate(request['data']):
         if 'location' in form_input.keys():
 
@@ -338,11 +345,9 @@ def get_grid_data(form_input, program):
             for el_idx in range(1,len(el_list) + 1):
                 datalist[date_idx].append(str(date_vals[el_idx]).strip(' '))
         else:
-            idx = -1
             for grid_idx, lat_grid in enumerate(lats):
                 for lat_idx, lat in enumerate(lat_grid):
                     idx+=1
-
                     datalist[idx].append(str(date_vals[0]))
                     datalist[idx].append(lons[grid_idx][lat_idx])
                     datalist[idx].append(lat)
@@ -350,6 +355,7 @@ def get_grid_data(form_input, program):
 
                     for el_idx in range(1,len(el_list) + 1):
                         datalist[idx].append(date_vals[el_idx][grid_idx][lat_idx])
+                    print idx, datalist[idx]
     return datalist, el_list
 
 #######################################
