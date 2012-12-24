@@ -86,6 +86,10 @@ def station_meta_to_json(by_type, val):
     else:
         #request = WRCCClasses.DataJob('StnMeta', params).make_data_call()
         request = StnMeta(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
     stn_meta_list = []
     stn_json ={}
     if 'meta' in request.keys():
@@ -149,6 +153,10 @@ def state_aves(state, month, elements):
     el_list = [{"name":el, "interval":[1,0,0],"duration":30,"reduce":"mean","smry":"mean"} for el in elements]
     params = {"state":state,"sdate":start_date,"edate":end_date, "elems":el_list}
     request = MultiStnData(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
     state_aves = defaultdict(dict)
     if 'error' in request:
         state_ave_temp = []
@@ -193,6 +201,9 @@ def get_point_data(form_input, program):
             pass
         request=StnMeta(params)
 
+        if not request:
+            request = {'error':'bad request, check params: %s'  % str(params)}
+
         try:
             request['meta']
             for k, stn in enumerate(request['meta']):
@@ -235,10 +246,10 @@ def get_point_data(form_input, program):
     elems=[dict(name=el)for el in elements])
     #request = MultiStnData(params)
     request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
+
     '''
     if not request:
-        print 'Bad request! Params: %s'  % params
-        sys.exit(1)
+        request = {'error':'bad request, check params: %s'  % str(params)}
     '''
     try:
         request['data']#list of data for the stations
@@ -287,76 +298,22 @@ def get_point_data(form_input, program):
     return dict(datadict), dates_dict, elements, stn_ids_dict, stn_names_dict
 
 def get_grid_data(form_input, program):
-    data_list = []
     #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
     #[date2, lat2, ...], ...]
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
     el_list = WRCCUtils.get_element_list(form_input, program)
     elements = ','.join(el_list)
-
     params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll,elev'}
     if 'location' in form_input.keys():params['loc'] = form_input['location']
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
-
     request = GridData(params)
-    #request = WRCCClasses.DataJob('GridData', params).make_data_call()
 
-    try:
-        #data_list[date_idx][0] = date
-        #data_list[date_idx][1] = el_1 data = [[grid_cell1_point_data], [grid_cell1_point_data], ...]
-        data_list = request['data']
-        #lats,lons = [[grid_cell1_lats/lons], [grid_cell2_lats/lons], ...]
-        #elevs = [[grid_cell1_elevs], [grid_cell2_elevs], ...]
-        if 'location' in form_input.keys():
-            lats = [[request['meta']['lat']]]
-            lons = [[request['meta']['lon']]]
-            elevs = [[request['meta']['elev']]]
-        else:
-            lats = request['meta']['lat']
-            lons = request['meta']['lon']
-            elevs = request['meta']['elev']
-    except:
-        if 'error' in request.keys():
-            print '%s' % str(request['error'])
-            sys.exit(1)
-        else:
-            print 'Unknown error ocurred when getting data'
-            sys.exit(1)
-    if 'location' in form_input.keys():
-        datalist = [[] for i in range(len(request['data']))]
-    else:
-        lat_num = 0
-        for lat_idx, lat_grid in enumerate(request['meta']['lat']):
-           lat_num+=len(lat_grid)
-        length = len(request['data']) * lat_num
-        #length = len(request['data']) * len(lats)
-        datalist = [[] for i in range(length)]
-    idx = -1
-    for date_idx, date_vals in enumerate(request['data']):
-        if 'location' in form_input.keys():
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
 
-            datalist[date_idx].append(str(date_vals[0]))
-            datalist[date_idx].append(lons[0][0])
-            datalist[date_idx].append(lats[0][0])
-            datalist[date_idx].append(elevs[0][0])
-
-            for el_idx in range(1,len(el_list) + 1):
-                datalist[date_idx].append(str(date_vals[el_idx]).strip(' '))
-        else:
-            for grid_idx, lat_grid in enumerate(lats):
-                for lat_idx, lat in enumerate(lat_grid):
-                    idx+=1
-                    datalist[idx].append(str(date_vals[0]))
-                    datalist[idx].append(lons[grid_idx][lat_idx])
-                    datalist[idx].append(lat)
-                    datalist[idx].append(elevs[grid_idx][lat_idx])
-
-                    for el_idx in range(1,len(el_list) + 1):
-                        datalist[idx].append(date_vals[el_idx][grid_idx][lat_idx])
-                    print idx, datalist[idx]
-    return datalist, el_list
+    return request
 
 #######################################
 #APPLICATION modules
@@ -380,6 +337,10 @@ def get_station_list(by_type, val):
     else:
         pass
     request=StnMeta(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
     try:
         request['meta']
         for i, stn in enumerate(request['meta']):
@@ -401,6 +362,10 @@ def get_us_meta():
     ,'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
     params = {"state":["%s" % state for state in states]}
     request = StnMeta(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
     return request
 
 #data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
@@ -477,9 +442,9 @@ def get_sod_data(form_input, program):
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el)for el in elements])
     request = MultiStnData(params)
+
     if not request:
-        print 'Bad request! Params: %s'  % params
-        sys.exit(1)
+        request = {'error':'bad request, check params: %s'  % str(params)}
 
     try:
         request['data']#list of data for the stations
@@ -539,6 +504,9 @@ def get_sod_data(form_input, program):
         groupby="year") for el in elements]
         params_x = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts_x)
         request_x = MultiStnData(params_x)
+        if not request_x:
+            request_x = {'error':'bad request, check params: %s'  % str(params_x)}
+
         try:
             request_x['data']#list of data for the stations
             #order results by stn id
@@ -609,6 +577,10 @@ def get_sodsum_data(form_input):
             dict(name='snow'), dict(name='snwd'), dict(name='maxt'), dict(name='mint'), dict(name='obst')])
 
         request = StnData(params)
+
+        if not request:
+            request = {'error':'bad request, check params: %s'  % str(params)}
+
         try:
             request['meta']
             station_names[i] = request['meta']['name']
@@ -669,6 +641,10 @@ def get_sodlist_data(form_input, program):
     #NOTE: these data need to be obtained via var major:
     if program == 'sodlist' and 'include_tobs_evap' in form_input.keys():
         request_evap = StnData(params_e)
+
+        if not request_evap:
+            request_evap = {'error':'bad request, check params: %s'  % str(params_e)}
+
         try:
             request_evap['meta']
         except:
@@ -686,6 +662,9 @@ def get_sodlist_data(form_input, program):
 
     #retrieve data via Acis webservices
     request = StnData(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
 
     #Test for successful data retrieval and get metadata information
     try:
