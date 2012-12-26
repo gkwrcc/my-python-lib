@@ -12,6 +12,7 @@ import time
 from cStringIO import StringIO
 import cairo
 import AcisWS
+import base64
 
 MEDIA_URL = '/Users/bdaudert/DRI/dj-projects/my_acis/media/'
 
@@ -102,17 +103,25 @@ class GridFigure(object) :
 
 
     def get_grid(self) :
-        result = AcisWS.GridData(self.params)
-        if not result or 'error' in result.keys():
-            import base64
+        try:
+            result = AcisWS.GridData(self.params)
+            if not result or 'error' in result.keys():
+                with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+                    encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
+                self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
+                'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
+                u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
+                'error':'bad request, check parameters %s' %str(self.params)}
+            else:
+                self.results = result
+        except ValueError:
             with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
             u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
             'error':'bad request, check parameters %s' %str(self.params)}
-        else:
-            self.results = result
+
         return self.results
 
     @staticmethod
@@ -231,15 +240,23 @@ class GridFigure(object) :
 class GridDiffFigure(GridFigure) :
     title = 'Difference from Last Year'
     def get_grid(self):
-        result = AcisWS.GridCalc(self.params)
-        if not result or 'error' in result.keys():
-            import base64
+        try:
+            result = AcisWS.GridCalc(self.params)
+            if not result or 'error' in result.keys():
+                with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+                    encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
+                self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
+                'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
+                u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
+                'error':'bad request, check parameters %s' %str(self.params)}
+            else:
+                self.results = results
+        except ValueError:
             with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
             u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
             'error':'bad request, check parameters %s' %str(self.params)}
-        else:
-            self.results = results
+
         return self.results

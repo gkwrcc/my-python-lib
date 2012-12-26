@@ -98,7 +98,11 @@ def station_meta_to_json(by_type, val):
             sids = stn['sids'] if 'sids' in stn.keys() else []
             for sid in sids:
                 sid_split = sid.split(' ')
-                stn_sids.append(str(sid_split[0]).replace("\'"," "))
+                #put coop id up front (for cscs application metagraph  and possibly others)
+                if str(sid_split[1]) == '2':
+                    stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
+                else:
+                    stn_sids.append(str(sid_split[0]).replace("\'"," "))
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
