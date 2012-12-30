@@ -367,30 +367,30 @@ def find_start_end_dates(form_input):
     if 'start_date' not in form_input.keys():
         s_date = 'por'
     else:
-        if form_input['start_date'] == '' or form_input['start_date'] == ' ':
+        if str(form_input['start_date']) == '' or str(form_input['start_date']) == ' ':
             s_date = 'por'
         else:
-            if len(form_input['start_date']) == 4:
-                s_date = form_input['start_date'] + '0101'
-            elif len(form_input['start_date']) == 6:
-                s_date = form_input['start_date'] + '01'
-            elif len(form_input['start_date']) == 8:
-                s_date = form_input['start_date']
+            if len(str(form_input['start_date'])) == 4:
+                s_date = str(form_input['start_date']) + '0101'
+            elif len(str(form_input['start_date'])) == 6:
+                s_date = str(form_input['start_date']) + '01'
+            elif len(str(form_input['start_date'])) == 8:
+                s_date = str(form_input['start_date'])
             else:
                 print 'Invalid start date format, should be yyyy or yyyymmdd!'
                 s_date = None
     if 'end_date' not in form_input.keys():
         e_date = 'por'
     else:
-        if form_input['end_date'] == '' or form_input['end_date'] == ' ':
+        if str(form_input['end_date']) == '' or str(form_input['end_date']) == ' ':
             e_date = 'por'
         else:
-            if len(form_input['end_date']) == 4:
-                e_date = form_input['end_date'] + '1231'
-            elif len(form_input['end_date']) == 6:
-                e_date = form_input['end_date'] + '31'
-            elif len(form_input['end_date']) == 8:
-                e_date = form_input['end_date']
+            if len(str(form_input['end_date'])) == 4:
+                e_date = str(form_input['end_date']) + '1231'
+            elif len(str(form_input['end_date'])) == 6:
+                e_date = str(form_input['end_date']) + '31'
+            elif len(str(form_input['end_date'])) == 8:
+                e_date = str(form_input['end_date'])
             else:
                 print 'Invalid end date format, should be yyyy or yyyymmdd!'
                 e_date = None
