@@ -366,6 +366,8 @@ def strip_n_sort(station_list):
 def find_start_end_dates(form_input):
     if 'start_date' not in form_input.keys():
         s_date = 'por'
+    elif form_input['start_date'] == 'por':
+        s_date = 'por'
     else:
         if str(form_input['start_date']) == '' or str(form_input['start_date']) == ' ':
             s_date = 'por'
@@ -380,6 +382,8 @@ def find_start_end_dates(form_input):
                 print 'Invalid start date format, should be yyyy or yyyymmdd!'
                 s_date = None
     if 'end_date' not in form_input.keys():
+        e_date = 'por'
+    elif form_input['end_date'] == 'por':
         e_date = 'por'
     else:
         if str(form_input['end_date']) == '' or str(form_input['end_date']) == ' ':

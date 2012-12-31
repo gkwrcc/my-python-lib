@@ -220,7 +220,6 @@ def get_point_data(form_input, program):
         return stn_list
 
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
-    dates = WRCCUtils.get_dates(s_date, e_date, program)
     elements = WRCCUtils.get_element_list(form_input, program)
     if 'station_id' in form_input.keys():
         station_ids =[form_input['station_id']]
@@ -246,10 +245,15 @@ def get_point_data(form_input, program):
 
     for i, stn in enumerate(station_ids):
         datadict[i] = [[] for el in elements]
-    params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
-    elems=[dict(name=el)for el in elements])
-    #request = MultiStnData(params)
-    request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
+    if len(station_ids) == 1:
+        params = dict(sid=station_ids[0], sdate=s_date, edate=e_date, \
+        elems=[dict(name=el)for el in elements])
+        request = StnData(params)
+    else:
+        params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
+        elems=[dict(name=el)for el in elements])
+        #request = MultiStnData(params)
+        request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
 
     '''
     if not request:
@@ -265,6 +269,15 @@ def get_point_data(form_input, program):
             print 'Unknown error ocurred when getting data'
             sys.exit(1)
 
+    if len(station_ids) == 1:
+        #make look like MultiStn call request and take care of por start/end dates
+        request = {'data':[{'meta':request['meta'],'data':request['data']}]}
+        if s_date == 'por':
+            s_date = ''.join(request['data'][0]['data'][0][0].split('-'))
+        if e_date == 'por':
+            e_date = ''.join(request['data'][0]['data'][-1][0].split('-'))
+        print s_date, e_date
+    dates = WRCCUtils.get_dates(s_date, e_date, program)
     for stn, stn_data in enumerate(request['data']):
         try:
             stn_data['meta']
