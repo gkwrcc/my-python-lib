@@ -77,9 +77,14 @@ def monthly_aves(request, el_list):
                             aves.append(float(dat))
                         except:
                             pass
-                    yr_aves.append(numpy.mean(aves))
-            results[el].append(numpy.mean(yr_aves))
-
+                    if aves:
+                        yr_aves.append(numpy.mean(aves))
+                    else:
+                        pass
+            if yr_aves:
+                results[el].append(numpy.mean(yr_aves))
+            else:
+                results[el].append(9999.9)
     return results
 ##########################################################################
 #######################KELLY's DATA APPLICATIONS##########################

@@ -40,11 +40,11 @@ go back, this routine calculates the start date.
 Leap years are taken into consideratiion. start date is given as
 string of length 8, eg: "20000115", the resulting end date is of same format
 '''
-def get_start_date(time_unit, start_date, number):
+def get_start_date(time_unit, end_date, number):
     x = int(number)
-    yr = start_date[0:4]
-    mon = start_date[4:6]
-    day = start_date[6:8]
+    yr = end_date[0:4]
+    mon = end_date[4:6]
+    day = end_date[6:8]
     mon_int = int(mon.lstrip('0'))
     day_int = int(day.lstrip('0'))
     if time_unit == 'years':
