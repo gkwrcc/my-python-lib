@@ -79,9 +79,9 @@ class DataJob:
 
 
 class GridFigure(object) :
-    image_padding = 30,100
+    image_padding = 50,100
     title = 'Acis GridData map'
-    def __init__(self, params, img_offset=10, text_offset=(50, 55)) :
+    def __init__(self, params, img_offset=10, text_offset=(50, 50)) :
         if 'state' in params.keys():
             self.region = 'state'
         elif 'bbox' in params.keys():
@@ -187,12 +187,13 @@ class GridFigure(object) :
         self.place_text(date_str,j=just)
         ctx.move_to(*self.text_offset)
         ctx.rel_move_to(0,25)
-        ctx.set_font_size(10.)
+        ctx.set_font_size(16.)
         ctx.set_source_rgb(.8,.1,.1)
         if 'bbox' in self.params.keys():
             fig_title = 'Element: %s Bounding Box: %s' %( self.params['elems'][0]['name'], self.params['bbox'])
         elif 'state' in self.params.keys():
             fig_title = 'Element: %s State: %s' %( self.params['elems'][0]['name'], self.params['state'])
+        #self.place_text(fig_title,j=just,v='t')
         self.place_text(fig_title,j=just,v='t')
 
     def add_legend(self, image_info) :
