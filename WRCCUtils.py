@@ -9,6 +9,10 @@ import time
 import sys
 import numpy
 import re
+
+LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
+MEDIA_URL = 'www-devel/apps/csc/dj-project/my_acis/media/'
+
 ############################################################################################
 #Utils
 ############################################################################################
@@ -1480,12 +1484,6 @@ def Cengam(nc, nw, c, sumx, sumlnx):
             scale = scalen
             nocon = 0
             break
-    return shape, scale, nocon
-
-
-
-
-
     return shape, scale, nocon
 
 #Returns as x the value of the gamma distribution variate corresponding to the decimal

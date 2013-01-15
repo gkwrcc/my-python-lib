@@ -7,6 +7,8 @@ WRCC programs included so far:
 sodlist, sodsum
 '''
 
+LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
+MEDIA_URL = 'www-devel/apps/csc/dj-project/my_acis/media/'
 
 #############################################################################
 #python modules
@@ -126,9 +128,9 @@ def station_meta_to_json(by_type, val):
     #double quotes needed for jquery json.load
     stn_json_str = str(stn_json).replace("\'", "\"")
     if by_type == 'states':
-        f = open("/Users/bdaudert/DRI/dj-projects/my_acis/media/json/SW_stn.json",'w+')
+        f = open(MEDIA_URL + 'json/SW_stn.json','w+')
     else:
-        f = open("/Users/bdaudert/DRI/dj-projects/my_acis/media/json/stn.json",'w+')
+        f = open(MEDIA_URL + 'json/stn.json','w+')
     f.write(stn_json_str)
     f.close()
     return stn_json

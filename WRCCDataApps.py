@@ -10,6 +10,9 @@ import sys
 import fileinput
 from scipy import stats
 
+LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
+MEDIA_URL = 'www-devel/apps/csc/dj-project/my_acis/media/'
+
 ##########################################################################
 #######################CSC DATA PORTAL APPLICATIONS##########################
 ##########################################################################
@@ -138,7 +141,7 @@ def Sodpiii(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input(['/Users/bdaudert/DRI/my-python-lib/piii.dat.2']):
+    for line in fileinput.input([LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -486,7 +489,7 @@ def Sodpiii(**kwargs):
             results_0[i][tbl_idx][num_yrs+6].append('%i' % int(count))
         #End numdur while loop... Phew...
         if kwargs['mean'] == 'am':stats[0] = amean
-        annpcp = 50.0 #from /Users/bdaudert/DRI/my-python-lib/arealstats.dat
+        annpcp = 50.0 #from LIB_PREFIX + arealstats.dat
         if kwargs['pct_average'] == 'apct':
             for idur in range(16):stats[1][idur] = apctan[idur]*annpcp
 
@@ -495,7 +498,7 @@ def Sodpiii(**kwargs):
 
         if kwargs['cv'] == 'acv':
             for idur in range(16):stats[1][idur] = acv[idur] * stats[0][idur]
-        #Ration of 6 and 12 hr to one day (from /Users/bdaudert/DRI/my-python-lib/arealstats.dat)
+        #Ration of 6 and 12 hr to one day (from LIB_PREFIX + arealstats.dat)
         r6to1 = 0.5
         r12to1 = 0.75
 
@@ -578,7 +581,7 @@ def Sodxtrmts(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input(['/Users/bdaudert/DRI/my-python-lib/piii.dat.2']):
+    for line in fileinput.input([LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -3172,4 +3175,3 @@ def SodsumMulti(data, dates, elements, coop_station_ids, station_names):
             results[i]['LNGPR'] = c_lngpr
 
     return results
-
