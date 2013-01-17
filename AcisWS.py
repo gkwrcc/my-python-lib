@@ -8,7 +8,7 @@ sodlist, sodsum
 '''
 
 LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
-MEDIA_URL = 'www-devel/apps/csc/dj-project/my_acis/media/'
+MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
 
 #############################################################################
 #python modules
@@ -65,6 +65,7 @@ def General(params):
 
 def station_meta_to_json(by_type, val):
     stn_list = []
+
     if by_type == 'county':
         params = dict(county=val)
     elif by_type == 'climate_division':
@@ -114,7 +115,7 @@ def station_meta_to_json(by_type, val):
             name = str(stn['name']).replace("\'"," ") if 'name' in stn.keys() else 'Name not listed'
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
-            state_key = str(stn['state']) if 'state' in stn.keys() else 'State not listed'
+            state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
 
             stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,"state":state_key}
             stn_meta_list.append(stn_dict)
@@ -127,13 +128,16 @@ def station_meta_to_json(by_type, val):
     stn_json["stations"] = stn_meta_list
     #double quotes needed for jquery json.load
     stn_json_str = str(stn_json).replace("\'", "\"")
+    time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     if by_type == 'states':
-        f = open(MEDIA_URL + 'json/SW_stn.json','w+')
+        f_name = 'SW_stn.json'
+        f = open('/tmp/' + f_name,'w+')
     else:
-        f = open(MEDIA_URL + 'json/stn.json','w+')
+        f_name = time_stamp + 'stn.json'
+        f = open('/tmp/' +  f_name,'w+')
     f.write(stn_json_str)
     f.close()
-    return stn_json
+    return stn_json, f_name
 
 #Rountine computes mean precip and temp for month given in end_date
 #for each year starting 1900 ending end_date[year] - 1
@@ -206,10 +210,6 @@ def get_point_data(form_input, program):
         else:
             pass
         request=StnMeta(params)
-
-        if not request:
-            request = {'error':'bad request, check params: %s'  % str(params)}
-
         try:
             request['meta']
             for k, stn in enumerate(request['meta']):
@@ -257,19 +257,18 @@ def get_point_data(form_input, program):
         #request = MultiStnData(params)
         request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
 
-    '''
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
-    '''
+
     try:
-        request['data']#list of data for the stations
+        request['meta']
     except:
-        if 'error' in request.keys():
-            print '%s' % str(request['error'])
-            sys.exit(1)
-        else:
-            print 'Unknown error ocurred when getting data'
-            sys.exit(1)
+        request['meta'] = {}
+
+    try:
+        request['data']
+    except:
+        request['data'] = []
 
     if len(station_ids) == 1:
         #make look like MultiStn call request and take care of por start/end dates
@@ -278,7 +277,6 @@ def get_point_data(form_input, program):
             s_date = ''.join(request['data'][0]['data'][0][0].split('-'))
         if e_date == 'por':
             e_date = ''.join(request['data'][0]['data'][-1][0].split('-'))
-        print s_date, e_date
     dates = WRCCUtils.get_dates(s_date, e_date, program)
     for stn, stn_data in enumerate(request['data']):
         try:
