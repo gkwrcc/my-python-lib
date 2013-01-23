@@ -66,10 +66,10 @@ def General(params):
 def station_meta_to_json(by_type, val):
     stn_list = []
     network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS'}
-    network_colors = {'1': 'yellow', '2': 'blue', '3': 'green','4':'yellow', '5': 'ltblue', \
+    network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'yellow-dot', '5': 'ltblue-dot', \
                     '6': 'orange-dot', '7': 'yellow-dot', '8': 'purple-dot', '9':'green', '10':'pink-dot', 'Multi': 'red', 'Misc':'red-dot'}
                      #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
-    stn_json={'network_codes': network_codes, 'network_colors': network_colors}
+    stn_json={'network_codes': network_codes, 'network_icons': network_icons}
     if by_type == 'county':
         params = dict(county=val)
     elif by_type == 'climate_division':
@@ -108,11 +108,11 @@ def station_meta_to_json(by_type, val):
             elif len(sids) == 1:
                 net_id = str(sids[0].split(' ')[1])
                 if int(net_id) >10:
-                    marker_color = network_colors['Misc']
+                    marker_icon = network_icons['Misc']
                 else:
-                    marker_color = network_colors[str(sids[0].split(' ')[1])]
+                    marker_icon = network_icons[str(sids[0].split(' ')[1])]
             else:
-                marker_color = network_colors['Multi']
+                marker_icon = network_icons['Multi']
             for sid in sids:
                 sid_split = sid.split(' ')
                 #put coop id up front (for cscs application metagraph  and possibly others)
@@ -134,7 +134,7 @@ def station_meta_to_json(by_type, val):
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
 
             stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
-            "state":state_key, 'marker_color': marker_color, 'network_codes': stn_network_codes}
+            "state":state_key, 'marker_icon': marker_icon, 'stn_network_codes': stn_network_codes}
             stn_meta_list.append(stn_dict)
     else:
         if 'error' in request.keys():
