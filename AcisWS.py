@@ -65,7 +65,11 @@ def General(params):
 
 def station_meta_to_json(by_type, val):
     stn_list = []
-
+    network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS'}
+    network_colors = {'1': 'yellow', '2': 'blue', '3': 'green','4':'yellow', '5': 'ltblue', \
+                    '6': 'orange-dot', '7': 'yellow-dot', '8': 'purple-dot', '9':'green', '10':'pink-dot', 'Multi': 'red', 'Misc':'red-dot'}
+                     #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
+    stn_json={'network_codes': network_codes, 'network_colors': network_colors}
     if by_type == 'county':
         params = dict(county=val)
     elif by_type == 'climate_division':
@@ -94,18 +98,30 @@ def station_meta_to_json(by_type, val):
         request = {'error':'bad request, check params: %s'  % str(params)}
 
     stn_meta_list = []
-    stn_json ={}
     if 'meta' in request.keys():
         for i, stn in enumerate(request['meta']):
             stn_sids = []
+            stn_network_codes = []
             sids = stn['sids'] if 'sids' in stn.keys() else []
+            if not sids:
+                pass
+            elif len(sids) == 1:
+                net_id = str(sids[0].split(' ')[1])
+                if int(net_id) >10:
+                    marker_color = network_colors['Misc']
+                else:
+                    marker_color = network_colors[str(sids[0].split(' ')[1])]
+            else:
+                marker_color = network_colors['Multi']
             for sid in sids:
                 sid_split = sid.split(' ')
                 #put coop id up front (for cscs application metagraph  and possibly others)
                 if str(sid_split[1]) == '2':
                     stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
+                    stn_network_codes.insert(0, str(sid_split[1]))
                 else:
                     stn_sids.append(str(sid_split[0]).replace("\'"," "))
+                    stn_network_codes.append(str(sid_split[1]))
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -117,7 +133,8 @@ def station_meta_to_json(by_type, val):
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
 
-            stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,"state":state_key}
+            stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
+            "state":state_key, 'marker_color': marker_color, 'network_codes': stn_network_codes}
             stn_meta_list.append(stn_dict)
     else:
         if 'error' in request.keys():
