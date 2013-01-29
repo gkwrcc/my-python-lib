@@ -25,7 +25,8 @@ import urllib2
 import json
 ##############################################################################
 # set Acis data server
-base_url = 'http://data.rcc-acis.org/'
+#base_url = 'http://data.rcc-acis.org/'
+base_url = 'http://data.wrcc.rcc-acis.org/'
 ##############################################################################
 
 #Acis WebServices functions
