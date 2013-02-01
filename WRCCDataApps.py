@@ -16,6 +16,26 @@ MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
 ##########################################################################
 #######################CSC DATA PORTAL APPLICATIONS##########################
 ##########################################################################
+acis_elements = defaultdict(dict)
+acis_elements ={'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
+              'mint':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
+              'avgt': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'}, \
+              'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'}, \
+              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'}, \
+              'snow': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'}, \
+              'snwd': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
+              'evap': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
+              'dd': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)'}, 'vX':'44', \
+              'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
+              #bug fix needed for cdd = 44
+
+'''
+monthly aves
+CSC hsitoric station data app
+computes monthly aves over multiple years for multiple elements chosen by user
+'''
 def monthly_aves(request, el_list):
     #request['data'] = [[year1, [el1(366entries)], [el2(366entries)], ...],
     #                   [year2, [el1(366entries)], [el2(366entries)], ...],...

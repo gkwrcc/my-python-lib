@@ -63,38 +63,59 @@ def General(params):
 ###############################
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
+network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
+'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Multi', '12':'Misc'}
+network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'yellow-dot', '5': 'ltblue-dot', \
+'6': 'orange-dot', '7': 'yellow-dot', '8': 'purple-dot', '9':'green', '10':'pink-dot', '11': 'red', '12':'red-dot'}
+#1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
 
-def station_meta_to_json(by_type, val):
+acis_elements = defaultdict(dict)
+acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
+              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
+              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'}, \
+              '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'}, \
+              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'}, \
+              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'}, \
+              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
+              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
+              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)'}, 'vX':'44', \
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
+              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
+              #bug fix needed for cdd = 44
+
+'''
+station_meta_to_json
+Writes json file used by javascript initialize_station_map.
+If el_list(lsit of var majors of elements), time_range(start_date, end_date) are given, only stations are listed that have elements for the given time range
+'''
+def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     stn_list = []
-    network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', '8':'RCC', '9':'ThreadEx', \
-    '10':'CoCoRaHS', '11':'Multi', '12':'Misc'}
-    network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'yellow-dot', '5': 'ltblue-dot', \
-                    '6': 'orange-dot', '7': 'yellow-dot', '8': 'purple-dot', '9':'green', '10':'pink-dot', '11': 'red', '12':'red-dot'}
-                     #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
     stn_json={'network_codes': network_codes, 'network_icons': network_icons}
+    vX_list= ['1','2','43','3','4','10','11','7','45']
+    vX_tuple = '1,2,43,3,4,10,11,7,45'
+    params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     if by_type == 'county':
-        params = dict(county=val)
+        params['county'] = val
     elif by_type == 'climate_division':
-        params = dict(climdiv=val)
+        params['climdiv'] = val
     elif by_type == 'county_warning_area':
-        params = dict(cwa=val)
+        params['cwa'] = val
     elif by_type == 'basin':
-        params = dict(basin=val)
+        params['basin'] =val
     elif by_type == 'state':
-        params = dict(state=val)
+        params['state'] =val
     elif by_type == 'bounding_box':
-        params = dict(bbox=val)
+        params['bbox'] = val
     elif by_type == 'id':
-        params = dict(sids=val)
+        params['sids'] =val
+    elif by_type == 'states': #Whole SW
+        params['state'] = 'az,ca,co,nm,nv,ut'
     else:
         pass
 
-    if by_type == 'states':
-        request = WRCCClasses.DataJob('StnMeta', {"state":"az,ca,co,nm,nv,ut"}).make_data_call()
-        #request = StnMeta({"state":"az,ca,co,nm,nv,ut"})
-    else:
-        #request = WRCCClasses.DataJob('StnMeta', params).make_data_call()
-        request = StnMeta(params)
+    #Acis WS call
+    request = StnMeta(params)
 
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
@@ -102,6 +123,31 @@ def station_meta_to_json(by_type, val):
     stn_meta_list = []
     if 'meta' in request.keys():
         for i, stn in enumerate(request['meta']):
+            flag_empty = False
+            if not stn['valid_daterange']:
+                continue
+            #check if we are looking for stations with particular elements
+            if el_list is not None and start_dates is not None and end_dates is not None:
+                if len(stn['valid_daterange']) != len(el_list):
+                    continue
+                for el_id, el_vX in enumerate(el_list):
+                    if not stn['valid_daterange'][el_idx]:
+                        #data for this element does not exist at station
+                        flag_empty = True
+                        break
+                    else: # data for this element found at station
+                        #check if data for that element lies in user given time_range
+                        start_por = datetime.datetime(stn['valid_daterange'][el_idx][0][0:4], stn['valid_daterange'][el_idx][0][5:7],stn['valid_daterange'][el_idx][0][8:10])
+                        end_por = datetime.datetime(stn['valid_daterange'][el_idx][1][0:4], stn['valid_daterange'][el_idx][1][5:7],stn['valid_daterange'][el_idx][1][8:10])
+                        start_user = datetime.datetime(time_range[0][0:4], time_range[0][4:6],time_range[0][6:8])
+                        end_user = datetime.datetime(time_range[1][0:4], time_range[1][4:6],time_range[1][6:8])
+                        if start_user < start_por or end_user > end_por:
+                            flag_empty =  True
+                            break
+                if flag_empty:
+                    continue
+
+
             stn_sids = []
             stn_networks = []
             stn_network_codes = []
@@ -150,6 +196,15 @@ def station_meta_to_json(by_type, val):
             stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
             "state":state_key, 'marker_icon': marker_icon, 'marker_category':marker_category, \
             'stn_networks':stn_networks, 'stn_network_codes': stn_network_codes}
+            #check which elements are available at the stations[valid_daterange is not empty]
+            valid_date_range_list = stn['valid_daterange']
+            available_elements = []
+            for j,rnge in enumerate(valid_date_range_list):
+                if rnge:
+                    available_elements.append([acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
+
+            if available_elements:
+                stn_dict['available_elements'] = available_elements
             stn_meta_list.append(stn_dict)
     else:
         if 'error' in request.keys():
