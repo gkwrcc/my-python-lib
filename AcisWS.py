@@ -355,8 +355,8 @@ def get_point_data(form_input, program):
     else:
         params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el)for el in elements])
-        #request = MultiStnData(params)
-        request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
+        request = MultiStnData(params)
+        #request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
 
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
@@ -373,13 +373,35 @@ def get_point_data(form_input, program):
 
     if len(station_ids) == 1:
         #make look like MultiStn call request and take care of por start/end dates
-        request = {'data':[{'meta':request['meta'],'data':request['data']}]}
-        if s_date == 'por':
-            s_date = ''.join(request['data'][0]['data'][0][0].split('-'))
-        if e_date == 'por':
-            e_date = ''.join(request['data'][0]['data'][-1][0].split('-'))
-    dates = WRCCUtils.get_dates(s_date, e_date, program)
+        #Pass error message in any
+        if 'error' in request.keys():
+            request = {'data':[{'meta':request['meta'],'data':request['data'], 'error':request['error']}]}
+        else:
+            request = {'data':[{'meta':request['meta'],'data':request['data']}]}
+
+        if 'error' in request.keys():
+            s_date = None
+            e_date = None
+        else:
+            if s_date == 'por':
+                if request['data'][0]['data']:
+                    s_date = ''.join(request['data'][0]['data'][0][0].split('-'))
+                else:
+                    s_date = None
+            if e_date == 'por':
+                if request['data'][0]['data']:
+                    e_date = ''.join(request['data'][0]['data'][-1][0].split('-'))
+                else:
+                    e_date = None
+    if s_date is not None and e_date is not None:
+        dates = WRCCUtils.get_dates(s_date, e_date, program)
+    else:
+        dates = []
+
+    errors ={}
     for stn, stn_data in enumerate(request['data']):
+        if 'error' in stn_data.keys():
+            errors[stn] = stn_data['error']
         try:
             stn_data['meta']
             index = None
@@ -396,11 +418,17 @@ def get_point_data(form_input, program):
                 continue
             else:
                 station_names[index] = str(stn_data['meta']['name'])
+                if 'error' in stn_data.keys():
+                    errors[index] = stn_data['error']
                 try:
                     stn_data['data']
                     datadict[index] = stn_data['data']
+                    if 'error' in stn_data.keys():
+                        errors[index] = stn_data['error']
                 except:
                     datadict[index] = []
+                    if 'error' in stn_data.keys():
+                        errors[index] = stn_data['error']
         except:
             pass
     stn_ids_dict = {}
@@ -413,7 +441,7 @@ def get_point_data(form_input, program):
     for k, date in enumerate(dates):
         dates_dict[k] = date
 
-    return dict(datadict), dates_dict, elements, stn_ids_dict, stn_names_dict
+    return dict(datadict), dates_dict, elements, stn_ids_dict, stn_names_dict, errors
 
 def get_grid_data(form_input, program):
     #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],

@@ -135,8 +135,12 @@ def format_stn_meta(meta_dict):
         elif key == 'valid_daterange':
             Val = []
             for el_idx, rnge in enumerate(val):
-                start = str(rnge[0])
-                end = str(rnge[1])
+                if rnge and len(rnge) == 2:
+                    start = str(rnge[0])
+                    end = str(rnge[1])
+                else:
+                    start = '00000000'
+                    end = '00000000'
                 dr = [start, end]
                 Val.append(dr)
         else:
