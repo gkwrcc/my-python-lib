@@ -92,6 +92,14 @@ If el_list(lsit of var majors of elements), time_range(start_date, end_date) are
 def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     stn_list = []
     stn_json={'network_codes': network_codes, 'network_icons': network_icons}
+    '''
+    if el_list is not None:
+        vX_list = el_list
+        vX_tuple = ','.join(el_list)
+    else:
+        vX_list= ['1','2','43','3','4','10','11','7','45']
+        vX_tuple = '1,2,43,3,4,10,11,7,45'
+    '''
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
@@ -107,7 +115,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
         params['state'] =val
     elif by_type == 'bounding_box':
         params['bbox'] = val
-    elif by_type == 'id':
+    elif by_type == 'id' or by_type == 'station_id' or by_type == 'station_ids':
         params['sids'] =val
     elif by_type == 'states': #Whole SW
         params['state'] = 'az,ca,co,nm,nv,ut'
@@ -127,21 +135,27 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             if not stn['valid_daterange']:
                 continue
             #check if we are looking for stations with particular elements
-            if el_list is not None and start_dates is not None and end_dates is not None:
-                if len(stn['valid_daterange']) != len(el_list):
+            if el_list is not None and time_range is not None:
+                if len(stn['valid_daterange']) < len(el_list):
                     continue
-                for el_id, el_vX in enumerate(el_list):
+                for el_idx, el_vX in enumerate(el_list):
                     if not stn['valid_daterange'][el_idx]:
                         #data for this element does not exist at station
                         flag_empty = True
                         break
                     else: # data for this element found at station
                         #check if data for that element lies in user given time_range
-                        start_por = datetime.datetime(stn['valid_daterange'][el_idx][0][0:4], stn['valid_daterange'][el_idx][0][5:7],stn['valid_daterange'][el_idx][0][8:10])
-                        end_por = datetime.datetime(stn['valid_daterange'][el_idx][1][0:4], stn['valid_daterange'][el_idx][1][5:7],stn['valid_daterange'][el_idx][1][8:10])
-                        start_user = datetime.datetime(time_range[0][0:4], time_range[0][4:6],time_range[0][6:8])
-                        end_user = datetime.datetime(time_range[1][0:4], time_range[1][4:6],time_range[1][6:8])
-                        if start_user < start_por or end_user > end_por:
+                        por_start = datetime.datetime(int(stn['valid_daterange'][el_idx][0][0:4]), int(stn['valid_daterange'][el_idx][0][5:7]),int(stn['valid_daterange'][el_idx][0][8:10]))
+                        por_end = datetime.datetime(int(stn['valid_daterange'][el_idx][1][0:4]), int(stn['valid_daterange'][el_idx][1][5:7]),int(stn['valid_daterange'][el_idx][1][8:10]))
+                        if time_range[0] != 'por':
+                            user_start = datetime.datetime(int(time_range[0][0:4]), int(time_range[0][4:6]),int(time_range[0][6:8]))
+                        else:
+                            user_start = por_start
+                        if time_range[1] != 'por':
+                            user_end = datetime.datetime(int(time_range[1][0:4]), int(time_range[1][4:6]),int(time_range[1][6:8]))
+                        else:
+                            user_end = por_end
+                        if user_start < por_start or user_end > por_end:
                             flag_empty =  True
                             break
                 if flag_empty:
