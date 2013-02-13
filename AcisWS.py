@@ -7,9 +7,6 @@ WRCC programs included so far:
 sodlist, sodsum
 '''
 
-LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
-MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
-
 #############################################################################
 #python modules
 import numpy
@@ -350,7 +347,7 @@ def get_point_data(form_input, program):
         datadict[i] = [[] for el in elements]
     if len(station_ids) == 1:
         params = dict(sid=station_ids[0], sdate=s_date, edate=e_date, \
-        elems=[dict(name=el)for el in elements])
+        meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', elems=[dict(name=el)for el in elements])
         request = StnData(params)
     else:
         params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
@@ -373,11 +370,11 @@ def get_point_data(form_input, program):
 
     if len(station_ids) == 1:
         #make look like MultiStn call request and take care of por start/end dates
-        #Pass error message in any
+        #Pass error message if any
         if 'error' in request.keys():
             request = {'data':[{'meta':request['meta'],'data':request['data'], 'error':request['error']}]}
         else:
-            request = {'data':[{'meta':request['meta'],'data':request['data']}]}
+            request = {'data':[{'meta':request['meta'],'data':request['data'], 'error':''}]}
 
         if 'error' in request.keys():
             s_date = None
@@ -441,7 +438,8 @@ def get_point_data(form_input, program):
     for k, date in enumerate(dates):
         dates_dict[k] = date
 
-    return dict(datadict), dates_dict, elements, stn_ids_dict, stn_names_dict, errors
+    return dict(datadict), dict(dates_dict), elements, dict(stn_ids_dict), dict(stn_names_dict), errors
+    #return dict(datadict), dates, elements,station_ids, station_names, errors
 
 def get_grid_data(form_input, program):
     #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],

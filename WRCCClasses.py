@@ -14,8 +14,7 @@ import cairo
 import AcisWS
 import base64
 
-LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
-MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
+MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
 '''
 Class to retrieve data via Acis Webservice

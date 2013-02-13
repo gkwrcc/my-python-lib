@@ -10,8 +10,6 @@ import sys
 import numpy
 import re
 
-LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
-MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
 
 ############################################################################################
 #Utils

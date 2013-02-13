@@ -6,12 +6,15 @@ Module WRCCDataApps
 from collections import defaultdict
 import WRCCUtils
 import numpy
-import sys
+import sys, os
 import fileinput
 from scipy import stats
 
-LIB_PREFIX = '/www-devel/apps/csc/my-python-lib/'
-MEDIA_URL = '/www-devel/apps/csc/dj-projects/my_acis/media/'
+#from django.conf import settings
+#import my_acis.settings as settings
+#LIB_PREFIX = settings.LIB_PREFIX
+
+LIB_PREFIX = "/www/apps/csc/my-python-lib/"
 
 ##########################################################################
 #######################CSC DATA PORTAL APPLICATIONS##########################
