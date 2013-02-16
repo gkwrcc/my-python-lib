@@ -4,16 +4,247 @@
 Module WRCCUtils
 '''
 
-import datetime
-import time
-import sys
+import datetime, time, sys
+import json
 import numpy
 import re
+import collections
 
+from django.http import HttpResponse, HttpResponseRedirect
 
 ############################################################################################
 #Utils
 ############################################################################################
+'''
+Unicode converter
+'''
+def u_convert(data):
+    if isinstance(data, unicode):
+        return str(data)
+    elif isinstance(data, collections.Mapping):
+        return dict(map(u_convert, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(u_convert, data))
+    else:
+        return data
+
+'''
+Writes gridded data to a file f which is
+of format = file_extension (.dat,.txt,.xls)
+If a file f is given, data will be written to file.
+If a request object is given, the file will be generated
+via the webpages
+'''
+def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, file_info=None):
+    #sanity check:
+    if not f and not request:
+        response = 'Error! Need either a file or a reqest object!'
+    elif f and request:
+        response = 'Error! Choose one of file f or request object'
+    else:
+        if file_extension in ['dat', 'txt']:
+            import csv
+            if request:
+                #make sure file_info is given
+                if not file_info:
+                    file_info = ['data', 'request']
+                response = HttpResponse(mimetype='text/csv')
+                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1],file_extension)
+                writer = csv.writer(response, delimiter=delim )
+            else: #file f given
+                try:
+                    csvfile = open(f, 'w+')
+                    writer = csv.writer(csvfile, delimiter=delim )
+                    response = None
+                except Exception, e:
+                    #Can' open user given file, create emergency writer object
+                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
+                    response = 'Error! Cant open file' + str(e)
+
+            row = ['Date', 'Lat', 'Lon', 'Elev']
+            for el in elements:row.append(el)
+            writer.writerow(row)
+            for date_idx, date_vals in enumerate(data):
+                writer.writerow(date_vals)
+            try:
+                csvfile.close()
+            except:
+                pass
+        elif file_extension == 'json':
+            with open(f, 'w+') as jsonf:
+                import json
+                json.dump(data, jsonf)
+                response = None
+        else: #Excel
+            from xlwt import Workbook
+            wb = Workbook()
+            #Note row number limit is 65536 in some excel versions
+            row_number = 0
+            flag = 0
+            sheet_counter = 0
+            for date_idx, date_vals in enumerate(data): #row
+                for j, val in enumerate(date_vals):#column
+                    if row_number == 0:
+                        flag = 1
+                    else:
+                        row_number+=1
+                    if row_number == 65535:flag = 1
+
+                    if flag == 1:
+                        sheet_counter+=1
+                        #add new workbook sheet
+                        ws = wb.add_sheet('Sheet_%s' %sheet_counter)
+                        #Header
+                        ws.write(0, 0, 'Date')
+                        ws.write(0, 1, 'Lat')
+                        ws.write(0, 2, 'Lon')
+                        ws.write(0, 3, 'Elev')
+                        for k, el in enumerate(elements):ws.write(0, k+4, el)
+                        row_number = 1
+                        flag = 0
+                    try:
+                        ws.write(date_idx+1, j, str(val))#row, column, label
+                    except Exception, e:
+                        response = 'Excel write error:' + str(e)
+                        break
+            if f:
+                try:
+                    wb.save(f)
+                    response = None
+                except Exception, e:
+                    response = 'Excel save error:' + str(e)
+            else: # request
+                if not file_info:
+                    file_info = ['data', 'request']
+                response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
+                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1], file_extension)
+                wb.save(response)
+    return response
+
+def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None):
+    #sanity check:
+    if not f and not request:
+        response = 'Error! Need either a file or a reqest object!'
+    elif f and request:
+        response = 'Error! Choose one of file f or request object'
+    else:
+        if file_extension in ['dat', 'txt']:
+            import csv
+            if request:
+                #make sure file_info is given
+                if not file_info:
+                    file_info = ['data', 'request']
+                response = HttpResponse(mimetype='text/csv')
+                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1],file_extension)
+                writer = csv.writer(response, delimiter=delim )
+            else: #file f given
+                try:
+                    csvfile = open(f, 'w+')
+                    writer = csv.writer(csvfile, delimiter=delim )
+                    response = None
+                except Exception, e:
+                    #Can' open user given file, create emergency writer object
+                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
+                    response = 'Error!' + str(e)
+
+            for stn, dat in data.iteritems():
+                row = ['Station ID: %s' %str(station_ids[stn]), 'Station_name: %s' %str(station_names[stn])]
+                writer.writerow(row)
+                row = ['date']
+                for el in elements:row.append(el)
+                writer.writerow(row)
+                for j, vals in enumerate(dat):
+                    row = [dates[j]]
+                    if len(station_ids) == 1:
+                        for val in vals[1:]:row.append(val)
+                    else:
+                        for val in vals:row.append(val)
+                    writer.writerow(row)
+        elif file_extension == 'json':
+            with open(f, 'w+') as jsonf:
+                jsonf.write(json.dumps(data))
+                response = None
+        else: #Excel
+            from xlwt import Workbook
+            wb = Workbook()
+            for stn, dat in data.items():
+                ws = wb.add_sheet('Station_%s %s' %(str(station_ids[stn]), str(stn)))
+                #Header
+                ws.write(0, 0, 'Date')
+                for k, el in enumerate(elements):ws.write(0, k+1, el)
+                #Data
+                for j, vals in enumerate(dat):
+                    ws.write(j+1, 0, dates[j])
+                    if len(station_ids) == 1:
+                        for l,val in enumerate(vals[1:]):ws.write(j+1, l+1, val) #row, column, label
+                    else:
+                        for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
+            if f:
+                try:
+                    wb.save(f)
+                    response = None
+                except:
+                    response = 'Error saving excel work boook to file %s' % f
+            else: # request
+                if not file_info:
+                    file_info = ['data', 'request']
+                response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
+                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1], file_extension)
+                wb.save(response)
+        return response
+
+'''
+given the parameters of the data request,
+format the data and generate output file of format
+specified in parameters['data_format']
+returned is a data list
+'''
+def format_grid_data(req, params):
+    el_list = params['elements']
+    #req= AcisWS.get_grid_data(params, 'griddata-web')
+    if 'error' in req.keys() or params['data_format'] == 'json':
+        data  = req
+    else:
+        if 'location' in params.keys():
+            #make look like multi point call
+            lats = [[req['meta']['lat']]]
+            lons = [[req['meta']['lon']]]
+            elevs = [[req['meta']['elev']]]
+            data = [[] for i in range(len(req['data']))]
+        else:
+            lats = req['meta']['lat']
+            lons = req['meta']['lon']
+            elevs = req['meta']['elev']
+            lat_num = 0
+            for lat_idx, lat_grid in enumerate(req['meta']['lat']):
+               lat_num+=len(lat_grid)
+            length = len(req['data']) * lat_num
+            #length = len(req['data'])
+            data = [[] for i in range(length)]
+        idx = -1
+        for date_idx, date_vals in enumerate(req['data']):
+            if 'location' in params.keys():
+                data[date_idx].append(str(date_vals[0]))
+                data[date_idx].append(lons[0][0])
+                data[date_idx].append(lats[0][0])
+                data[date_idx].append(elevs[0][0])
+
+                for el_idx in range(1,len(el_list) + 1):
+                    data[date_idx].append(str(date_vals[el_idx]).strip(' '))
+            else:
+                #idx+=1
+                for grid_idx, lat_grid in enumerate(lats):
+                    for lat_idx, lat in enumerate(lat_grid):
+                        idx+=1
+                        data[idx].append(str(date_vals[0]))
+                        data[idx].append(lons[grid_idx][lat_idx])
+                        data[idx].append(lat)
+                        data[idx].append(elevs[grid_idx][lat_idx])
+
+                        for el_idx in range(1,len(el_list) + 1):
+                            data[idx].append(date_vals[el_idx][grid_idx][lat_idx])
+    return data
+
 '''
 strips base temp xx from gddxx ( hddxx, cddxx)
 return element name gdd( hdd, cdd) and base temp xx
