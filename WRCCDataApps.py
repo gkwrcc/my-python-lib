@@ -4,9 +4,9 @@
 Module WRCCDataApps
 '''
 from collections import defaultdict
-import WRCCUtils
+import WRCCUtils, AcisWS
 import numpy
-import sys, os
+import sys, os, datetime
 import fileinput
 from scipy import stats
 
@@ -33,6 +33,134 @@ acis_elements ={'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (
               'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
               'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
+
+'''
+Routine computes monthly averages of stn data in a state
+for a givenmonth over date range (default 1900 - present)
+element, start end date and state are chosen by user
+(Center piece of CSC apps page or of main page??)
+'''
+def state_aves_stn(state, month, elements):
+    mon = int(month)
+    if mon not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+        print "Not a valid month: %s. Enter a number 1-12" % str(mon)
+        sys.exit(0)
+
+    mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    today = datetime.date.today()
+    year = today.year
+    start_year = 1900
+    year_list = []
+    if len(str(mon)) == 1:
+        mon = '0%s' % mon
+    if WRCCUtils.is_leap_year(year) and mon == 2:
+        start_date = "%s%s%s" %(str(start_year), str(mon), str(29))
+        end_date = "%s%s%s" % (str(year), str(mon), str(29))
+    else:
+        end_date = "%s%s%s" % (str(year), str(mon), str(mon_lens[int(mon) - 1]))
+        start_date = "%s%s%s" %(str(start_year), str(mon), str(mon_lens[int(mon) - 1]))
+
+    dur = mon_lens[int(mon) - 1]
+    el_list = [{"name":el, "interval":[1,0,0],"duration":dur,"reduce":"mean","smry":"mean"} for el in elements]
+    params = {"state":state,"sdate":start_date,"edate":end_date, "elems":el_list}
+    request = AcisWS.MultiStnData(params)
+
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
+    state_aves = defaultdict(dict)
+    if 'error' in request:
+        state_ave_temp = []
+        state_ave_pcpn = []
+    try:
+        for k, el in enumerate(elements):
+            state_aves[k] = {'element': el, 'state_ave': [999 for yr in range(len(request['data'][0]['data']))]}
+        state_ave_temp = [999 for yr in range(len(request['data'][0]['data']))]
+        state_ave_pcpn = [999 for yr in range(len(request['data'][0]['data']))]
+    except:
+        state_ave_temp = []
+        state_ave_pcpn = []
+
+    for yr in range(len(request['data'][0]['data'])):
+        year_list.append("%s" % str(start_year + yr))
+        for k,el in enumerate(elements):
+            ave_list = []
+            for stn in request['data']:
+                try:
+                    ave_list.append(float(stn['data'][yr][k]))
+                except:
+                    pass
+            state_aves[k]['state_ave'][yr] = numpy.mean(ave_list)
+    return year_list, state_aves
+
+'''
+Routine computes monthly averages of Acis gridded data in a state
+for a givenmonth over date range (default 1900 - present)
+element, start end date and state are chosen by user
+(Center piece of CSC apps page or of main page??)
+'''
+def state_aves_grid(state, month, elements):
+    state_aves = defaultdict(dict)
+    mon = int(month)
+    if mon not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+        print "Not a valid month: %s. Enter a number 1-12" % str(mon)
+        sys.exit(0)
+
+    mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    today = datetime.date.today()
+    year = today.year - 1
+    start_year = 1950
+    year_list = []
+    if len(str(mon)) == 1:
+        mon = '0%s' % mon
+    if WRCCUtils.is_leap_year(year) and mon == 2:
+        start_date = "%s%s%s" %(str(start_year), str(mon), str(29))
+        end_date = "%s%s%s" % (str(year), str(mon), str(29))
+    else:
+        end_date = "%s%s%s" % (str(year), str(mon), str(mon_lens[int(mon) - 1]))
+        start_date = "%s%s%s" %(str(start_year), str(mon), str(mon_lens[int(mon) - 1]))
+
+    dur = mon_lens[int(mon) - 1]
+    el_list = [{"name":el, "interval":[1,0,0],"duration":dur,"reduce":"mean","smry":"mean"} for el in elements]
+    params = {"state":state,"sdate":start_date,"edate":end_date, "meta":"elev,ll", "elems":el_list, "grid":"1"}
+    request = AcisWS.GridData(params)
+    if not request:
+        request = {'error':'bad request, check params: %s'  % str(params)}
+
+    try:
+        for k, el in enumerate(elements):
+            state_aves[k] = {'element': el, 'state_ave': [999.0 for yr in range(len(request['data']))]}
+    except:
+        state_aves = {}
+
+    if 'error' in request:
+        year_list = []
+        state_aves = {'error': request['error']}
+    else:
+        for yr in range(len(request['data'])):
+            year_list.append("%s" % str(start_year + yr))
+            for k,el in enumerate(elements):
+                ave_list = []
+                for grid_idx, lat_grid in enumerate(request['meta']['lat']):
+                    for lat_idx, lat in enumerate(lat_grid):
+                        try:
+                            float(request['data'][yr][1][k][lat_idx])
+                        except:
+                            continue
+
+                        if abs(float(request['data'][yr][1][k][lat_idx]) + 999.0) < 0.01:
+                            continue
+                        elif abs(float(request['data'][yr][1][k][lat_idx]) - 999.0) < 0.01:
+                            continue
+                        else:
+                            ave_list.append(float(request['data'][yr][1][k][lat_idx]))
+
+                if ave_list:
+                    state_aves[k]['state_ave'][yr] = numpy.mean(ave_list)
+
+    print year_list, state_aves
+    return year_list, state_aves
+
 
 '''
 monthly aves

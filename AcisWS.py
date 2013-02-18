@@ -237,59 +237,6 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     f.close()
     return stn_json, f_name
 
-#Rountine computes mean precip and temp for month given in end_date
-#for each year starting 1900 ending end_date[year] - 1
-#def mean_temp_pcpn(state, month, elements):
-def state_aves(state, month, elements):
-    mon = int(month)
-    if mon not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
-        print "Not a valid month: %s. Enter a number 1-12" % str(mon)
-        sys.exit(0)
-
-    mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    today = datetime.date.today()
-    year = today.year
-    start_year = 1900
-    year_list = []
-    if WRCCUtils.is_leap_year(year) and mon == 2:
-        start_date = "%s%s%s" %(str(start_year), str(mon), str(29))
-        end_date = "%s%s%s" % (str(year), str(mon), str(29))
-    else:
-        end_date = "%s%s%s" % (str(year), str(mon), str(mon_lens[mon - 1]))
-        start_date = "%s%s%s" %(str(start_year), str(mon), str(mon_lens[mon - 1]))
-
-    el_list = [{"name":el, "interval":[1,0,0],"duration":30,"reduce":"mean","smry":"mean"} for el in elements]
-    params = {"state":state,"sdate":start_date,"edate":end_date, "elems":el_list}
-    request = MultiStnData(params)
-
-    if not request:
-        request = {'error':'bad request, check params: %s'  % str(params)}
-
-    state_aves = defaultdict(dict)
-    if 'error' in request:
-        state_ave_temp = []
-        state_ave_pcpn = []
-    try:
-        for k, el in enumerate(elements):
-            state_aves[k] = {'element': el, 'state_ave': [999 for yr in range(len(request['data'][0]['data']))]}
-        state_ave_temp = [999 for yr in range(len(request['data'][0]['data']))]
-        state_ave_pcpn = [999 for yr in range(len(request['data'][0]['data']))]
-    except:
-        state_ave_temp = []
-        state_ave_pcpn = []
-
-    for yr in range(len(request['data'][0]['data'])):
-        year_list.append("%s" % str(start_year + yr))
-        for k,el in enumerate(elements):
-            ave_list = []
-            for stn in request['data']:
-                try:
-                    ave_list.append(float(stn['data'][yr][k]))
-                except:
-                    pass
-            state_aves[k]['state_ave'][yr] = numpy.mean(ave_list)
-    return year_list, state_aves
-
 def get_point_data(form_input, program):
     def get_stn_list(by_type, val):
         stn_list = []
