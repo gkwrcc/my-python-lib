@@ -4,29 +4,128 @@
 Module WRCCUtils
 '''
 
-import datetime, time, sys
+import datetime, time, sys, os
 import json
 import numpy
 import re
-import collections
+from collections import defaultdict, Mapping, Iterable
+import smtplib
+from ftplib import FTP
 
 from django.http import HttpResponse, HttpResponseRedirect
 
 ############################################################################################
 #Utils
 ############################################################################################
+fips_state_keys = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
+             'nm':'29','pi':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
+             'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
+             'la':'16','me':'17','md':'18','ma':'19', 'mi':'20', 'mn':'21','ms':'22', 'mo':'23', \
+             'ne':'25','nh':'27','nj':'28','ny':'30', 'nc':'31', 'nd':'32','oh':'33', 'ok':'34', \
+             'pa':'36','ri':'37','sc':'38','sd':'39', 'tn':'40', 'ct':'43','va':'44', 'wv':'46', \
+             'wi':'47','vi':'67','pr':'66','wr':'96', 'ml':'97', 'ws':'98','ak':'50'}
+fips_key_state = {}
+network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
+'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
+network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
+'6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
+#1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
+
+acis_elements = defaultdict(dict)
+acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
+              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
+              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'}, \
+              '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'}, \
+              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'}, \
+              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'}, \
+              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
+              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
+              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)'}, 'vX':'44', \
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
+              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
+              #bug fix needed for cdd = 44
+
+###################################
+#functions for large data requests
+###################################
+
+'''
+Upload file to ftp_server
+in directory pub_dir = /pub/
+sub_dir = csc/
+'''
+def upload(ftp_server,pub_dir,f):
+    try:
+        fname = os.path.split(f)[1]
+        ftp = FTP(ftp_server)
+        ftp.login()
+        ftp.set_debuglevel(2)
+        try:
+            ftp.cwd(pub_dir)
+        except:
+            #Need to create sub_directories one by one
+            dir_list = pub_dir.strip('/').split('/')
+            sub_dir = ''
+            for d in dir_list:
+                sub_dir = sub_dir +  '/' + d
+                try:
+                    ftp.cwd(sub_dir)
+                except:
+                    print 'Creating Directory: %s on %s' % (sub_dir, ftp_server)
+                    ftp.mkd(sub_dir)
+        try:
+            ftp.cwd(pub_dir)
+        except:
+            error = 'File: %s Upload error. Could not create directory %s on server %s' %(f,pub_dir, ftp_server)
+        ext = os.path.splitext(f)[1]
+        #Check if file is already there
+        print ftp.nlst()
+        if fname in ftp.nlst():
+            pass
+        else:
+            if ext in (".txt", ".htm", ".html", ".json"):
+                ftp.storlines('STOR %s' % fname, open(f))
+            else:
+                ftp.storbinary('STOR %s' % fname, open(f, 'rb'), 1024)
+        ftp.quit()
+        error = None
+    except Exception, e:
+        error = 'File: %s Upload error: %s' %(f, str(e))
+    return error
+
+
+'''
+Write e-mail via smtp
+'''
+def write_email(mail_server,fromaddr,toaddr,message):
+    try:
+        server = smtplib.SMTP(mail_server)
+        server.set_debuglevel(1)
+        server.sendmail(fromaddr, toaddr, message)
+        server.quit()
+        error = None
+    except Exception, e:
+        error = 'Email attempt to recipient %s failed with error %s' %(toaddr, str(e))
+    return error
+
+
 '''
 Unicode converter
 '''
 def u_convert(data):
     if isinstance(data, unicode):
         return str(data)
-    elif isinstance(data, collections.Mapping):
+    elif isinstance(data, Mapping):
         return dict(map(u_convert, data.iteritems()))
-    elif isinstance(data, collections.Iterable):
+    elif isinstance(data, Iterable):
         return type(data)(map(u_convert, data))
     else:
         return data
+
+##################################
+#End multiprocessing functions
+###################################
 
 '''
 Writes gridded data to a file f which is
@@ -570,7 +669,11 @@ def is_leap_year(year):
 #it takes as arguments a start date and an end date (format yyyymmdd)
 #and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
 def get_dates(s_date, e_date, app_name):
-    if s_date and e_date:
+    if not s_date or not e_date:
+        dates = []
+    elif s_date == 'por' or e_date == 'por':
+        dates = []
+    else:
         dates = []
         #convert to datetimes
         start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
@@ -582,8 +685,6 @@ def get_dates(s_date, e_date, app_name):
             if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                 if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
                     dates.append('dates[-1][0:4]0229')
-    else:
-        dates = []
     #convert to acis format
     for i,date in enumerate(dates):
         dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])

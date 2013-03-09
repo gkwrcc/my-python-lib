@@ -129,7 +129,8 @@ def state_aves_grid(state, month, elements):
 
     try:
         for k, el in enumerate(elements):
-            state_aves[k] = {'element': el, 'state_ave': [999.0 for yr in range(len(request['data']))]}
+            state_aves[k] = {'element': el, 'state_ave': [999.0 for yr in range(len(request['data']))], \
+            'moving_ave': [999.0 for yr in range(len(request['data']))]}
     except:
         state_aves = {}
 
@@ -143,22 +144,30 @@ def state_aves_grid(state, month, elements):
                 ave_list = []
                 for grid_idx, lat_grid in enumerate(request['meta']['lat']):
                     for lat_idx, lat in enumerate(lat_grid):
+                        #Averages
                         try:
-                            float(request['data'][yr][1][k][lat_idx])
+                            float(request['data'][yr][k+1][grid_idx][lat_idx])
                         except:
                             continue
 
-                        if abs(float(request['data'][yr][1][k][lat_idx]) + 999.0) < 0.01:
+                        if abs(float(request['data'][yr][k+1][grid_idx][lat_idx]) + 999.0) < 0.01:
                             continue
-                        elif abs(float(request['data'][yr][1][k][lat_idx]) - 999.0) < 0.01:
+                        elif abs(float(request['data'][yr][k+1][grid_idx][lat_idx]) - 999.0) < 0.01:
                             continue
                         else:
-                            ave_list.append(float(request['data'][yr][1][k][lat_idx]))
-
+                            ave_list.append(float(request['data'][yr][k+1][grid_idx][lat_idx]))
                 if ave_list:
                     state_aves[k]['state_ave'][yr] = numpy.mean(ave_list)
-
-    print year_list, state_aves
+                #9yr Moving Averages
+                mov_ave_list = []
+                if yr >= 4 and yr <= len(request['data']) - 5:
+                    for l in range(yr - 4, yr + 5):
+                        if abs(state_aves[k]['state_ave'][l] - 999.0) > 0.01:
+                            mov_ave_list.append(state_aves[k]['state_ave'][l])
+                else:
+                    mov_ave_list.append(state_aves[k]['state_ave'][yr])
+                if mov_ave_list:
+                    state_aves[k]['moving_ave'][yr] = numpy.mean(mov_ave_list)
     return year_list, state_aves
 
 

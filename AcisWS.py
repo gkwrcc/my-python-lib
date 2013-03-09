@@ -24,6 +24,8 @@ import json
 # set Acis data server
 #base_url = 'http://data.rcc-acis.org/'
 base_url = 'http://data.wrcc.rcc-acis.org/'
+## For Prism Data
+test_url = 'http://data.test.rcc-acis.org/'
 ##############################################################################
 
 #Acis WebServices functions
@@ -50,6 +52,9 @@ def StnMeta(params):
 def GridData(params):
     return make_request(base_url+'GridData',params)
 
+def PrismData(params):
+    return make_request(test_url+'GridData',params)
+
 def GridCalc(params):
     return make_request(base_url+'GridCalc',params)
 
@@ -61,9 +66,9 @@ def General(params):
 #Southwest CSC DATA PORTAL modules
 #Used in Station Finder pages of SW CSC Data Portal
 network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
-'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Multi', '12':'Misc'}
-network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'yellow-dot', '5': 'ltblue-dot', \
-'6': 'orange-dot', '7': 'yellow-dot', '8': 'purple-dot', '9':'green', '10':'pink-dot', '11': 'red', '12':'red-dot'}
+'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
+network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
+'6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
 #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
 
 acis_elements = defaultdict(dict)
@@ -163,36 +168,24 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             stn_networks = []
             stn_network_codes = []
             sids = stn['sids'] if 'sids' in stn.keys() else []
-            if not sids:
-                pass
-            elif len(sids) == 1:
-                net_id = str(sids[0].split(' ')[1])
-                if int(net_id) >10:
-                    marker_icon = network_icons['12']
-                    marker_category = 'Misc'
-                else:
-                    marker_icon = network_icons[str(sids[0].split(' ')[1])]
-                    marker_category = network_codes[str(sids[0].split(' ')[1])]
-            else:
-                marker_icon = network_icons['11']
-                marker_category = 'Multi'
+            marker_icons = []
             for sid in sids:
                 sid_split = sid.split(' ')
                 #put coop id up front (for cscs application metagraph  and possibly others)
                 if str(sid_split[1]) == '2':
                     stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.insert(0, str(sid_split[1]))
-                    if int(sid_split[1]) <= 10:
-                        stn_networks.insert(0,network_codes[str(sid_split[1])])
-                    else:
-                        stn_networks.insert(0,'Unknown')
+                    marker_icons.insert(0, network_icons[str(sid_split[1])])
+                    stn_networks.insert(0,network_codes[str(sid_split[1])])
                 else:
                     stn_sids.append(str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.append(str(sid_split[1]))
                     if int(sid_split[1]) <= 10:
                         stn_networks.append(network_codes[str(sid_split[1])])
+                        marker_icons.append(network_icons[str(sid_split[1])])
                     else:
-                        stn_networks.append('Unknown')
+                        stn_networks.append('Misc')
+                        marker_icons.append(network_icons['11'])
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -204,19 +197,20 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
 
-            stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
-            "state":state_key, 'marker_icon': marker_icon, 'marker_category':marker_category, \
-            'stn_networks':stn_networks, 'stn_network_codes': stn_network_codes}
-            #check which elements are available at the stations[valid_daterange is not empty]
-            valid_date_range_list = stn['valid_daterange']
-            available_elements = []
-            for j,rnge in enumerate(valid_date_range_list):
-                if rnge:
-                    available_elements.append([acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
+            for j, sid in enumerate(stn_networks):
+                stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
+                "state":state_key, 'marker_icon': marker_icons[j], 'marker_category':stn_networks[j], \
+                'stn_networks':stn_networks, 'stn_network_codes': stn_network_codes}
+                #check which elements are available at the stations[valid_daterange is not empty]
+                valid_date_range_list = stn['valid_daterange']
+                available_elements = []
+                for j,rnge in enumerate(valid_date_range_list):
+                    if rnge:
+                        available_elements.append([acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
 
-            if available_elements:
-                stn_dict['available_elements'] = available_elements
-            stn_meta_list.append(stn_dict)
+                if available_elements:
+                    stn_dict['available_elements'] = available_elements
+                stn_meta_list.append(stn_dict)
     else:
         if 'error' in request.keys():
             stn_json['error'] = request['error']
@@ -237,7 +231,126 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     f.close()
     return stn_json, f_name
 
+
 def get_point_data(form_input, program):
+    #Set up parameters for data request
+    resultsdict = defaultdict(dict)
+    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    #Sanity check for valid date input:
+    if (s_date == 'por' or e_date == 'por') and ('station_id' not in form_input.keys()):
+        resultsdict['error'] = 'Parameter error. Start/End date ="por" not supported for multi station call.'
+        return resultsdict
+
+    elements = WRCCUtils.get_element_list(form_input, program)
+    params = dict(sdate=s_date, edate=e_date, \
+        meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
+        elems=[dict(name=el)for el in elements])
+    if 'station_id' in form_input.keys():
+        #Check for por:
+        if s_date =='por' or e_date == 'por':
+            meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
+            try:
+                meta_request = StnMeta(meta_params)
+            except Exception, e:
+                resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(meta_params, str(e))
+                return resultsdict
+            #Find largest daterange
+            start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][0][8:10]))
+            end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][1][8:10]))
+            idx_s = 0
+            idx_e = 0
+            for el_idx, dr in enumerate(meta_request['meta'][0]['valid_daterange']):
+                new_start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][0][8:10]))
+                new_end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][1][8:10]))
+                if new_start < start:
+                    start = new_start
+                    idx_s = el_idx
+                if new_end > end:
+                    end = new_end
+                    idx_e = el_idx
+            if s_date == 'por':
+                s_yr = meta_request['meta'][0]['valid_daterange'][idx_s][0][0:4]
+                s_mon = meta_request['meta'][0]['valid_daterange'][idx_s][0][5:7]
+                s_day = meta_request['meta'][0]['valid_daterange'][idx_s][0][8:10]
+                s_date = '%s%s%s' %(s_yr,s_mon,s_day)
+            if e_date == 'por':
+                e_yr = meta_request['meta'][0]['valid_daterange'][idx_e][1][0:4]
+                e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
+                e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
+                e_date = '%s%s%s' %(e_yr,e_mon,e_day)
+        params['sdate']= s_date
+        params['edate'] = e_date
+        params['sids'] = form_input['station_id']
+    elif 'station_ids' in form_input.keys():
+        params['sids'] = form_input['station_ids']
+    elif 'county' in form_input.keys():
+        params['county'] = form_input['county']
+    elif 'climate_division' in form_input.keys():
+        params['climdiv'] = form_input['climate_division']
+    elif 'county_warning_area' in form_input.keys():
+        params['cwa'] = form_input['county_warning_area']
+    elif 'basin' in form_input.keys():
+        params['basin'] = form_input['basin']
+    elif 'state' in form_input.keys():
+        params['state'] = form_input['state']
+    elif 'bounding_box' in form_input.keys():
+        params['bbox'] = form_input['bounding_box']
+    else:
+        params['sids'] =''
+
+    #Data request
+    try:
+        request = MultiStnData(params)
+        print request
+        print params
+    except Exception, e:
+        resultsdict['error'] = 'Error at Data request. Pameters: %s. Error: %s' %(params, str(e))
+        return resultsdict
+    try:
+        request['data']
+    except Exception, e:
+        resultsdict['error'] = 'Error at Data request: No meta data found. Pameters: %s. Error: %s' %(params, str(e))
+        return resultsdict
+    #Initialize outpout lists
+    if s_date is not None and e_date is not None:
+        dates = WRCCUtils.get_dates(s_date, e_date, program)
+    else:
+        dates = []
+    stn_errors = ['' for stn in request['data']]
+    stn_names = ['' for stn in request['data']]
+    stn_ids = [[] for stn in request['data']]
+    stn_data = [[] for stn in request['data']]
+    for stn, data in enumerate(request['data']):
+        if 'error' in data.keys():
+            stn_errors[stn] = str(data['error'])
+        try:
+            stn_ids[stn] = []
+            stn_id_list = data['meta']['sids']
+            for sid in stn_id_list:
+                stn_id = str(sid.split(' ')[0])
+                network_id_name = WRCCUtils.network_codes[str(sid.split(' ')[1])]
+                ids = '%s %s' %(stn_id, network_id_name)
+                stn_ids[stn].append(ids)
+        except:
+            stn_ids[stn] = []
+        try:
+            stn_names[stn] = str(data['meta']['name'])
+        except:
+            stn_names[stn] = ''
+        try:
+            stn_data[stn] = data['data']
+        except:
+            stn_data[stn] = []
+        #Add dates
+        if dates and len(dates) == len(data['data']):
+            for idx, date in  enumerate(dates):
+                stn_data[stn][idx].insert(0, date)
+    resultsdict['stn_data'] = stn_data;resultsdict['dates'] = dates;resultsdict['stn_ids'] = stn_ids
+    resultsdict['stn_names'] = stn_names;resultsdict['stn_errors'] = stn_errors;resultsdict['elements'] = elements
+    return resultsdict
+
+
+def get_point_data_old(form_input, program):
     def get_stn_list(by_type, val):
         stn_list = []
         if by_type == 'county':
@@ -287,11 +400,12 @@ def get_point_data(form_input, program):
     else:
         station_ids =[]
 
+    #Initialize output dirs
     datadict = defaultdict(list)
     station_names = ['No Name found' for stn in station_ids]
-
     for i, stn in enumerate(station_ids):
-        datadict[i] = [[] for el in elements]
+        #datadict[i] = [[] for el in elements]
+        datadict[i]=[]
     if len(station_ids) == 1:
         params = dict(sid=station_ids[0], sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', elems=[dict(name=el)for el in elements])
@@ -300,7 +414,6 @@ def get_point_data(form_input, program):
         params = dict(sids=station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el)for el in elements])
         request = MultiStnData(params)
-        #request = WRCCClasses.DataJob('MultiStnData', params).make_data_call()
 
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
@@ -337,6 +450,7 @@ def get_point_data(form_input, program):
                     e_date = ''.join(request['data'][0]['data'][-1][0].split('-'))
                 else:
                     e_date = None
+
     if s_date is not None and e_date is not None:
         dates = WRCCUtils.get_dates(s_date, e_date, program)
     else:
