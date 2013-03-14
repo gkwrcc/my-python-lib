@@ -9,7 +9,7 @@ sodlist, sodsum
 
 #############################################################################
 #python modules
-import numpy
+import numpy, bisect
 import datetime
 import sys
 from collections import defaultdict
@@ -72,18 +72,18 @@ network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purpl
 #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
 
 acis_elements = defaultdict(dict)
-acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
-              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
-              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'}, \
-              '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'}, \
-              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'}, \
-              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'}, \
-              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
-              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
-              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)'}, 'vX':'44', \
-              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
-              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
+acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature(F)', 'vX':'1'}, \
+              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature(F)', 'vX':'2'}, \
+              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature(F)', 'vX':'43'}, \
+              '3':{'name':'obst', 'name_long': 'Observation Time Temp.(F)', 'vX':'3'}, \
+              '4': {'name': 'pcpn', 'name_long':'Precipitation(In)', 'vX':'4'}, \
+              '10': {'name': 'snow', 'name_long':'Snowfall(In)', 'vX':'10'}, \
+              '11': {'name': 'snwd', 'name_long':'Snow Depth(In)', 'vX':'11'}, \
+              '7': {'name': 'evap', 'name_long':'Pan Evaporation(In)', 'vX':'7'}, \
+              '45': {'name': 'dd', 'name_long':'Degree Days(Days)', 'vX':'45'}, \
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days(Days)'}, 'vX':'44', \
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days(Days)'}, 'vX':'45', \
+              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days(Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
 
 '''
@@ -132,6 +132,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
 
     stn_meta_list = []
     if 'meta' in request.keys():
+        sorted_list =[]
         for i, stn in enumerate(request['meta']):
             flag_empty = False
             if not stn['valid_daterange']:
@@ -193,6 +194,12 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             else:
                 continue
             name = str(stn['name']).replace("\'"," ") if 'name' in stn.keys() else 'Name not listed'
+            sorted_list.append(name.split(' ')[0])
+            try:
+                sorted_list.sort()
+                stn_idx = sorted_list.index(name.split(' ')[0])
+            except ValueError:
+                stn_idx = -1
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
@@ -210,7 +217,10 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
 
                 if available_elements:
                     stn_dict['available_elements'] = available_elements
-                stn_meta_list.append(stn_dict)
+                if stn_idx == -1:
+                    stn_meta_list.append(stn_dict)
+                else:
+                    stn_meta_list.insert(stn_idx, stn_dict)
     else:
         if 'error' in request.keys():
             stn_json['error'] = request['error']
@@ -301,8 +311,6 @@ def get_point_data(form_input, program):
     #Data request
     try:
         request = MultiStnData(params)
-        print request
-        print params
     except Exception, e:
         resultsdict['error'] = 'Error at Data request. Pameters: %s. Error: %s' %(params, str(e))
         return resultsdict
@@ -341,6 +349,9 @@ def get_point_data(form_input, program):
             stn_data[stn] = data['data']
         except:
             stn_data[stn] = []
+
+        if not stn_data[stn]:
+            stn_errors[stn] = 'No data found for this station!'
         #Add dates
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
@@ -514,10 +525,8 @@ def get_grid_data(form_input, program):
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
     request = GridData(params)
-
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
-
     return request
 
 #######################################

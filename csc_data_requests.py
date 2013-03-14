@@ -20,7 +20,9 @@ from multiprocessing import Queue
 
 import WRCCUtils, AcisWS
 
+############
 #hard codes:
+#############
 nprocs = 4 #number of data requests to be executed in parallel
 ftp_server = 'pubfiles.dri.edu'
 mail_server = 'owa.dri.edu'
@@ -36,33 +38,9 @@ now = datetime.datetime.now()
 x_mins_ago = now - datetime.timedelta(minutes=5) #cron job checking for param files runs every 5 minutes
 time_out = now - datetime.timedelta(hours=1) #timeout for data request
 time_out_human = '1 hour'
+##############
 #Functions
-'''
-def worker_stn(params, datadict_q, dates_dict_q, elements_q, stn_ids_dict_q, stn_names_dict_q, errors_q):
-    name = multiprocessing.current_process().name
-    error = None
-    print "Starting:", name
-    print "Parameters: ", params
-    #Loop over parameter list and request data for each item in list
-    try:
-        datadict_out, dates_dict_out, elements_out, stn_ids_dict_out, stn_names_dict_out, errors_out = AcisWS.get_point_data(dict(params),'sodlist_web')
-    except:
-        datadict_out = {};dates_dict_out={}; elements_out={};stn_ids_dict_out={};stn_names_dict_out={}
-        error = 'Process %s failed at data request. System info: %s' %(name, sys.exc_info())
-        multiprocessing.current_process().terminate
-    #Put results in queues
-    datadict_q.put(datadict_out)
-    dates_dict_q.put(dates_dict_out)
-    elements_q.put(elements_out)
-    stn_ids_dict_q.put(stn_ids_dict_out)
-    stn_names_dict_q.put(stn_names_dict_out)
-    errors_q.put(errors_out)
-    if error:
-        print 'Error occurred during. Terminated: ', name
-        multiprocessing.current_process().terminate
-    else:
-        print 'Ending successfully: ', name
-'''
+###############
 def worker_stn(params, stn_data_q,errors_q):
     name = multiprocessing.current_process().name
     error = None
