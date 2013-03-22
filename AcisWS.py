@@ -119,7 +119,9 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
         params['bbox'] = val
     elif by_type == 'id' or by_type == 'station_id' or by_type == 'station_ids':
         params['sids'] =val
-    elif by_type == 'states': #Whole SW
+    elif by_type == 'states': #multiple states
+        params['state'] = val
+    elif by_type == 'sw_states':
         params['state'] = 'az,ca,co,nm,nv,ut'
     else:
         pass
@@ -231,7 +233,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     #double quotes needed for jquery json.load
     stn_json_str = str(stn_json).replace("\'", "\"")
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
-    if by_type == 'states':
+    if by_type == 'sw_states':
         f_name = 'SW_stn.json'
         f = open('/tmp/' + f_name,'w+')
     else:
@@ -338,7 +340,11 @@ def get_point_data(form_input, program):
                 stn_id = str(sid.split(' ')[0])
                 network_id_name = WRCCUtils.network_codes[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
-                stn_ids[stn].append(ids)
+                #Put COOP upfront
+                if network_id_name == "COOP":
+                    stn_ids[stn].insert(0, ids)
+                else:
+                    stn_ids[stn].append(ids)
         except:
             stn_ids[stn] = []
         try:

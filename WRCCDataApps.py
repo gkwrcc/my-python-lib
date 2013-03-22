@@ -9,6 +9,7 @@ import numpy
 import sys, os, datetime
 import fileinput
 from scipy import stats
+from math import ceil
 
 #from django.conf import settings
 #import my_acis.settings as settings
@@ -2269,6 +2270,7 @@ def Sodsumm(**kwargs):
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
     months = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De']
     time_cats = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De', 'An', 'Wi', 'Sp', 'Su', 'Fa']
+    #time_cats = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De']
     time_cats_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 366, 91, 92, 92, 91]
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     #results[i][table]
@@ -2290,7 +2292,7 @@ def Sodsumm(**kwargs):
             if table == 'temp':
                 results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=90', '<=32', '<=32', '<=0'])
             elif table == 'prsn':
-                results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date','Mean', 'High', 'Yr', '>=0.01', '>=0.10', '>=0.50', '>=1.00'])
+                results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.01', '>=0.10', '>=0.50', '>=1.00', 'Mean', 'High', 'Yr'])
             elif table in ['hdd', 'cdd']:
                 results[i][table].append(['Base', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann'])
             elif table in ['gdd', 'corn']:
@@ -2334,17 +2336,17 @@ def Sodsumm(**kwargs):
                 idx_start = 0
                 idx_end = 366
             elif cat_idx == 13: #Winter
-                idx_start = 335
-                idx_end = 60
+                idx_start = 336
+                idx_end = 61
             elif cat_idx == 14: #Spring
-                idx_start = 60
-                idx_end = 152
+                idx_start = 61
+                idx_end = 153
             elif cat_idx == 15: #Summer
-                idx_start = 152
-                idx_end = 244
+                idx_start = 153
+                idx_end = 245
             elif cat_idx == 16: # Fall
-                idx_start = 244
-                idx_end = 335
+                idx_start = 245
+                idx_end = 336
             #Read in data, for ease of statistical computation, data and dates for each category are
             #ordered chronolocically in two indexed list: el_data[element], el_dates[element].
             for el_idx, element in enumerate(elements):
@@ -2435,18 +2437,25 @@ def Sodsumm(**kwargs):
                         sm+=dat
                         cnt+=1
                     if cnt !=0:
-                        ave = sm/cnt
+                        ave = round(sm/cnt,2)
                     else:
                         ave = 0.0
                     val_list.append('%.1f' % ave)
 
-                val_list.append(int(max_max))
-                val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
-                val_list.append(int(min_min))
-                val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
+                val_list.append(int(round(max_max,0)))
+                if cat_idx >=12:
+                    val_list.append('%s%s%s' % (date_max[0:4],date_max[5:7],date_max[8:10]))
+                else:
+                    val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
+                val_list.append(int(round(min_min,0)))
+                if cat_idx >=12:
+                    val_list.append('%s%s%s' % (date_min[0:4],date_min[5:7],date_min[8:10]))
+                else:
+                    val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
 
                 #3)  Mean Extremes (over yrs)
                 means_yr=[]
+                yr_list = []
                 for yr in range(num_yrs):
                     #Omit data yrs where month max_missing day threshold is not met
                     if cat_idx < 12 and x_miss[cat_idx]['avgt'][yr] > kwargs['max_missing_days']:
@@ -2462,21 +2471,22 @@ def Sodsumm(**kwargs):
                         sm+=dat
                         cnt+=1
                     if cnt!=0:
-                        means_yr.append(sm/cnt)
-                    else:
-                        means_yr.append(0.0)
+                        means_yr.append(round(sm/cnt,2))
+                        yr_list.append(str(int(start_year) + yr))
                 if means_yr:
                     ave_low = min(means_yr)
                     ave_high = max(means_yr)
                     yr_idx_low = means_yr.index(ave_low)
                     yr_idx_high = means_yr.index(ave_high)
-                    yr_low = str(int(start_year) + yr_idx_low - 1900)
-                    yr_high = str(int(start_year) + yr_idx_high - 1900)
+                    yr_low = yr_list[yr_idx_low]
+                    yr_high = yr_list[yr_idx_high]
+                    #yr_low = str(int(start_year) + yr_idx_low)
+                    #yr_high = str(int(start_year) + yr_idx_high)
                 else:
                     ave_low = 99.0
                     ave_high = -99.0
-                    yr_low = '***'
-                    yr_high = '***'
+                    yr_low = '****'
+                    yr_high = '****'
                 val_list.append('%.1f' %ave_high)
                 val_list.append(yr_high)
                 val_list.append('%.1f' %ave_low)
@@ -2500,7 +2510,7 @@ def Sodsumm(**kwargs):
                             if thresh == '90':
                                 yr_dat_thresh = numpy.where((yr_dat >= 90) & (abs(yr_dat + 9999.0) >= 0.05))
                             else:
-                                yr_dat_thresh = numpy.where((yr_dat <= int(thresh)) & (abs(yr_dat + 9999.0) >= 0.05))
+                                yr_dat_thresh = numpy.where((yr_dat <= float(thresh)) & (abs(yr_dat + 9999.0) >= 0.05))
                             cnt_days.append(len(yr_dat_thresh[0]))
                         try:
                             val_list.append('%.1f' % numpy.mean(cnt_days))
@@ -2514,46 +2524,58 @@ def Sodsumm(**kwargs):
                 #1) Total Precipitation
                 for el in ['pcpn', 'snow']:
                     sum_yr=[]
+                    yr_list = []
                     for yr in range(num_yrs):
                         #Omit data yrs where max_missing day threshold is not met
                         if cat_idx < 12 and x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
+                        '''
                         if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
                             cat_l = 28
                         else:
                             cat_l = time_cats_lens[cat_idx]
+                        '''
+                        cat_l = time_cats_lens[cat_idx]
                         idx_start = cat_l * yr
                         idx_end = idx_start + cat_l
-                        #idx_start = time_cats_lens[cat_idx] * yr
-                        #idx_end = idx_start + time_cats_lens[cat_idx]
                         yr_dat = el_data[el][idx_start:idx_end]
                         sm = 0
                         for yr_dat_idx, dat in enumerate(yr_dat):
                             if abs(dat + 9999.0) >= 0.05:
                                 sm+=dat
                         sum_yr.append(sm)
+                        yr_list.append(str(int(start_year) + yr))
                     try:
-                        val_list.append('%.2f' % numpy.mean(sum_yr))
+                        if el == 'snow':
+                            val_list.append('%.1f' % numpy.mean(sum_yr))
+                        else:
+                            val_list.append('%.2f' % numpy.mean(sum_yr))
                     except:
                         val_list.append('****')
                     if sum_yr:
                         prec_high = max(sum_yr)
                         yr_idx_high = sum_yr.index(prec_high)
-                        yr_high = str(int(start_year) + yr_idx_high - 1900)
+                        yr_high = yr_list[yr_idx_high]
                         if el == 'pcpn':
                             prec_low = min(sum_yr)
                             yr_idx_low = sum_yr.index(prec_low)
-                            yr_low = str(int(start_year) + yr_idx_low - 1900)
+                            yr_low = yr_list[yr_idx_low]
                     else:
                         prec_high = -99.0
-                        yr_high = '***'
+                        yr_high = '****'
                         if el == 'pcpn':
                             prec_low = 99.0
-                            yr_low = '***'
-                    val_list.append('%.2f' %prec_high)
+                            yr_low = '****'
+                    if el == 'snow':
+                        val_list.append('%.1f' %prec_high)
+                    else:
+                        val_list.append('%.2f' %prec_high)
                     val_list.append(yr_high)
                     if el == 'pcpn':
-                        val_list.append('%.2f' %prec_low)
+                        if el == 'snow':
+                            val_list.append('%.1f' %prec_low)
+                        else:
+                            val_list.append('%.2f' %prec_low)
                         val_list.append(yr_low)
                         #2) Daily Prec max
                         prec_max = max(el_data['pcpn'])
@@ -2564,7 +2586,7 @@ def Sodsumm(**kwargs):
 
                 #3) Precip Thresholds
                 threshs = [0.01, 0.10, 0.50, 1.00]
-                for thresh in threshs:
+                for t_idx, thresh in enumerate(threshs):
                         cnt_days = []
 
                         for yr in range(num_yrs):
@@ -2577,9 +2599,11 @@ def Sodsumm(**kwargs):
                             yr_dat_thresh = numpy.where(yr_dat >= thresh)
                             cnt_days.append(len(yr_dat_thresh[0]))
                         try:
-                            val_list.append('%d' % int(round(numpy.mean(cnt_days))))
+                            val_list.insert(8+t_idx, '%d' % int(round(numpy.mean(cnt_days),0)))
+                            #val_list.append('%d' % int(round(numpy.mean(cnt_days))))
                         except:
-                            val_list.append('0')
+                            val_list.insert(8+t_idx,'0')
+                            #val_list.append('0')
                 results[i]['prsn'].append(val_list)
             #3) Degree Days tables
             if kwargs['el_type'] in ['hc', 'g', 'all']:
@@ -2606,39 +2630,41 @@ def Sodsumm(**kwargs):
                                 cat_l = time_cats_lens[cat_idx]
                             idx_start = cat_l * yr
                             idx_end = idx_start + cat_l
-                            #idx_start = time_cats_lens[cat_idx]*yr
-                            #idx_end = idx_start + time_cats_lens[cat_idx]
                             dd_sum = 0
                             dd_cnt = 0
+                            count_missing_days = 0
                             for idx in range(idx_start, idx_end):
                                 t_x = el_data['maxt'][idx]
                                 t_n = el_data['mint'][idx]
                                 if abs(t_x + 9999.0) < 0.05 or abs(t_n + 9999.0) < 0.05:
-                                    continue
-                                #corn is special:
-                                if table == 'corn' and t_x > 86.0:
-                                    t_x = 86.0
-                                if table == 'corn' and t_n < 50.0 and abs(t_x + 9999.0) >= 0.05:
-                                    t_n = 50.0
-                                if table == 'corn' and t_x < t_n:
-                                    tx = t_n
-                                ave = (t_x + t_n)/2.0
-                                if table in ['cdd', 'gdd', 'corn']:
-                                    dd = ave - base
+                                    count_missing_days+=1
                                 else:
-                                    dd = base - ave
-                                if dd < 0:
-                                    dd = 0
-                                dd_sum+=dd
-                                dd_cnt+=1
-
+                                    #corn is special:
+                                    if table == 'corn' and t_x > 86.0:
+                                        t_x = 86.0
+                                    if table == 'corn' and t_n < 50.0:
+                                        t_n = 50.0
+                                    if table == 'corn' and t_x < t_n:
+                                        t_x = t_n
+                                    ave = (t_x + t_n)/2.0
+                                    if table in ['cdd', 'gdd', 'corn']:
+                                        dd = ave - base
+                                    else:
+                                        dd = base - ave
+                                    if dd < 0:
+                                        dd = 0
+                                    dd_sum+=dd
+                                    dd_cnt+=1
+                            #Discard years wheremax_missing_days or more are missing
+                            if count_missing_days >= kwargs['max_missing_days']:
+                                continue
                             #Make adjustments for missing hdd - replace with mean days
-                            if table in ['hdd','cdd']:
-                                if time_cats_lens[cat_idx] - dd_cnt <= kwargs['max_missing_days']:
-                                    dd_sum = (dd_sum/dd_cnt)*float(time_cats_lens[cat_idx])
+                            if table in ['cdd', 'hdd']:
+                                if cat_idx < 12 and cat_l - dd_cnt <= kwargs['max_missing_days']:
+                                    dd_sum = (dd_sum/dd_cnt)*float(cat_l)
                             yr_dat.append(dd_sum)
                         try:
-                            dd_month = int(round(numpy.mean(yr_dat)))
+                            dd_month = int(round(numpy.mean(yr_dat), 0))
                         except:
                             dd_month = 0
                         if table in ['gdd', 'corn']:

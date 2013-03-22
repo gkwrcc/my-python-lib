@@ -25,6 +25,12 @@ fips_state_keys = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10'
              'pa':'36','ri':'37','sc':'38','sd':'39', 'tn':'40', 'ct':'43','va':'44', 'wv':'46', \
              'wi':'47','vi':'67','pr':'66','wr':'96', 'ml':'97', 'ws':'98','ak':'50'}
 fips_key_state = {}
+state_choices = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', \
+                'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', \
+                'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM', 'NV', \
+                'NY', 'OH', 'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', \
+                'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
+
 network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
 '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
 network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
@@ -41,9 +47,9 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
               '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
               '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)'}, 'vX':'44', \
-              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)'}, 'vX':'45', \
-              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':'44'}, \
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':'45'}, \
+              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':'45'}}
               #bug fix needed for cdd = 44
 
 ###################################
@@ -245,8 +251,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     #Can' open user given file, create emergency writer object
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error!' + str(e)
-
-            for stn, dat in data.iteritems():
+            for stn, dat in enumerate(data):
                 row = ['Station ID: %s' %str(station_ids[stn]), 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
                 row = ['date']
@@ -680,7 +685,14 @@ def get_dates(s_date, e_date, app_name):
         end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
         for n in range(int ((end_date - start_date).days +1)):
             next_date = start_date + datetime.timedelta(n)
-            dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
+            n_year = str(next_date.year)
+            n_month = str(next_date.month)
+            n_day = str(next_date.day)
+            if len(n_month) == 1:n_month='0%s' % n_month
+            if len(n_day) == 1:n_day='0%s' % n_day
+            acis_next_date = '%s%s%s' %(n_year,n_month,n_day)
+            dates.append(acis_next_date)
+            #dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
             #note, these apps are grouped by year and return a 366 day year even for non-leap years
             if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                 if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
