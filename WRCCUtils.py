@@ -141,6 +141,7 @@ If a request object is given, the file will be generated
 via the webpages
 '''
 def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, file_info=None):
+    time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #sanity check:
     if not f and not request:
         response = 'Error! Need either a file or a reqest object!'
@@ -154,7 +155,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 if not file_info:
                     file_info = ['data', 'request']
                 response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1],file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
                 writer = csv.writer(response, delimiter=delim )
             else: #file f given
                 try:
@@ -222,11 +223,12 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 if not file_info:
                     file_info = ['data', 'request']
                 response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1], file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
                 wb.save(response)
     return response
 
 def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None):
+    time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #sanity check:
     if not f and not request:
         response = 'Error! Need either a file or a reqest object!'
@@ -240,7 +242,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 if not file_info:
                     file_info = ['data', 'request']
                 response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1],file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
                 writer = csv.writer(response, delimiter=delim )
             else: #file f given
                 try:
@@ -252,17 +254,21 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error!' + str(e)
             for stn, dat in enumerate(data):
-                row = ['Station ID: %s' %str(station_ids[stn]), 'Station_name: %s' %str(station_names[stn])]
+                row = ['Station ID: %s' %str(station_ids[stn]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
                 row = ['date']
                 for el in elements:row.append(el)
                 writer.writerow(row)
                 for j, vals in enumerate(dat):
-                    row = [dates[j]]
+                    #row = [dates[j]]
+                    row = []
+                    '''
                     if len(station_ids) == 1:
                         for val in vals[1:]:row.append(val)
                     else:
                         for val in vals:row.append(val)
+                    '''
+                    for val in vals:row.append(val)
                     writer.writerow(row)
         elif file_extension == 'json':
             with open(f, 'w+') as jsonf:
@@ -271,18 +277,21 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
         else: #Excel
             from xlwt import Workbook
             wb = Workbook()
-            for stn, dat in data.items():
-                ws = wb.add_sheet('Station_%s %s' %(str(station_ids[stn]), str(stn)))
+            for stn, dat in enumerate(data):
+                ws = wb.add_sheet('Station_%s_%s' %(str(station_ids[stn][0]).split(' ')[0], str(stn)))
                 #Header
                 ws.write(0, 0, 'Date')
                 for k, el in enumerate(elements):ws.write(0, k+1, el)
                 #Data
                 for j, vals in enumerate(dat):
+                    '''
                     ws.write(j+1, 0, dates[j])
                     if len(station_ids) == 1:
                         for l,val in enumerate(vals[1:]):ws.write(j+1, l+1, val) #row, column, label
                     else:
                         for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
+                    '''
+                    for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
             if f:
                 try:
                     wb.save(f)
@@ -293,7 +302,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 if not file_info:
                     file_info = ['data', 'request']
                 response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s.%s' % (file_info[0], file_info[1], file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp, file_extension)
                 wb.save(response)
         return response
 
@@ -379,77 +388,23 @@ string of length 8, eg: "20000115", the resulting end date is of same format
 '''
 def get_start_date(time_unit, end_date, number):
     x = int(number)
-    yr = end_date[0:4]
-    mon = end_date[4:6]
-    day = end_date[6:8]
-    mon_int = int(mon.lstrip('0'))
-    day_int = int(day.lstrip('0'))
+    yr = int(end_date[0:4])
+    mon = int(end_date[4:6])
+    day = int(end_date[6:8])
     if time_unit == 'years':
-        yr_start = str(int(yr) - x)
-        mon_start = mon
-        day_start = day
-        #day_start = '0%s' %day if len(day) == 1 else day
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x*365)
     elif time_unit == 'months':
-        day_start = day
-        if x == mon_int:
-            yr_start = str(int(yr) - 1)
-            mon_start = '12'
-        elif x < mon_int:
-            yr_start = yr
-            mon_start = str(mon_int - x)
-        elif x > mon_int and x < 12:
-            yr_start = str(int(yr) - 1)
-            mon_start =  str(12 + mon_int - x)
-        elif x > 12:
-            num_yrs = x/12
-            months_left = x%12
-            if months_left < mon_int:
-                yr_start = str(int(yr) - num_yrs)
-                mon_start = str(mon_int - months_left)
-            elif months_left == mon_int:
-                yr_start = str(int(yr) - num_yrs - 1)
-                mon_start = '12'
-            else:
-                yr_start = str(int(yr) - num_yrs - 1)
-                mon_start = str(12 + mon_int - months_left)
-    elif time_unit == 'days':
-        #find day of year
-        if is_leap_year(yr):
-            doy = compute_doy_leap(mon, day)
-        else:
-            doy = compute_doy(mon, day)
-        #find day of year of start date
-        if x == doy:
-            doy_start = 366 if is_leap_year(int(yr) - 1) else 365
-            num_yrs =1
-        elif x < doy:
-            doy_start = doy - x
-            num_yrs = 0
-        else:
-            #find number of years, month and day
-            x_left = x
-            x_test = x
-            num_yrs = 1
-            day_count = 0
-            flag = True
-            while flag:
-                days_in_year = 366 if is_leap_year(yr) else 355
-                x_test-=days_in_year
-                if x_test >0:
-                    day_count+=days_in_year
-                    x_left-=days_in_year
-                    num_yrs+=1
-                else:
-                    flag = False
-            doy_start = 366 + doy - x_left if is_leap_year(int(yr) - 1) else 365 + doy - x_left
-        mon_start, day_start = compute_mon_day(doy_start)
-        yr_start = str(int(yr) - num_yrs)
-        mon_start = str(mon_start)
-        day_start = str(day_start)
-    if len(mon_start) ==1:mon_start = '0%s' %mon_start
-    if len(day_start) ==1:day_start = '0%s' %day_start
-    start_date = '%s%s%s' % (yr_start, mon_start, day_start)
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=(x*365)/12)
+    else:
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x)
+    yr_start = str(start.year)
+    mon_start = str(start.month)
+    day_start = str(start.day)
+    if len(mon_start) == 1:mon_start = '0%s' % mon_start
+    if len(day_start) == 1:day_start = '0%s' % day_start
+    start_date = '%s%s%s' %(yr_start, mon_start,day_start)
     return start_date
+
 '''
 This routine deals with meta data issues:
 1)jQuery does not like ' in station names
