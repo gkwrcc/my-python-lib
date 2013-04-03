@@ -62,9 +62,11 @@ def General(params):
     return make_request(base_url+'General',params)
 
 
-###############################
+###################################
 #Southwest CSC DATA PORTAL modules
-#Used in Station Finder pages of SW CSC Data Portal
+###################################
+
+#Utilities
 network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
 '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
 network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
@@ -86,22 +88,24 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature(F)',
               '-46': {'name': 'gdd', 'name_long':'Growing Degree Days(Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
 
-'''
-station_meta_to_json
-Writes json file used by javascript initialize_station_map.
-If el_list(lsit of var majors of elements), time_range(start_date, end_date) are given, only stations are listed that have elements for the given time range
-'''
 def station_meta_to_json(by_type, val, el_list=None, time_range=None):
+    '''
+    Requests station meta data from ACIS and writes results to a json file
+    This json file is read by the javascript funcition initialize_station_map
+    which generates the station finder map
+    Keyword arguments:
+    by_type    -- station selection argument.
+                  station selection is one of: county, climate_division,
+                  county_warning_area, basin, bounding_box, state or states
+    val        -- Value of station selection argument, e.g, AL if by_type = state
+    el_list    -- List of var_majors of climate elements (default None)
+    time_range -- [start_date, end_date](default None)
+
+    If el_list and time_range are given, only stations that have elements
+    for the given time range are listed.
+    '''
     stn_list = []
     stn_json={'network_codes': network_codes, 'network_icons': network_icons}
-    '''
-    if el_list is not None:
-        vX_list = el_list
-        vX_tuple = ','.join(el_list)
-    else:
-        vX_list= ['1','2','43','3','4','10','11','7','45']
-        vX_tuple = '1,2,43,3,4,10,11,7,45'
-    '''
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
@@ -134,6 +138,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
 
     stn_meta_list = []
     if 'meta' in request.keys():
+        #For alphabetic ordering of station names
         sorted_list =[]
         for i, stn in enumerate(request['meta']):
             flag_empty = False
@@ -174,7 +179,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             marker_icons = []
             for sid in sids:
                 sid_split = sid.split(' ')
-                #put coop id up front (for cscs application metagraph  and possibly others)
+                #put coop id up front (for csc application metagraph  and possibly others)
                 if str(sid_split[1]) == '2':
                     stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.insert(0, str(sid_split[1]))
@@ -196,16 +201,10 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
             else:
                 continue
             name = str(stn['name']).replace("\'"," ") if 'name' in stn.keys() else 'Name not listed'
-            sorted_list.append(name.split(' ')[0])
-            try:
-                sorted_list.sort()
-                stn_idx = sorted_list.index(name.split(' ')[0])
-            except ValueError:
-                stn_idx = -1
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
-
+            #Generate one entry per network that the station belongs to
             for j, sid in enumerate(stn_networks):
                 stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
                 "state":state_key, 'marker_icon': marker_icons[j], 'marker_category':stn_networks[j], \
@@ -219,6 +218,14 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
 
                 if available_elements:
                     stn_dict['available_elements'] = available_elements
+                #find index in alphabetically ordered list of station names
+                sorted_list.append(name.split(' ')[0])
+                try:
+                    sorted_list.sort()
+                    stn_idx = sorted_list.index(name.split(' ')[0])
+                except ValueError:
+                    stn_idx = -1
+                #Insert stn into alphabeticlly ordered list
                 if stn_idx == -1:
                     stn_meta_list.append(stn_dict)
                 else:
@@ -245,6 +252,21 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
 
 
 def get_point_data(form_input, program):
+    '''
+    Retrieves Station Data from ACIS.
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of CSC pages
+    program -- specifies program that is making the request.
+
+    Returned is a resultsdictionary with entries:
+    'stn_data'   -- list of station data of form [date, val_element1, val_element2, ...val_elementn]
+                    for each station
+    'dates'      -- list of dates of request
+    'stn_ids'    -- list of station ids
+    'stn_names'  -- list of station names
+    'stn_errors' -- list of errors that occurred during request
+    'elements'   -- list of elements of request
+    '''
     #Set up parameters for data request
     resultsdict = defaultdict(dict)
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
@@ -367,6 +389,17 @@ def get_point_data(form_input, program):
     return resultsdict
 
 def get_grid_data(form_input, program):
+    '''
+    Retrieves Grid Data from ACIS.
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of CSC pages
+    program -- specifies program that is making the request.
+
+    Returned is a resultsdictionary from ACIS with entries:
+    'lats'   -- lists of latitudes for grid points
+    'lons'   -- lists of longitudes for grid points
+    'data'   -- lists of grid data for each lat, lon
+    '''
     #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
     #[date2, lat2, ...], ...]
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
@@ -386,6 +419,15 @@ def get_grid_data(form_input, program):
 #APPLICATION modules
 #######################################
 def get_station_list(by_type, val):
+    '''
+    Finds all station ids that belong to a specific region
+
+    Keyword arguments:
+    by_type -- station selection argument.
+               station selection is one of: county, climate_division,
+               county_warning_area, basin, bounding_box, state or states
+    val     -- Value of station selection argument, e.g, AL if by_type = state
+    '''
     stn_list = []
     if by_type == 'county':
         params = dict(county=val)
@@ -421,9 +463,10 @@ def get_station_list(by_type, val):
 
     return stn_list
 
-
 def get_us_meta():
-    #states=['DE']
+    '''
+    Retrieve meta data for all US states.
+    '''
     states = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME'\
     ,'MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC'\
     ,'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
@@ -435,8 +478,15 @@ def get_us_meta():
 
     return request
 
-#data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
 def get_sod_data(form_input, program):
+    '''
+    Data acquisition for Soddyrec, Soddynorm, Soddd, Sodpad, Sodsumm
+
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of WRCC SOD pages
+    program -- specifies program that is making the request.
+    '''
+
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     '''
     if program in ['Sodpiii']:
@@ -614,7 +664,14 @@ def get_sod_data(form_input, program):
                 sys.exit(1)
     return datadict, dates, elements, coop_station_ids, station_names
 
+
 def get_sodsum_data(form_input):
+    '''
+    Data acquisition for sodsum
+
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of WRCC SOD pages
+    '''
     if 'element' not in form_input.keys() or 'coop_station_ids' not in form_input.keys():
         print 'element and coop_station_id options required!'
         sys.exit(0)
@@ -663,8 +720,14 @@ def get_sodsum_data(form_input):
     return datadict, elements, coop_station_ids, station_names
 
 
-#Routine to return data for programs sodlist, sodmonline(my), sodcnv
 def get_sodlist_data(form_input, program):
+    '''
+    Data acquisition for sodlist,sodmonline(my), sodcnv
+
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of WRCC SOD pages
+    program -- specifies program that is making the request.
+    '''
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     coop_station_id = form_input['coop_station_id']
     if program in ['sodlist', 'sodcnv']:

@@ -17,9 +17,9 @@ from math import ceil
 
 LIB_PREFIX = "/www/apps/csc/my-python-lib/"
 
-##########################################################################
-#######################CSC DATA PORTAL APPLICATIONS##########################
-##########################################################################
+#############################
+#Useful dicts and lists
+#############################
 acis_elements = defaultdict(dict)
 acis_elements ={'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
               'mint':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
@@ -35,13 +35,16 @@ acis_elements ={'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (
               'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
 
-'''
-Routine computes monthly averages of stn data in a state
-for a givenmonth over date range (default 1900 - present)
-element, start end date and state are chosen by user
-(Center piece of CSC apps page or of main page??)
-'''
+#############################
+#CSC DATA PORTAL APPLICATIONS
+#############################
+
 def state_aves_stn(state, month, elements):
+    '''
+    Routine computes monthly averages of stn data in a state
+    for a given month over date range (default 1900 - present)
+    element, start end date and state are chosen by user
+    '''
     mon = int(month)
     if mon not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
         print "Not a valid month: %s. Enter a number 1-12" % str(mon)
@@ -94,13 +97,12 @@ def state_aves_stn(state, month, elements):
             state_aves[k]['state_ave'][yr] = numpy.mean(ave_list)
     return year_list, state_aves
 
-'''
-Routine computes monthly averages of Acis gridded data in a state
-for a givenmonth over date range (default 1900 - present)
-element, start end date and state are chosen by user
-(Center piece of CSC apps page or of main page??)
-'''
 def state_aves_grid(state, month, elements):
+    '''
+    Routine computes monthly averages of Acis gridded data in a state
+    for a given month over date range (default 1900 - present)
+    element, start end date and state are chosen by user
+    '''
     state_aves = defaultdict(dict)
     mon = int(month)
     if mon not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
@@ -172,12 +174,15 @@ def state_aves_grid(state, month, elements):
     return year_list, state_aves
 
 
-'''
-monthly aves
-CSC hsitoric station data app
-computes monthly aves over multiple years for multiple elements chosen by user
-'''
 def monthly_aves(request, el_list):
+    '''
+    CSC hsitoric station data app
+    computes monthly aves over multiple years for multiple elements chosen by user
+
+    Keyword arguments:
+    request  -- data request object containing data
+    el_list  -- List of climate elements
+    '''
     #request['data'] = [[year1, [el1(366entries)], [el2(366entries)], ...],
     #                   [year2, [el1(366entries)], [el2(366entries)], ...],...
     #                   [lastyear, [el1(366entries)], [el2(366entries)], ...]]
@@ -250,16 +255,17 @@ def monthly_aves(request, el_list):
             else:
                 results[el].append(9999.9)
     return results
-##########################################################################
-#######################KELLY's DATA APPLICATIONS##########################
-##########################################################################
 
-'''
-Sodpiii
-THIS PROGRAM CALCULATES ANNUAL TIME SERIES OF EXTREME VALUES OF A CLIMATE
-VARIABLE
-'''
+#####################################################
+#KELLY's DATA APPLICATION
+#Mostly copied straight from Kelly's Fortran programs
+#####################################################
+
 def Sodpiii(**kwargs):
+    '''
+    THIS PROGRAM CALCULATES ANNUAL TIME SERIES OF EXTREME VALUES OF A CLIMATE
+    VARIABLE
+    '''
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results_0 = defaultdict(dict)
     results = defaultdict(dict)
@@ -705,12 +711,12 @@ def Sodpiii(**kwargs):
                 results[i][tbl_idx][iretrn].append('PSD = %.4f ' % psd)
                 results[i][tbl_idx][iretrn].append('VALUE = %.4f ' % value)
     return results_0, results, averages, stdevs, skews
-'''
-Sodxtrmts
-THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
-LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
-'''
+
 def Sodxtrmts(**kwargs):
+    '''
+    THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
+    LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
+    '''
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(list)
     fa_results = defaultdict(list)
@@ -1284,26 +1290,26 @@ def Sodxtrmts(**kwargs):
             #End monind loop
 
     return results, fa_results
-'''
-Sodthr
-This program can be used to find the latest spring and
-earliest fall frost (or other temperature(s)) each year.
-However, it is written much more generally to allow
-finding the latest or earliest occurrence above or below
-a threshold value, for a period up to 12-months long,
-which may extend from one year into the next (for example,
-the winter season from July thru June), for up to 10 sets
-of values.  Furthermore, the "midpoint" of the period can
-be set anywhere between the starting and ending dates.
-For example, July 31 can be used as mid-year, rather than
-June 30 (is a frost on July 2 the "last frost" of  spring
-or the "first frost" of autumn??)  A time series of the
-values for each half of the interval is formed, and the
-probability of exceedance is calculated, using only those
-years with less missing data than the user specifies as a
-minimum.
-'''
+
 def Sodthr(**kwargs):
+    '''
+    This program can be used to find the latest spring and
+    earliest fall frost (or other temperature(s)) each year.
+    However, it is written much more generally to allow
+    finding the latest or earliest occurrence above or below
+    a threshold value, for a period up to 12-months long,
+    which may extend from one year into the next (for example,
+    the winter season from July thru June), for up to 10 sets
+    of values.  Furthermore, the midpoint of the period can
+    be set anywhere between the starting and ending dates.
+    For example, July 31 can be used as mid-year, rather than
+    June 30 (is a frost on July 2 the "last frost" of  spring
+    or the "first frost" of autumn??)  A time series of the
+    values for each half of the interval is formed, and the
+    probability of exceedance is calculated, using only those
+    years with less missing data than the user specifies as a
+    minimum.
+    '''
     results = defaultdict(dict)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
@@ -1623,25 +1629,24 @@ def Sodthr(**kwargs):
                         results[i][period][thresh][k] = '%.1f' % thrpct[period][thresh][k -1]
 
     return results
-'''
-Sodpct
-This program determines percentiles of distributions of
-climate elements.  These elements include max, min and
-mean temperature, degree days, daily temperature range
-precipitation, snowfall and snowdepth.  The user selects
-the starting and ending year.  Distributions are
-empirical rather than fitted to theoretical distributions.
-Separate values are calculated for each day of the year.
-The values for any given day are determined from the next
-1 to 30 days, starting on that day (a user-selectable
-quantity).  (The use of additional days increases the
-sample size, and smooths the day-to-day variations.)
-Furthermore, these values can be based on individual
-daily values, or on averages (or sums, for some elements)
-for the next (n) days.
-'''
 
 def Sodpct(**kwargs):
+    '''
+    This program determines percentiles of distributions of
+    climate elements.  These elements include max, min and
+    mean temperature, degree days, daily temperature range
+    precipitation, snowfall and snowdepth.  The user selects
+    the starting and ending year.  Distributions are
+    empirical rather than fitted to theoretical distributions.
+    Separate values are calculated for each day of the year.
+    The values for any given day are determined from the next
+    1 to 30 days, starting on that day (a user-selectable
+    quantity).  (The use of additional days increases the
+    sample size, and smooths the day-to-day variations.)
+    Furthermore, these values can be based on individual
+    daily values, or on averages (or sums, for some elements)
+    for the next (n) days.
+    '''
     results = defaultdict(list)
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
@@ -1921,14 +1926,13 @@ def Sodpct(**kwargs):
             results[i] = results_temp
     return results
 
-'''
-Sodrun and Sodrunr
-THESE PROGRAMS FIND ALL RUNS OF CONSECUTIVE DAYS WHERE REQUESTED THRESHOLD
-CONDITIONS ARE MET. SODRUNR CONSIDERS 2 DAYS A TIME. OTHERWISE, THE TWO
-PROGRAMS ARE IDENTICAL.
-'''
-
 def Sodrun(**kwargs):
+    '''
+    Sodrun and Sodrunr
+    THESE PROGRAMS FIND ALL RUNS OF CONSECUTIVE DAYS WHERE REQUESTED THRESHOLD
+    CONDITIONS ARE MET. SODRUNR CONSIDERS 2 DAYS A TIME. OTHERWISE, THE TWO
+    PROGRAMS ARE IDENTICAL.
+    '''
     def write_str_missing(days, nxt):
         print_str = '%5s DAYS MISSING.  NEXT DATE %s' % (str(days), str(nxt))
         return print_str
@@ -2218,12 +2222,11 @@ def Sodrun(**kwargs):
         for key in key_list:
             results[i].append('%10s%8s' % (key, run_cnt[key]))
     return results
-'''
-Sodlist
-
-'''
 
 def Sodlist(**kwargs):
+    '''
+    Summary of the day data lister
+    '''
     results = defaultdict(list)
     coop_station_ids = kwargs['coop_station_ids']
     elements = kwargs['elements']
@@ -2238,14 +2241,13 @@ def Sodlist(**kwargs):
         results[i]=stn_data
     return results
 
-'''
-Sodmonline
-THIS PROGRAM WAS WRITTEN SPECIFICALLY FOR JOHN HANSON AT PGE, AND
-GIVES THE DAILY AVERAGE TEMPERATURE FOR SPECIFIED STATIONS
-THE FIRST YEARS ARE FROM THE SOD DATA BASE AND THE LATER YEARS
-MAY BE FROM THE MONTHLY NCDC TELEPHONE CALL FILES
-'''
 def Sodmonline(**kwargs):
+    '''
+    THIS PROGRAM WAS WRITTEN SPECIFICALLY FOR JOHN HANSON AT PGE, AND
+    GIVES THE DAILY AVERAGE TEMPERATURE FOR SPECIFIED STATIONS
+    THE FIRST YEARS ARE FROM THE SOD DATA BASE AND THE LATER YEARS
+    MAY BE FROM THE MONTHLY NCDC TELEPHONE CALL FILES
+    '''
     results = defaultdict(list)
     coop_station_ids = kwargs['coop_station_ids']
     elements = kwargs['elements']
@@ -2259,12 +2261,11 @@ def Sodmonline(**kwargs):
         results[i]=stn_data
     return results
 
-'''
-Sodsumm
-THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
-THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
-'''
 def Sodsumm(**kwargs):
+    '''
+    THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
+    THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
+    '''
     elements = kwargs['elements']
     dates = kwargs['dates']
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
@@ -2689,13 +2690,12 @@ def Sodsumm(**kwargs):
                             results[i][table].append(val_l)
     return results
 
-'''
-Sodpad
-THIS PROGRAM READS IN PRECIPITATION FROM THE NCC SOD SET, AND THEN
-FINDS, FOR EACH DAY OF THE YEAR, THE NUMBER OF TIMES THAT A RANGE OF
-THRESHOLD AMOUNTS WAS EQUALLED, FOR A RANGE OF DURATIONS.
-'''
 def Sodpad(**kwargs):
+    '''
+    THIS PROGRAM READS IN PRECIPITATION FROM THE NCC SOD SET, AND THEN
+    FINDS, FOR EACH DAY OF THE YEAR, THE NUMBER OF TIMES THAT A RANGE OF
+    THRESHOLD AMOUNTS WAS EQUALLED, FOR A RANGE OF DURATIONS
+    '''
     results = defaultdict(dict)
     #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
@@ -2803,17 +2803,16 @@ def Sodpad(**kwargs):
                 icount+=1
     return results
 
-'''
-Soddd
-This program finds degree days above or below any selected
-base temperature, allowing for heating, cooling, freezing,
-thawing, chilling and other degree day thresholds.
-NCDC round-off can be simulated (truncation rather than rounding).
-Maximum and minimum temperatures can be truncated, and certain days can be skipped.
-The program can find either time series of monthly values,
-or long term averages of daily values.
-'''
 def Soddd(**kwargs):
+    '''
+    This program finds degree days above or below any selected
+    base temperature, allowing for heating, cooling, freezing,
+    thawing, chilling and other degree day thresholds.
+    NCDC round-off can be simulated (truncation rather than rounding).
+    Maximum and minimum temperatures can be truncated, and certain days can be skipped.
+    The program can find either time series of monthly values,
+    or long term averages of daily values.
+    '''
     #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
     #if output_type monthly time series:
     #results[stn_id][yr] =[Year,Jan_dd, Feb_dd, ..., Dec_dd]
@@ -2929,12 +2928,11 @@ def Soddd(**kwargs):
                         results[i][day].append(0)
     return results
 
-'''
-Soddynorm
-FINDS DAILY NORMALS FOR EACH DAY OF THE YEAR FOR EACH STATION
-OVER A MULTI YEAR PERIOD. IT USES EITHER A GAUSSIAN FILTER OR RUNNING MEAN.
-'''
 def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_type, filter_days):
+    '''
+    FINDS DAILY NORMALS FOR EACH DAY OF THE YEAR FOR EACH STATION
+    OVER A MULTI YEAR PERIOD. IT USES EITHER A GAUSSIAN FILTER OR RUNNING MEAN.
+    '''
     #data[stn_id][el] = [[year1 data], [year2 data], ... [yearn data]]
     #results[stn_id] = [[doy =1, mon=1, day=1, maxt_ave, yrs, mint_ave, yrs, pcpn_ave, yrs, sd_maxt, sd_mint],[doy=2, ...]...]
     results = defaultdict(list)
@@ -3113,12 +3111,11 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                     results[i][-1].append(k)
     return results
 
-'''
-Soddyrec
-FINDS DAILY AVERAGES AND RECORD FOR EACH DAY OF THE YEAR
-FOR EACH STATION OVER A MULTI YEAR PERIOD
-'''
 def Soddyrec(data, dates, elements, coop_station_ids, station_names):
+    '''
+    FINDS DAILY AVERAGES AND RECORD FOR EACH DAY OF THE YEAR
+    FOR EACH STATION OVER A MULTI YEAR PERIOD
+    '''
     #data[stn_id][el] = smry for station stn_id, element el = [ave, high_or_low, date,yrs_missing]
     #result[stn_id][el] = [[month=1, day=1, ave, no, high_or_low, yr], [month=1, day=2, ave,..]..]
     #for all 365 days a year
@@ -3142,18 +3139,16 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     return results
 
 
-'''
-Sodsum:
-COUNTS THE NUMBER OF OBSERVATIONS FOR THE PERIOD OF RECORD
-OF EACH STATION IN THE SOD DATA SET. IT ALSO FINDS THE AOUNT OF
-POTENTIAL, PRESENT, MISSING AND CONSECUTIVE PRESENT AND MISSING DAYS.
-ELEMENTS ARE GIVEN IN THIS ORDER:
-[PCPN, SNOW,SNWD,MAXT,MINT,TOBS]
-NOT ALL ELEMENTS MAY BE PREENT. DATA MAY BE OBTAINED FOR A SINGLE ELELMENT ONLY
-OR FOR ALL OF THE ABOVE LISTED.
-'''
-
 def Sodsum(data, elements, coop_station_ids, station_names):
+    '''
+    COUNTS THE NUMBER OF OBSERVATIONS FOR THE PERIOD OF RECORD
+    OF EACH STATION IN THE SOD DATA SET. IT ALSO FINDS THE AOUNT OF
+    POTENTIAL, PRESENT, MISSING AND CONSECUTIVE PRESENT AND MISSING DAYS.
+    ELEMENTS ARE GIVEN IN THIS ORDER:
+    [PCPN, SNOW,SNWD,MAXT,MINT,TOBS]
+    NOT ALL ELEMENTS MAY BE PREENT. DATA MAY BE OBTAINED FOR A SINGLE ELELMENT ONLY
+    OR FOR ALL OF THE ABOVE LISTED.
+    '''
     results = defaultdict(dict)
     #Loop over stations
     for i, stn in enumerate(coop_station_ids):
@@ -3258,8 +3253,12 @@ def Sodsum(data, elements, coop_station_ids, station_names):
 
 
 def SodsumMulti(data, dates, elements, coop_station_ids, station_names):
-    #element in elements correspond to data values in data, i.e data[i][j] is value corresponding to elements[j]
-    #Results.keys()=[coop_station_id, stn_name, start, end, pcpn, snow, snwd, maxt, mint, tobs, evap, wdmv, wesf, posbl, prsnt, lngpr, missg, lngms]
+    '''
+    Executes Sodsum on multiple stations
+    element in elements correspond to data values in data, i.e data[i][j] is value corresponding to elements[j]
+    Results.keys():
+        coop_station_id, stn_name, start, end, pcpn, snow, snwd, maxt, mint, tobs, evap, wdmv, wesf, posbl, prsnt, lngpr, missg, lngms
+    '''
     results = defaultdict(dict)
     #Loop over stations
     for i, stn in enumerate(coop_station_ids):

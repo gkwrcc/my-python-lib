@@ -14,9 +14,9 @@ from ftplib import FTP
 
 from django.http import HttpResponse, HttpResponseRedirect
 
-############################################################################################
-#Utils
-############################################################################################
+######################
+#Useful Dicts and List
+######################
 fips_state_keys = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
              'nm':'29','pi':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
              'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
@@ -52,16 +52,13 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':'45'}}
               #bug fix needed for cdd = 44
 
-###################################
-#functions for large data requests
-###################################
 
-'''
-Upload file to ftp_server
-in directory pub_dir = /pub/
-sub_dir = csc/
-'''
 def upload(ftp_server,pub_dir,f):
+    '''
+    Uploads file to ftp_server
+    in directory pub_dir = /pub/
+    sub_dir = csc/
+    '''
     try:
         fname = os.path.split(f)[1]
         ftp = FTP(ftp_server)
@@ -101,10 +98,10 @@ def upload(ftp_server,pub_dir,f):
     return error
 
 
-'''
-Write e-mail via smtp
-'''
 def write_email(mail_server,fromaddr,toaddr,message):
+    '''
+    Write e-mail via pythons  smtp module
+    '''
     try:
         server = smtplib.SMTP(mail_server)
         server.set_debuglevel(1)
@@ -116,10 +113,10 @@ def write_email(mail_server,fromaddr,toaddr,message):
     return error
 
 
-'''
-Unicode converter
-'''
 def u_convert(data):
+    '''
+    Unicode converter, needed to write json files
+    '''
     if isinstance(data, unicode):
         return str(data)
     elif isinstance(data, Mapping):
@@ -129,18 +126,23 @@ def u_convert(data):
     else:
         return data
 
-##################################
-#End multiprocessing functions
-###################################
-
-'''
-Writes gridded data to a file f which is
-of format = file_extension (.dat,.txt,.xls)
-If a file f is given, data will be written to file.
-If a request object is given, the file will be generated
-via the webpages
-'''
 def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, file_info=None):
+    '''
+    Writes gridded data to a file.
+
+    Keyword aruments:
+    data           -- data to write to file
+    elements       -- list of climate elements
+    delim          -- delimiter used to separate data vaules
+    file_extension -- format of output data file (.dat, .txt, .xls)
+    f              -- file name (default None)
+    request        -- data request object (default None)
+    file_info      -- extra information about name of output file (if f not given)
+
+    If a file f is given, data will be written to file.
+    If a request object is given, the file will be generated
+    via the CSC webpages
+    '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #sanity check:
     if not f and not request:
@@ -228,6 +230,25 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
     return response
 
 def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None):
+    '''
+    Writes station data to a file.
+
+    Keyword aruments:
+    data           -- data to write to file
+    dates          -- list of dates of data request
+    station_names  -- list of station names of data request
+    station_ids    -- list of station ids of data request
+    elements       -- list of climate elements
+    delim          -- delimiter used to separate data vaules
+    file_extension -- format of output data file (.dat, .txt, .xls)
+    f              -- file name (default None)
+    request        -- data request object (default None)
+    file_info      -- extra information about name of output file (if f not given)
+
+    If a file f is given, data will be written to file.
+    If a request object is given, the file will be generated
+    via the CSC webpages
+    '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #sanity check:
     if not f and not request:
@@ -306,13 +327,14 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 wb.save(response)
         return response
 
-'''
-given the parameters of the data request,
-format the data and generate output file of format
-specified in parameters['data_format']
-returned is a data list
-'''
 def format_grid_data(req, params):
+    '''
+    Format grid data. Output are lists of form [date, lat, lon, value_element1, value_element2, ...]
+
+    Keyword arguments:
+    req    -- Data request object
+    params -- parameter dictionary
+    '''
     el_list = params['elements']
     #req= AcisWS.get_grid_data(params, 'griddata-web')
     if 'error' in req.keys() or params['data_format'] == 'json':
@@ -358,11 +380,14 @@ def format_grid_data(req, params):
                             data[idx].append(date_vals[el_idx][grid_idx][lat_idx])
     return data
 
-'''
-strips base temp xx from gddxx ( hddxx, cddxx)
-return element name gdd( hdd, cdd) and base temp xx
-'''
 def get_el_and_base_temp(el):
+    '''
+    strips base temp xx from gddxx ( hddxx, cddxx)
+    return element name gdd( hdd, cdd) and base temp xx
+
+    Keyword arguments:
+    el -- climate element abbreviation
+    '''
     el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
     b = el[-2:len(el)]
     try:
@@ -379,14 +404,14 @@ def get_el_and_base_temp(el):
     return element, base_temp
 
 
-'''
-Given a time unit (days, months or years),
-an end date and the number of days/months/years to
-go back, this routine calculates the start date.
-Leap years are taken into consideratiion. start date is given as
-string of length 8, eg: "20000115", the resulting end date is of same format
-'''
 def get_start_date(time_unit, end_date, number):
+    '''
+    Given a time unit (days, months or years),
+    an end date and the number of days/months/years to
+    go back, this routine calculates the start date.
+    Leap years are taken into consideratiion. start date is given as
+    string of length 8, eg: "20000115", the resulting end date is of same format
+    '''
     x = int(number)
     yr = int(end_date[0:4])
     mon = int(end_date[4:6])
@@ -405,12 +430,12 @@ def get_start_date(time_unit, end_date, number):
     start_date = '%s%s%s' %(yr_start, mon_start,day_start)
     return start_date
 
-'''
-This routine deals with meta data issues:
-1)jQuery does not like ' in station names
-2) unicode output can cause trouble
-'''
 def format_stn_meta(meta_dict):
+    '''
+    This routine deals with meta data issues:
+    1)jQuery does not like ' in station names
+    2) unicode output can cause trouble
+    '''
     #deal with meta data issues:
     #1)jQuery does not like ' in station names
     #2) unicode output can cause trouble
@@ -436,109 +461,10 @@ def format_stn_meta(meta_dict):
         Meta[key] = Val
     return Meta
 
-
-'''
-JulDay; Function utilized to check for gap in data
-This program is based on and algorithm presented in 'Sky And Telescope Magazine, March 1984.'
-It will correctly calculate any date A.D. to the correct Julian date through at least 3500 A.D.
-Note that Julain dates begin at noon GMT. For this reason, the number is incremented by one to
-correspond to a day beginning at midnight.
-'''
-def JulDay(year, mon, day):
-    jd = 367 * year - 7 * (year + (mon + 9) / 12) / 4\
-    - 3 * ((year + (mon - 9) / 7) / 100 +1) / 4\
-    + 275 * mon / 9 + day + 1721029
-
-    jd+=1
-    return int(jd)
-
-#Routine  to convert calendar days to yearly Julian days,
-#All years are leap years, used in Sodthr
-def Catoju(mnth, dy):
-    month = int(mnth.lstrip('0'))
-    nday = int(dy.lstrip('0'))
-    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    ndoy =0
-    for  mon in range(1,month+1):
-        if mon < month:ndoy+=mon_lens[mon]
-        if mon == month: ndoy+=nday
-    if month == -1 and nday == -1:ndoy = -1
-    return ndoy
-
-#Routine to convert yearly Julian Days to Calenday days,
-#All years are leap years, used in Sodthr
-def Jutoca(ndoy):
-    jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
-    month = 0
-    for mon in range(12):
-        if ndoy >= jstart[mon]:
-            month = mon + 1
-            if month == 12:
-                if ndoy < 367:
-                    nday = ndoy - 336 +1
-                else:
-                    month = -1
-                    nday = -1
-        else:
-            nday = ndoy - jstart[month-1] +1
-            break
-
-    nday = str(nday)
-    month = str(month)
-    if len(nday)== 1:
-        nday = '0%s' % nday
-    if len(month) == 1:
-        month = '0%s' % month
-    return month, nday
-
-#Routine to find the month and day given the day of the year,
-#the start month and the year of the starting month
-#Used in WRCCDataApps.Sodpiii
-def Doymd(idoy, most, iyear):
-    lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    #n732 has no blank spaces so we set February to have length 28
-    iidoy = idoy
-    iyeart = iyear
-    imo = most
-    while imo < 13:
-        if imo == 2 and is_leap_year(iyeart):
-            length = 29
-        else:
-            length = lens[imo - 1]
-
-        if iidoy <= length:
-            imon = imo
-            iday = iidoy
-        else:
-            iidoy = iidoy - length
-            imo+=1
-            if imo == 13:
-                imo = 1
-                iyear+=1
-            continue
-
-        idate = 100 * imon + iday
-        return idate
-
-#Routine to compute binomial coefficients for Soddynorm
-#######################################################
-def bcof(n, normlz=True):
-    C = []
-    S = 0
-    for k in range(n+1):
-        bc = [1 for i in range(0,k+1)]
-        for j in range(1,n-k+1):
-            for i in range(1,k+1):
-                bc[i] = bc[i-1]+bc[i]
-        C.append(bc[k])
-        S+=bc[k]
-    if normlz:
-        C = ['%.6f' % (c/float(S)) for c in C ]
-    return C
-
-#Routine to strip data of attached flags
-########################################
 def strip_data(val):
+    '''
+    Routine to strip data of attached flags
+    '''
     if not val:
         pos_val = ' '
         flag = ' '
@@ -568,10 +494,10 @@ def strip_data(val):
 
     return strp_val, flag
 
-
-#Routine to compute day of year ignoring leap years
-###################################################
 def compute_doy(mon,day):
+    '''
+    Routine to compute day of year ignoring leap years
+    '''
     mon_len = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     nmon = int(mon.lstrip('0'))
     nday = int(day.lstrip('0'))
@@ -582,6 +508,9 @@ def compute_doy(mon,day):
     return ndoy
 
 def compute_doy_leap(mon, day):
+    '''
+    Routine to compute day of leap years
+    '''
     mon_len = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     nmon = int(mon.lstrip('0'))
     nday = int(day.lstrip('0'))
@@ -591,8 +520,10 @@ def compute_doy_leap(mon, day):
         ndoy = sum(mon_len[0:nmon - 1]) + nday
     return ndoy
 
-#reverse of compute_doy but counting every feb as having 29 days
 def compute_mon_day(doy):
+    '''
+    Reverse of compute_doy but counting every feb as having 29 days
+    '''
     ndoy = int(doy)
     mon = 0
     day = 0
@@ -618,6 +549,9 @@ def compute_mon_day(doy):
     return mon,day
 
 def is_leap_year(year):
+    '''
+    Check if year is leap year.
+    '''
     yr = int(year)
     if yr % 100 != 0 and yr % 4 == 0:
         return True
@@ -625,10 +559,13 @@ def is_leap_year(year):
         return True
     else:
         return False
-#This function is in place because Acis_WS's MultiStnCall does not return dates
-#it takes as arguments a start date and an end date (format yyyymmdd)
-#and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
+
 def get_dates(s_date, e_date, app_name):
+    '''
+    This function is in place because Acis_WS's MultiStnCall does not return dates
+    it takes as arguments a start date and an end date (format yyyymmdd)
+    and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
+    '''
     if not s_date or not e_date:
         dates = []
     elif s_date == 'por' or e_date == 'por':
@@ -658,6 +595,10 @@ def get_dates(s_date, e_date, app_name):
     return dates
 
 def strip_n_sort(station_list):
+    '''
+    Strips station ids of leading zero,
+    sorts in ascending order, re-inserts leading zeros.
+    '''
     c_ids_strip_list = [int(stn.lstrip('0')) for stn in station_list]
     stn_list = sorted(c_ids_strip_list)
     for i, stn in enumerate(stn_list):
@@ -667,8 +608,11 @@ def strip_n_sort(station_list):
             stn_list[i] = str(stn)
     return stn_list
 
-#Utility functions
 def find_start_end_dates(form_input):
+    '''
+    Converts form_input['start_date'] and form_input['end_date']
+    to 8 digit start, end dates of format yyyymmdd.
+    '''
     if 'start_date' not in form_input.keys():
         s_date = 'por'
     elif form_input['start_date'] == 'por':
@@ -706,6 +650,13 @@ def find_start_end_dates(form_input):
     return s_date, e_date
 
 def get_element_list(form_input, program):
+    '''
+    Finds element liste for program data query
+
+    Keyword arguments:
+    form_input -- webpage user form fields
+    program    -- application name
+    '''
     if program == 'Soddyrec':
         if form_input['element'] == 'all':
             elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
@@ -754,65 +705,17 @@ def get_element_list(form_input, program):
         elements = [str(el) for el in form_input['elements']]
     return elements
 
-#Routine to compute percentiles, needed for Sodpct
-def pctil(app_name, data, number, npctil):
-    #number  number of data elements
-    #sort contains sorted values low to high
-    #npctil number of percentiles
-    #pctile percentiles in ascending order
-    #xmed median of distribution
-    xmax = -100000000.0
-    dummy = [data[i] for i in range(number)]
-    sort = [0.0 for i in range(number)]
-    pctile = [0.0 for i in range(npctil-1)]
-    for i in range(number):
-        try:
-            xmax = max(xmax,dummy[i])
-        except:
-            pass
-    for islow in range(number):
-        xmin = 100000000.0
-        # For each element of sort, find lowest of the vaues
-        iskip = None
-        for ifast in range(number):
-            if dummy[ifast] <= xmin:
-                xmin = dummy[ifast]
-                iskip = ifast
-
-        sort[islow] = xmin
-        if iskip is not None:
-            dummy[iskip] = xmax + 1
-    #Find the median:
-    if number % 2  == 0:
-        xmed = (sort[number/2 - 1 ] + sort[(number/2)]) / 2
-    else:
-        xmed = sort[(number/2)]
-
-    #Find percentiles
-    frac = float(number) /  float(npctil)
-
-    # Note that there are one less percentile separators than percentiles
-    for i in range(npctil -1 ):
-        dum = frac * float(i+1) + 0.5
-        idum = int(dum)
-
-        if app_name == 'Sodthr':
-            if sort[idum - 1] < -0.5 or sort[idum] < -0.5:
-                pctile[i] = -1
-            elif sort[idum - 1] > 366.5 or sort[idum] > 366.5:
-                pctile[i] =  367
-            else:
-                pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
-        else:
-            pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
-    if app_name == 'Sodpct':
-        return pctile, sort
-    elif app_name == 'Sodthr':
-        return pctile, sort, xmed
-
-#Routine to filter out data according to window specification(sodlist)
-#######################################################################
 def get_windowed_data(data, start_date, end_date, start_window, end_window):
+    '''
+    Routine to filter out data according to window specification(sodlist)
+
+    Keyword arguments:
+    data         -- data array
+    start_date   -- start date of data array
+    end_date     -- end date of data array
+    start_window -- start date of window
+    end_window   -- end date of window
+    '''
     if start_window == '0101' and end_window == '1231':
         windowed_data = data
     else:
@@ -878,6 +781,175 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
             windowed_data = windowed_data + add_data
     return windowed_data
 
+###########################################################
+#KELLY's routines
+#These are mostly copied directly from Kelly's Fortran code
+###########################################################
+
+def JulDay(year, mon, day):
+    '''
+    JulDay; Function utilized to check for gap in data
+    This program is based on and algorithm presented in 'Sky And Telescope Magazine, March 1984.'
+    It will correctly calculate any date A.D. to the correct Julian date through at least 3500 A.D.
+    Note that Julain dates begin at noon GMT. For this reason, the number is incremented by one to
+    correspond to a day beginning at midnight.
+    '''
+    jd = 367 * year - 7 * (year + (mon + 9) / 12) / 4\
+    - 3 * ((year + (mon - 9) / 7) / 100 +1) / 4\
+    + 275 * mon / 9 + day + 1721029
+
+    jd+=1
+    return int(jd)
+
+def Catoju(mnth, dy):
+    '''
+    Routine  to convert calendar days to yearly Julian days,
+    All years are leap years, used in Sodthr
+    '''
+    month = int(mnth.lstrip('0'))
+    nday = int(dy.lstrip('0'))
+    mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ndoy =0
+    for  mon in range(1,month+1):
+        if mon < month:ndoy+=mon_lens[mon]
+        if mon == month: ndoy+=nday
+    if month == -1 and nday == -1:ndoy = -1
+    return ndoy
+
+def Jutoca(ndoy):
+    '''
+    Routine to convert yearly Julian Days to Calenday days,
+    All years are leap years, used in Sodthr
+    '''
+    jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
+    month = 0
+    for mon in range(12):
+        if ndoy >= jstart[mon]:
+            month = mon + 1
+            if month == 12:
+                if ndoy < 367:
+                    nday = ndoy - 336 +1
+                else:
+                    month = -1
+                    nday = -1
+        else:
+            nday = ndoy - jstart[month-1] +1
+            break
+
+    nday = str(nday)
+    month = str(month)
+    if len(nday)== 1:
+        nday = '0%s' % nday
+    if len(month) == 1:
+        month = '0%s' % month
+    return month, nday
+
+def Doymd(idoy, most, iyear):
+    '''
+    Routine to find the month and day given the day of the year,
+    the start month and the year of the starting month
+    Used in WRCCDataApps.Sodpiii
+    '''
+    lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    #n732 has no blank spaces so we set February to have length 28
+    iidoy = idoy
+    iyeart = iyear
+    imo = most
+    while imo < 13:
+        if imo == 2 and is_leap_year(iyeart):
+            length = 29
+        else:
+            length = lens[imo - 1]
+
+        if iidoy <= length:
+            imon = imo
+            iday = iidoy
+        else:
+            iidoy = iidoy - length
+            imo+=1
+            if imo == 13:
+                imo = 1
+                iyear+=1
+            continue
+
+        idate = 100 * imon + iday
+        return idate
+
+def bcof(n, normlz=True):
+    '''
+    Routine to compute binomial coefficients for Soddynorm
+    '''
+    C = []
+    S = 0
+    for k in range(n+1):
+        bc = [1 for i in range(0,k+1)]
+        for j in range(1,n-k+1):
+            for i in range(1,k+1):
+                bc[i] = bc[i-1]+bc[i]
+        C.append(bc[k])
+        S+=bc[k]
+    if normlz:
+        C = ['%.6f' % (c/float(S)) for c in C ]
+    return C
+
+def pctil(app_name, data, number, npctil):
+    '''
+    Routine to compute percentiles, needed for Sodpct
+
+    Keyword arguments:
+    app_name -- application name
+    data     -- data array
+    number   -- number of data elements
+    npctil   -- number of percentiles
+    '''
+    xmax = -100000000.0
+    dummy = [data[i] for i in range(number)]
+    sort = [0.0 for i in range(number)]
+    pctile = [0.0 for i in range(npctil-1)]
+    for i in range(number):
+        try:
+            xmax = max(xmax,dummy[i])
+        except:
+            pass
+    for islow in range(number):
+        xmin = 100000000.0
+        # For each element of sort, find lowest of the vaues
+        iskip = None
+        for ifast in range(number):
+            if dummy[ifast] <= xmin:
+                xmin = dummy[ifast]
+                iskip = ifast
+
+        sort[islow] = xmin
+        if iskip is not None:
+            dummy[iskip] = xmax + 1
+    #Find the median:
+    if number % 2  == 0:
+        xmed = (sort[number/2 - 1 ] + sort[(number/2)]) / 2
+    else:
+        xmed = sort[(number/2)]
+
+    #Find percentiles
+    frac = float(number) /  float(npctil)
+
+    # Note that there are one less percentile separators than percentiles
+    for i in range(npctil -1 ):
+        dum = frac * float(i+1) + 0.5
+        idum = int(dum)
+
+        if app_name == 'Sodthr':
+            if sort[idum - 1] < -0.5 or sort[idum] < -0.5:
+                pctile[i] = -1
+            elif sort[idum - 1] > 366.5 or sort[idum] > 366.5:
+                pctile[i] =  367
+            else:
+                pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
+        else:
+            pctile[i] = sort[idum -1] + (dum - float(idum)) * (sort[idum] - sort[idum-1])
+    if app_name == 'Sodpct':
+        return pctile, sort
+    elif app_name == 'Sodthr':
+        return pctile, sort, xmed
 
 ##################
 #Sodxrmts routines
@@ -886,22 +958,22 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
 ####################################
 #PearsonIII routines: Pintp3, Capiii
 ####################################
-
-'''
-Pintp3
-This routine interpolates in the piii table
-Inputs:
-prnoex = probability of non-exceedance
-averag = average of the distribution
-stdev = standard deviation of the distribution
-skew = skewness of the distribution
-piii = input array of PearsonIII frequency distribution
-piiili = list of probabilities in piii array
-npiili = len(piiili)
-Output:
-psdout = probability of non-exceedance expressed in standard deviations
-'''
 def Pintp3(prnoex, piii, piiili, npiili,skew):
+    '''
+    This routine interpolates in the piii table.
+
+    Keyword arguments:
+    prnoex -- probability of non-exceedance
+    averag -- average of the distribution
+    stdev  -- standard deviation of the distribution
+    skew   -- skewness of the distribution
+    piii   -- input array of PearsonIII frequency distribution
+    piiili -- list of probabilities in piii array
+    npiili -- len(piiili)
+
+    Output:
+    psdout -- probability of non-exceedance expressed in standard deviations
+    '''
     if skew > 9.0:skew = 9.0
     if skew < -9.0:skew = -9.0
     nsklo = int(round(10.0*skew))
@@ -961,30 +1033,29 @@ def Pintp3(prnoex, piii, piiili, npiili,skew):
     psdout = t * (a2 - a1) + a1
     #psdout =  (1.0 - t)*(1.0 - u)*y1 + t*(1.0 - u)*y2 + t*u*y3 + (1.0 - t)*u*y4
     return psdout
-'''
-Capiii
-Subroutine adapted from old Fortran program, mixture of cases thus results.
-Finds values of the Pearson III distribution from lookup tables calculated
-by Jim Goodridge.  For non-exceedance probabilities not in these tables,
-simple linear interpolation is used.
-Reference:  Selection of Frequency Distributions, with tables for
-Pearson Type III, Log-Normal, Weibull, Normal and Gumbel
-Distributions.  Baolin Wu and Jim Goodridge, June 1976,
-California Department of Water Resources, 85 pp.
-data is a large array (n=50000) containing the data
-numdat is the actual number of data points in the array 'data'
-pnlist is an array with the list of nonexceedance probabilities desired
-piii is a 2-dimensional array containing the Pearson III look-up tables
-piiili is an array containing the npiili nonexceedance values in the tables
-npiili is the number (27) of values in piiili
-ave is the average
-sk is the skewness
-cv is the coefficient of variation
-xmax is the max value
-xmin is the min value
-psd is an array containing the numpn nonexceedance values
-'''
 def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
+    '''
+    Subroutine adapted from old Fortran program, mixture of cases thus results.
+    Finds values of the Pearson III distribution from lookup tables calculated
+    by Jim Goodridge.  For non-exceedance probabilities not in these tables,
+    simple linear interpolation is used.
+    Reference:  Selection of Frequency Distributions, with tables for
+    Pearson Type III, Log-Normal, Weibull, Normal and Gumbel
+    Distributions.  Baolin Wu and Jim Goodridge, June 1976,
+    California Department of Water Resources, 85 pp.
+    data is a large array (n=50000) containing the data
+    numdat is the actual number of data points in the array 'data'
+    pnlist is an array with the list of nonexceedance probabilities desired
+    piii is a 2-dimensional array containing the Pearson III look-up tables
+    piiili is an array containing the npiili nonexceedance values in the tables
+    npiili is the number (27) of values in piiili
+    ave is the average
+    sk is the skewness
+    cv is the coefficient of variation
+    xmax is the max value
+    xmin is the min value
+    psd is an array containing the numpn nonexceedance values
+    '''
     xmax = -9999.0
     xmin = 9999.0
     summ = 0.0
@@ -1046,25 +1117,27 @@ def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
 ##########################################################################
 #Obtained from Jim Angel @ MrCC in Champaign, Illinois
 
-#Samlmr
-#SAMPLE L-MOMENTS OF A DATA ARRAY
-#
-#  PARAMETERS OF ROUTINE:
-#  X      * INPUT* ARRAY OF LENGTH N. CONTAINS THE DATA, IN ASCENDING
-#                  ORDER.
-#  N      * INPUT* NUMBER OF DATA VALUES
-#  XMOM   *OUTPUT* ARRAY OF LENGTH NMOM. ON EXIT, CONTAINS THE SAMPLE
-#                  L-MOMENTS L-1, L-2, T-3, T-4, ... .
-#  NMOM   * INPUT* NUMBER OF L-MOMENTS TO BE FOUND. AT MOST MAX(N,20).
-#  A      * INPUT* ) PARAMETERS OF PLOTTING
-#  B      * INPUT* ) POSITION (SEE BELOW)
-#
-#  FOR UNBIASED ESTIMATES (OF THE LAMBDA'S) SET A=B=ZERO. OTHERWISE,
-#  PLOTTING-POSITION ESTIMATORS ARE USED, BASED ON THE PLOTTING POSITION
-#  (J+A)/(N+B)  FOR THE J'TH SMALLEST OF N OBSERVATIONS. FOR EXAMPLE,
-#  A=-0.35D0 AND B=0.0D0 YIELDS THE ESTIMATORS RECOMMENDED BY
-#  HOSKING ET AL. (1985, TECHNOMETRICS) FOR THE GEV DISTRIBUTION.
 def Samlmr(x, n, nmom, a, b):
+    '''
+    SAMPLE L-MOMENTS OF A DATA ARRAY
+
+    PARAMETERS OF ROUTINE:
+    X      * INPUT* ARRAY OF LENGTH N. CONTAINS THE DATA, IN ASCENDING
+             ORDER.
+    N      * INPUT* NUMBER OF DATA VALUES
+    XMOM   *OUTPUT* ARRAY OF LENGTH NMOM. ON EXIT, CONTAINS THE SAMPLE
+           L-MOMENTS L-1, L-2, T-3, T-4, ... .
+    NMOM   * INPUT* NUMBER OF L-MOMENTS TO BE FOUND. AT MOST MAX(N,20).
+    A      * INPUT* ) PARAMETERS OF PLOTTING
+    B      * INPUT* ) POSITION (SEE BELOW)
+
+    FOR UNBIASED ESTIMATES (OF THE LAMBDA'S) SET A=B=ZERO. OTHERWISE,
+    PLOTTING-POSITION ESTIMATORS ARE USED, BASED ON THE PLOTTING POSITION
+    (J+A)/(N+B)  FOR THE J'TH SMALLEST OF N OBSERVATIONS. FOR EXAMPLE,
+    A=-0.35D0 AND B=0.0D0 YIELDS THE ESTIMATORS RECOMMENDED BY
+    HOSKING ET AL. (1985, TECHNOMETRICS) FOR THE GEV DISTRIBUTION.
+    '''
+
     summ = [0.0 for k in range(nmom)]
     xmom = [0.0 for k in range(nmom)]
 
@@ -1123,8 +1196,10 @@ def Samlmr(x, n, nmom, a, b):
             xmom[k] = summ[k] / summ[1]
     return xmom
 
-#Dlgama: LOGARITHM OF GAMMA FUNCTION
 def Dlgama(x):
+    '''
+    Logarithm of Gamma function
+    '''
     #c[0] - c[7] are the coeffs of the asymtotic expansion of dlgama
     c = [0.91893, 0.83333, -0.27777, 0.79365, \
         -0.59523, 0.84175, -0.19175, 0.64102]
@@ -1163,14 +1238,15 @@ def Dlgama(x):
         dlgama = sum1 + sum2
     return dlgama
 
-#Pelgev
-#Parameter Estomation via L-Moments for the generalized extreme value distribution
-#XMOM   * INPUT* ARRAY OF LENGTH 3. CONTAINS THE L-MOMENTS LAMBDA-1,
-#LAMBDA-2, TAU-3.
-#PARA   *OUTPUT* ARRAY OF LENGTH 3. ON EXIT, CONTAINS THE PARAMETERS
-#IN THE ORDER XI, ALPHA, K (LOCATION, SCALE, SHAPE).
-#Uses Dlgama
 def Pelgev(xmom):
+    '''
+    Parameter Estomation via L-Moments for the generalized extreme value distribution
+    XMOM   * INPUT* ARRAY OF LENGTH 3. CONTAINS THE L-MOMENTS LAMBDA-1,
+    LAMBDA-2, TAU-3.
+    PARA   *OUTPUT* ARRAY OF LENGTH 3. ON EXIT, CONTAINS THE PARAMETERS
+    IN THE ORDER XI, ALPHA, K (LOCATION, SCALE, SHAPE).
+    Uses Dlgama
+    '''
     eu = 0.57721566
     dl2 = 0.69314718
     dl3 = 1.0986123
@@ -1213,8 +1289,10 @@ def Pelgev(xmom):
             para[0] = xmom[0] - eu * para[1]
     return para
 
-#Quantile function of the generalized extreme value distribiution
 def Quagev(f,para):
+    '''
+    Quantile function of the generalized extreme value distribiution
+    '''
     u = para[0]
     a = para[1]
     g = para[2]
@@ -1252,10 +1330,9 @@ def Gev(x, n):
     para = Pelgev(xmom)
     return para
 
-#######################################################################
+################
 #beta-p routines
-########################################################################
-#Not used right now
+################
 def Sortb(rdata, n):
     ra = rdata
     l = n/2 + 1
@@ -1336,9 +1413,11 @@ def Betapll(alpha, theta, beta, n, x, ndim):
 
 
 
-#Maximum likelihood fit for the "Beta-P" distribution
-#Data x assumed to be sorted in ascending order.
 def Fitbetap(x, n, ndim):
+    '''
+    Maximum likelihood fit for the "Beta-P" distribution
+    Data x assumed to be sorted in ascending order.
+    '''
     itmax = 2000
     epsilon = 0.0005
     efd = 0.00001
@@ -1490,8 +1569,9 @@ def Cabetap(rdata, numdat, pnlist, numpn):
     for i in range(numpn):
         psd[i] = Pintbetap(alpha, beta, theta, pnlist[i])
     return psd
-
+########################
 #Censored Gamma routines
+########################
 def Func(beta, alpha, p):
     func = Gammp(alpha, x/beta) - p
     return func
@@ -1787,9 +1867,11 @@ def Cengam(nc, nw, c, sumx, sumlnx):
             break
     return shape, scale, nocon
 
-#Returns as x the value of the gamma distribution variate corresponding to the decimal
-#fraction pcentile
 def Gampctle(pcentile, beta, alpha):
+    '''
+    Returns as x the value of the gamma distribution variate corresponding to the decimal
+    fraction pcentile
+    '''
     x1 = 0
     x2 = 100.0*beta
     x = Zbrent(beta, alpha, pcentile, x1, x2, 1.0e-7)
