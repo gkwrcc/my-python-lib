@@ -22,45 +22,48 @@ acis_data_call is one of StnMeta, StnData, MultiStnData, GridData, General
 given as a string argument,
 params is the parameter dictionary for the acis_data_call
 '''
-class DataJob:
+class StnDataJob:
     def __init__(self, acis_data_call, params):
         self.params = params
         self.acis_data_call = acis_data_call
         self.request = {}
 
+    def format_stn_meta(self, meta_dict):
+        '''
+        deal with meta data issues:
+        1)jQuery does not like ' in station names
+        2) unicode output can cause trouble
+        '''
+        Meta = {}
+        for key, val in meta_dict.items():
+            if key == 'sids':
+                Val = []
+                for sid in val:
+                    Val.append(str(sid).replace("\'"," "))
+            elif key == 'valid_daterange':
+                Val = []
+                for el_idx, rnge in enumerate(val):
+                    start = str(rnge[0])
+                    end = str(rnge[1])
+                    dr = [start, end]
+                    Val.append(dr)
+            else:
+                Val = str(val)
+            Meta[key] = Val
+        return Meta
+
+    def format_stn_dict(self, stn_dict):
+        new_dict = {}
+        for res_key, res in stn_dict.items():
+            if res_key == 'meta':
+                res_dict = self.format_stn_meta(res)
+            else:
+                res_dict = res
+            new_dict[str(res_key)] = res
+        return new_dict
+
+
     def make_data_call(self):
-        def format_stn_meta(meta_dict):
-            #deal with meta data issues:
-            #1)jQuery does not like ' in station names
-            #2) unicode output can cause trouble
-            Meta = {}
-            for key, val in meta_dict.items():
-                if key == 'sids':
-                    Val = []
-                    for sid in val:
-                        Val.append(str(sid).replace("\'"," "))
-                elif key == 'valid_daterange':
-                    Val = []
-                    for el_idx, rnge in enumerate(val):
-                        start = str(rnge[0])
-                        end = str(rnge[1])
-                        dr = [start, end]
-                        Val.append(dr)
-                else:
-                    Val = str(val)
-                Meta[key] = Val
-            return Meta
-
-        def format_stn_dict(stn_dict):
-            new_dict = {}
-            for res_key, res in stn_dict.items():
-                if res_key == 'meta':
-                    res_dict = format_stn_meta(res)
-                else:
-                    res_dict = res
-                new_dict[str(res_key)] = res
-            return new_dict
-
         get_data = getattr(AcisWS, self.acis_data_call)
         self.request = get_data(self.params)
         result = {}
@@ -70,11 +73,10 @@ class DataJob:
             result['error'] = self.request['error']
         else:
             if self.acis_data_call == 'StnData':
-                result = format_stn_dict(self.request)
+                result = iself.format_stn_dict(self.request)
 
             else:
                 result = self.request
-
         return result
 
 

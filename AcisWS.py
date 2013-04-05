@@ -550,8 +550,6 @@ def get_sod_data(form_input, program):
     elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
-        params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
-        elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
     elif program in ['Sodlist', 'Sodcnv']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el,add='t')for el in elements])
@@ -568,10 +566,12 @@ def get_sod_data(form_input, program):
     except:
         if request['error']:
             print '%s' % str(request['error'])
-            sys.exit(1)
+            return datadict, dates, elements, coop_station_ids, station_names
+            #sys.exit(1)
         else:
             'Unknown error ocurred when getting data'
-            sys.exit(1)
+            #sys.exit(1)
+            return datadict, dates, elements, coop_station_ids, station_names
 
     for stn, stn_data in enumerate(request['data']):
         try:

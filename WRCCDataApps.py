@@ -2607,14 +2607,21 @@ def Sodsumm(**kwargs):
                             #val_list.append('0')
                 results[i]['prsn'].append(val_list)
             #3) Degree Days tables
-            if kwargs['el_type'] in ['hc', 'g', 'all']:
+            if kwargs['el_type'] in ['hc', 'g', 'all', 'gdd', 'hdd', 'cdd', 'corn']:
                 if kwargs['el_type'] == 'hc':
                     table_list = ['hdd', 'cdd']
                 elif kwargs['el_type'] == 'g':
                     table_list = ['gdd', 'corn']
+                elif kwargs['el_type'] == 'gdd':
+                    table_list = ['gdd']
+                elif kwargs['el_type'] == 'hdd':
+                    table_list = ['hdd']
+                elif kwargs['el_type'] == 'cdd':
+                    table_list = ['cdd']
+                elif kwargs['el_type'] == 'corn':
+                    table_list = ['corn']
                 else:
                     table_list = ['hdd', 'cdd', 'gdd', 'corn']
-
                 if cat_idx >=13:
                     continue
 
