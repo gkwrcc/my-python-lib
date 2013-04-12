@@ -56,14 +56,13 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
 def upload(ftp_server,pub_dir,f):
     '''
     Uploads file to ftp_server
-    in directory pub_dir = /pub/
-    sub_dir = csc/
+    in directory pub_dir
     '''
     try:
         fname = os.path.split(f)[1]
         ftp = FTP(ftp_server)
         ftp.login()
-        ftp.set_debuglevel(2)
+        ftp.set_debuglevel(0)
         try:
             ftp.cwd(pub_dir)
         except:

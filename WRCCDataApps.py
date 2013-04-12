@@ -1105,7 +1105,7 @@ def Sodxtrmts(**kwargs):
                 #For annual totals, ignore years with at least one
                 #Month that does not meet teh missing day criterium
                 if mon <= 11:
-                    if missng < int(kwargs['max_missing_days']):
+                    if missng <=int(kwargs['max_missing_days']):
                         summ+=value
                         summ2+= value**2
                         summ3+=value**3
@@ -1167,15 +1167,28 @@ def Sodxtrmts(**kwargs):
                 if annsav[yr][mon] != ' ':outchr[monind] = annsav[yr][mon]
 
                 if kwargs['departures_from_averages']  == 'F':
-                    results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
+                    if mon == 12:
+                        results[i][yr].append('%.2f' % table_1[yr][mon])
+                    else:
+                        results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
                 else:
-                    results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
-                if table_1[yr][mon] < -9998.0:results[i][yr][-1] = 9999.0
+                    if mon == 12:
+                        results[i][yr].append('%.2f' %(table_1[yr][mon] - mean_out[monind]))
+                    else:
+                        results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
+                if table_1[yr][mon] < -9998.0:
+                    if mon < 12:
+                        results[i][yr][-1] = '-----z'
+                    else:
+                        results[i][yr][-1] = 9999.0
                 if table_1[yr][mon] > 9998.5:
                     if kwargs['analysis_type'] == 'msum' and el_type == 'hdd':
                         continue
                     else:
-                        results[i][yr][-1] = 9999.0
+                        if mon < 12:
+                            results[i][yr][-1] = '-----z'
+                        else:
+                            results[i][yr][-1] = 9999.0
             #End month loop
         #End of year loop
         #Start for frequency analysis
