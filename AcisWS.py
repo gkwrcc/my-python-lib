@@ -410,7 +410,7 @@ def get_grid_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
     el_list = WRCCUtils.get_element_list(form_input, program)
-    if 'data_summary' in form_input.keys():
+    if 'data_summary' in form_input.keys() and form_input['data_summary'] != 'none':
         elements = [{'name':str(el),'smry':str(form_input['data_summary']),'smry_only':1} for el in el_list]
     else:
         elements = ','.join(el_list)

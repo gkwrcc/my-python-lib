@@ -334,59 +334,128 @@ def format_grid_data(req, params):
     req    -- Data request object
     params -- parameter dictionary
     '''
-    el_list = params['elements']
-    #req= AcisWS.get_grid_data(params, 'griddata-web')
-    if 'error' in req.keys() or 'data' not in req.keys():
-        data  = req
-        data['data'] = []
-        if 'meta' not in req.keys():
-            data['meta'] = {'lat':[], 'lon':[]}
-    elif params['data_format'] == 'json':
-        data = req
-        if 'data' not in req.keys():
-            data['data'] = []
-        if 'meta' not in req.keys():
-            data['meta'] = {'lat':[], 'lon':[]}
-    else:
-        if 'location' in params.keys():
-            #make look like multi point call
-            lats = [[req['meta']['lat']]]
-            lons = [[req['meta']['lon']]]
-            elevs = [[req['meta']['elev']]]
-            data = [[] for i in range(len(req['data']))]
+    #Make sure params are formatted correctly
+    prms = {}
+    for key, val in params.iteritems():
+        if key != 'elements':
+            prms[key] = str(val)
         else:
-            lats = req['meta']['lat']
-            lons = req['meta']['lon']
-            elevs = req['meta']['elev']
+            prms[key] = val
+    if 'data_summary' in prms.keys():
+        data_summary = prms['data_summary']
+    else:
+        data_summary = 'none'
+    el_list = prms['elements']
+    #Sanity check
+    data = {'meta':{'lat':[[]], 'lon':[[]], 'elev':[[]]}, 'data':[]}
+    if 'error' in req.keys():
+        data['error'] = req['error']
+        if 'meta' in req.keys():
+            data['meta'] = req['meta']
+    if 'data' in req.keys():
+        data['data'] = req['data']
+    if 'meta' in req.keys():
+        if 'lat' in req['meta'].keys():
+            if 'location' in prms.keys():
+                #make look like multi grid point output
+                data['meta']['lat'] = [[req['meta']['lat']]]
+            else:
+                data['meta']['lat'] = req['meta']['lat']
+        if 'lon' in req['meta'].keys():
+            if 'location' in prms.keys():
+                #make look like multi grid point output
+                data['meta']['lon'] = [[req['meta']['lon']]]
+            else:
+                data['meta']['lon'] =req['meta']['lon']
+        if 'elev'in req['meta'].keys():
+            if 'location' in prms.keys():
+                #make look like multi grid point output
+                data['meta']['elev'] = [[req['meta']['elev']]]
+            else:
+                data['meta']['elev'] = req['meta']['elev']
+    if data_summary != 'none':
+        if 'smry' in req.keys():
+            data['data'] = req['smry']
+        else:
+            data['data'] = []
+
+    #Format data
+    if prms['data_format'] == 'json':
+        return req
+    elif data_summary != 'none':
+        #Sumaries have different format than raw data
+        lats = data['meta']['lat']
+        lons = data['meta']['lon']
+        elevs = data['meta']['elev']
+        if 'start_date' in prms.keys():
+            start_date = prms['start_date']
+        else:
+            start_date = '00000000'
+        if 'end_date' in prms.keys():
+            end_date = prms['start_date']
+        else:
+            end_date = '00000000'
+        date_range = '%s - %s' %(start_date, end_date)
+        if 'location' in prms.keys():
+            #Single gridpoint format
+            vals = ','.join([str(dat) for dat in data['data']])
+            data_out = [date_range, lons[0][0], lats[0][0] , vals]
+        else:
             lat_num = 0
-            for lat_idx, lat_grid in enumerate(req['meta']['lat']):
-               lat_num+=len(lat_grid)
-            length = len(req['data']) * lat_num
-            #length = len(req['data'])
-            data = [[] for i in range(length)]
+            for lat_idx, lat_grid in enumerate(data['meta']['lat']):
+                lat_num+=len(lat_grid)
+            length = lat_num
+            #length = len(data['data'])
+            data_out = [[] for i in range(length)]
+            #Multiple gridpoints
+            idx = -1
+            for grid_idx, lat_grid in enumerate(lats):
+                for lat_idx, lat in enumerate(lat_grid):
+                    idx+=1
+                    data_out[idx].append(date_range)
+                    data_out[idx].append(lons[grid_idx][lat_idx])
+                    data_out[idx].append(lat)
+                    data_out[idx].append(elevs[grid_idx][lat_idx])
+
+                    for el_idx in range(len(data['data'])):
+                        data_out[idx].append(data['data'][el_idx][grid_idx][lat_idx])
+        return data_out
+    else:
+        #Raw data request
+        lats = data['meta']['lat']
+        lons = data['meta']['lon']
+        elevs = data['meta']['elev']
+        if 'location' in prms.keys():
+            data_out = [[] for i in range(len(data['data']))]
+        else:
+            lat_num = 0
+            for lat_idx, lat_grid in enumerate(data['meta']['lat']):
+                lat_num+=len(lat_grid)
+            length = len(data['data']) * lat_num
+            data_out = [[] for i in range(length)]
         idx = -1
-        for date_idx, date_vals in enumerate(req['data']):
-            if 'location' in params.keys():
-                data[date_idx].append(str(date_vals[0]))
-                data[date_idx].append(lons[0][0])
-                data[date_idx].append(lats[0][0])
-                data[date_idx].append(elevs[0][0])
+        for date_idx, date_vals in enumerate(data['data']):
+            if 'location' in prms.keys():
+                data_out[date_idx].append(str(date_vals[0]))
+                data_out[date_idx].append(lons[0][0])
+                data_out[date_idx].append(lats[0][0])
+                data_out[date_idx].append(elevs[0][0])
 
                 for el_idx in range(1,len(el_list) + 1):
-                    data[date_idx].append(str(date_vals[el_idx]).strip(' '))
+                    data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
             else:
                 #idx+=1
                 for grid_idx, lat_grid in enumerate(lats):
                     for lat_idx, lat in enumerate(lat_grid):
                         idx+=1
-                        data[idx].append(str(date_vals[0]))
-                        data[idx].append(lons[grid_idx][lat_idx])
-                        data[idx].append(lat)
-                        data[idx].append(elevs[grid_idx][lat_idx])
+                        data_out[idx].append(str(date_vals[0]))
+                        data_out[idx].append(lons[grid_idx][lat_idx])
+                        data_out[idx].append(lat)
+                        data_out[idx].append(elevs[grid_idx][lat_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
-                            data[idx].append(date_vals[el_idx][grid_idx][lat_idx])
-    return data
+                            data_out[idx].append(date_vals[el_idx][grid_idx][lat_idx])
+        return data_out
 
 def get_el_and_base_temp(el):
     '''
