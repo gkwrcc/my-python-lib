@@ -311,7 +311,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     else:
                         for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
                     '''
-                    for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
+                    for l,val in enumerate(vals):ws.write(j+1, l, val) #row, column, label
             if f:
                 try:
                     wb.save(f)
@@ -336,8 +336,17 @@ def format_grid_data(req, params):
     '''
     el_list = params['elements']
     #req= AcisWS.get_grid_data(params, 'griddata-web')
-    if 'error' in req.keys() or params['data_format'] == 'json':
+    if 'error' in req.keys() or 'data' not in req.keys():
         data  = req
+        data['data'] = []
+        if 'meta' not in req.keys():
+            data['meta'] = {'lat':[], 'lon':[]}
+    elif params['data_format'] == 'json':
+        data = req
+        if 'data' not in req.keys():
+            data['data'] = []
+        if 'meta' not in req.keys():
+            data['meta'] = {'lat':[], 'lon':[]}
     else:
         if 'location' in params.keys():
             #make look like multi point call

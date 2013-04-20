@@ -67,6 +67,11 @@ def General(params):
 ###################################
 
 #Utilities
+
+kelly_network_codes = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
+'8':'CoCoRaHS', '9':'RCC', '10':'Threadex', '11':'Misc'}
+kelly_network_icons = {'1': 'blue-dot', '2': 'orange-dot', '3': 'ltblue-dot','4':'pink-dot', '5': 'green-dot', \
+'6': 'purple-dot', '7': 'yellow-dot', '8': 'purple', '9':'yellow', '10':'green', '11': 'red'}
 network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
 '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
 network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
@@ -105,7 +110,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     for the given time range are listed.
     '''
     stn_list = []
-    stn_json={'network_codes': network_codes, 'network_icons': network_icons}
+    stn_json={'network_codes': kelly_network_codes, 'network_icons': kelly_network_icons}
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
@@ -405,7 +410,10 @@ def get_grid_data(form_input, program):
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
     el_list = WRCCUtils.get_element_list(form_input, program)
-    elements = ','.join(el_list)
+    if 'data_summary' in form_input.keys():
+        elements = [{'name':str(el),'smry':str(form_input['data_summary']),'smry_only':1} for el in el_list]
+    else:
+        elements = ','.join(el_list)
     params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll,elev'}
     if 'location' in form_input.keys():params['loc'] = form_input['location']
     if 'state' in form_input.keys():params['state'] = form_input['state']

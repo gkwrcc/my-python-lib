@@ -251,7 +251,8 @@ def monthly_aves(request, el_list):
                     else:
                         pass
             if yr_aves:
-                results[el].append(numpy.mean(yr_aves))
+                #results[el].append(numpy.mean(yr_aves))
+                results[el].append(round(numpy.mean(yr_aves),2))
             else:
                 results[el].append(9999.9)
     return results
