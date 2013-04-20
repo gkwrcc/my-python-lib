@@ -228,7 +228,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 wb.save(response)
     return response
 
-def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None):
+def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None, show_flags='F'):
     '''
     Writes station data to a file.
 
@@ -277,18 +277,23 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 row = ['Station ID: %s' %str(station_ids[stn]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
                 row = ['date']
-                for el in elements:row.append(el)
+                for el in elements:
+                    if show_flags == 'F':
+                        row.append(el)
+                    else:
+                        row.append(el);row.append('flag')
                 writer.writerow(row)
+
                 for j, vals in enumerate(dat):
                     #row = [dates[j]]
                     row = []
-                    '''
-                    if len(station_ids) == 1:
-                        for val in vals[1:]:row.append(val)
-                    else:
-                        for val in vals:row.append(val)
-                    '''
-                    for val in vals:row.append(val)
+                    row.append(vals[0])
+                    for val in vals[1:]:
+                        if show_flags == 'F':
+                            row.append(val[0])
+                        else:
+                            row.append(val[0])
+                            row.append(val[1])
                     writer.writerow(row)
         elif file_extension == 'json':
             with open(f, 'w+') as jsonf:
@@ -301,17 +306,27 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 ws = wb.add_sheet('Station_%s_%s' %(str(station_ids[stn][0]).split(' ')[0], str(stn)))
                 #Header
                 ws.write(0, 0, 'Date')
-                for k, el in enumerate(elements):ws.write(0, k+1, el)
+                idx = 0
+                for k, el in enumerate(elements):
+                    idx+=1
+                    if show_flags == 'F':
+                        ws.write(0, k+1, el)
+                    else:
+                        ws.write(0, idx, el)
+                        ws.write(0, idx+1,'flag')
+                        idx+=1
                 #Data
                 for j, vals in enumerate(dat):
-                    '''
-                    ws.write(j+1, 0, dates[j])
-                    if len(station_ids) == 1:
-                        for l,val in enumerate(vals[1:]):ws.write(j+1, l+1, val) #row, column, label
-                    else:
-                        for l,val in enumerate(vals):ws.write(j+1, l+1, val) #row, column, label
-                    '''
-                    for l,val in enumerate(vals):ws.write(j+1, l, val) #row, column, label
+                    idx = 0
+                    ws.write(j+1,0,vals[0])
+                    for l,val in enumerate(vals[1:]):
+                        idx+=1
+                        if show_flags == 'F':
+                            ws.write(j+1, l, val[0])
+                        else:
+                            ws.write(j+1, idx, val[0]) #row, column, label
+                            ws.write(j+1, idx+1, val[1])
+                            idx+=1
             if f:
                 try:
                     wb.save(f)
@@ -392,7 +407,7 @@ def format_grid_data(req, params):
         else:
             start_date = '00000000'
         if 'end_date' in prms.keys():
-            end_date = prms['start_date']
+            end_date = prms['end_date']
         else:
             end_date = '00000000'
         date_range = '%s - %s' %(start_date, end_date)

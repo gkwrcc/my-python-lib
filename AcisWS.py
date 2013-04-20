@@ -283,7 +283,7 @@ def get_point_data(form_input, program):
     elements = WRCCUtils.get_element_list(form_input, program)
     params = dict(sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
-        elems=[dict(name=el)for el in elements])
+        elems=[dict(name=el, add='f')for el in elements])
     if 'station_id' in form_input.keys():
         #Check for por:
         if s_date =='por' or e_date == 'por':
@@ -346,7 +346,7 @@ def get_point_data(form_input, program):
     try:
         request['data']
     except Exception, e:
-        resultsdict['error'] = 'Error at Data request: No meta data found. Pameters: %s. Error: %s' %(params, str(e))
+        resultsdict['error'] = 'Error at Data request: No data found. Pameters: %s. Error: %s' %(params, str(e))
         return resultsdict
     #Initialize outpout lists
     if s_date is not None and e_date is not None:
