@@ -81,7 +81,7 @@ class StnDataJob:
 
 
 class GridFigure(object) :
-    image_padding = 50,100
+    image_padding = 20,80
     title = 'Acis GridData map'
     def __init__(self, params, img_offset=10, text_offset=(50, 50)) :
         if 'state' in params.keys():
@@ -106,8 +106,11 @@ class GridFigure(object) :
 
     def get_grid(self) :
         try:
-            result = AcisWS.GridData(self.params)
-            if not result or 'error' in result.keys():
+            if 'data' in self.params.keys():
+                result = self.params['data']
+            else:
+                result = AcisWS.GridData(self.params)
+            if not result or 'error' in result.keys() or not 'data' in result.keys():
                 with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
                 self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
@@ -165,7 +168,7 @@ class GridFigure(object) :
         ctx.rectangle(pad_w/2,self.image_offset,width,height)
         ctx.stroke()
 
-        self.add_title()
+        #self.add_title()
         ctx.set_matrix(cairo.Matrix(y0=self.image_offset+height+5))
         #self.add_footer()
         ctx.set_matrix(cairo.Matrix(x0=15+25,
