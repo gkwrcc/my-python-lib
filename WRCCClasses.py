@@ -106,10 +106,7 @@ class GridFigure(object) :
 
     def get_grid(self) :
         try:
-            if 'data' in self.params.keys():
-                result = self.params['data']
-            else:
-                result = AcisWS.GridData(self.params)
+            result = AcisWS.GridData(self.params)
             if not result or 'error' in result.keys() or not 'data' in result.keys():
                 with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())

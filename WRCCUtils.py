@@ -59,48 +59,6 @@ acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum
                       ['snwd', 'Snow Depth (In)'], ['cdd', 'Cooling Degree Days (F)'], \
                       ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)']]
 
-def make_ACIS_maps(grid, start_date, end_date,element_list, state='DE', bounding_box=None, data=None):
-    '''
-    Generates A climate summary map using Cairo
-    Keywork Arguments:
-    '''
-    figure_files=[]
-    image = dict(type='png',proj='lcc',interp='cspline',cmap='jet',
-            overlays=['state','county:0.5:black'],width=500, height=400)
-    params = {
-            'image':image , 'output':'json', 'grid': grid,
-            'sdate': start_date,
-            'edate': end_date }
-    #Loop over elements and generate figure files
-    for idx,elem in enumerate(element_list):
-        if data:
-            el_data = {'meta':{}, 'data':[]}
-            #compile right data_set
-            if 'meta' in data.keys():
-                el_data['meta']=data['meta']
-            if 'data' in data.keys():
-                el_data['data'] = data['data'][idx]
-            params['data'] = el_data
-
-        params['elems'] = [{'name':elem}]
-        if 'state':
-            params['state'] = state
-            region = 'state_%s' %state
-        elif 'bounding_box':
-            params['bbox'] = bounding_box
-            region = 'bbox_' + re.sub(',','_',bounding_box)
-        fig = WRCCClasses.GridFigure(params)
-        results = fig.get_grid()
-        time_stamp = datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S_')
-        figure_file = time_stamp + 'acis_map_' + region + '.png'
-        file_path_big = '/tmp/' + figure_file
-        #file_path_small = MEDIA_URL +'tmp/' + time_stamp + 'acis_map_small_' + region + '.png'
-        #context['file_path_thumbnail'] = file_path_small
-        fig.build_figure(results, file_path_big)
-        #fig.draw_thumbnail(results,file_path_small)
-        figure_files.append(figure_file)
-    return figure_files
-
 def upload(ftp_server,pub_dir,f):
     '''
     Uploads file to ftp_server
