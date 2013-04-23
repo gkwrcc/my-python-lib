@@ -247,7 +247,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     if by_type == 'sw_states':
         f_name = 'SW_stn.json'
-        f = open('/tmp/' + f_name,'w+')
+        f = open('/www/apps/csc/media/tmp/' + f_name,'w+')
     else:
         f_name = time_stamp + 'stn.json'
         f = open('/tmp/' +  f_name,'w+')

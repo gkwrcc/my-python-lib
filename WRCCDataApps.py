@@ -2339,8 +2339,8 @@ def Sodsumm(**kwargs):
         #Loop over time categories and compute stats
         for cat_idx, cat in enumerate(time_cats):
             #Find indices for each time category
+            x_miss[cat_idx] = {}
             if cat_idx < 12: #months
-                x_miss[cat_idx] = {}
                 if cat_idx == 0:
                     idx_start = 0
                     idx_end = 31
@@ -2380,6 +2380,16 @@ def Sodsumm(**kwargs):
                                 el_data[element].append(kwargs['data'][i][yr+1][el_idx][idx])
                                 date_idx  = yr+1 * 366 + idx
                                 el_dates[element].append(kwargs['dates'][date_idx])
+                        mon_l = [11,0,1]
+                        for ct in mon_l:
+                            if x_miss[ct][element][yr] > kwargs['max_missing_days']:
+                                flag = True
+                                break
+                            if flag:
+                                #found a month with too many missing days
+                                x_miss[cat_idx][element].append(int(kwargs['max_missing_days']) + 1)
+                            else:
+                                x_miss[cat_idx][element].append(0)
                     else:
                         data_list = []
                         for idx in range(idx_start, idx_end):
@@ -2387,10 +2397,24 @@ def Sodsumm(**kwargs):
                             el_data[element].append(kwargs['data'][i][yr][el_idx][idx])
                             date_idx  = yr * 366 + idx
                             el_dates[element].append(kwargs['dates'][date_idx])
-                        #Count missing days for monthly categories
+                        #Count missing days for all categories
                         if cat_idx < 12:
                             days_miss = len([dat for dat in data_list if dat == 'M'])
                             x_miss[cat_idx][element].append(days_miss)
+                        else:
+                            if cat_idx == 12:mon_l = range(0,12)
+                            if cat_idx == 14:mon_l = [2,3,4]
+                            if cat_idx == 14:mon_l = [5,6,7]
+                            if cat_idx == 14:mon_l = [8,9,10]
+                            for ct in mon_l:
+                                if x_miss[ct][element][yr] > kwargs['max_missing_days']:
+                                    flag = True
+                                    break
+                                if flag:
+                                    #found a month with too many missing days
+                                    x_miss[cat_idx][element].append(int(kwargs['max_missing_days']) + 1)
+                                else:
+                                    x_miss[cat_idx][element].append(0)
                 #strip data of flags and convert unicode to floats for stats calculations
                 for idx, dat in enumerate(el_data[element]):
                     val, flag = WRCCUtils.strip_data(dat)
@@ -2425,6 +2449,7 @@ def Sodsumm(**kwargs):
                     #Omit data yrs for month where max_missing day threshold is not met
                     data_list = []
                     dates_list = []
+                    #keep track of which years to use for ann,sp,su,au,wi calculations
                     for yr in range(num_yrs):
                         if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
                             cat_l = 28
@@ -2544,13 +2569,10 @@ def Sodsumm(**kwargs):
                         #Omit data yrs where max_missing day threshold is not met
                         if cat_idx < 12 and x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
-                        '''
                         if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
                             cat_l = 28
                         else:
                             cat_l = time_cats_lens[cat_idx]
-                        '''
-                        cat_l = time_cats_lens[cat_idx]
                         idx_start = cat_l * yr
                         idx_end = idx_start + cat_l
                         yr_dat = el_data[el][idx_start:idx_end]
@@ -2646,7 +2668,7 @@ def Sodsumm(**kwargs):
                         yr_dat = []
                         for yr in range(num_yrs):
                             #Take care of leap years
-                            if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                            if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year) + yr):
                                 cat_l = 28
                             else:
                                 cat_l = time_cats_lens[cat_idx]
