@@ -624,7 +624,7 @@ def get_sod_data(form_input, program):
             pass
 
     if program == 'Soddyrec':
-        #need to get averages separately add: date, mcnt fails if we ask for mean, max together
+        #need to get averages separately; add: date, mcnt fails if we ask for mean, max together
         elts_x = [dict(name='%s' % el, interval='dly', duration='dly', smry={'reduce':'mean'}, \
         groupby="year") for el in elements]
         params_x = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts_x)
@@ -651,12 +651,11 @@ def get_sod_data(form_input, program):
                 try:
                     indx_x = coop_station_ids.index(station_id)
                     try:
-                        stn_data['smry']
-                        for el_id, ave_list in enumerate(stn_data['smry']): #k : element id
+                        for el_id, ave_list in enumerate(stn_data['smry']):
                             for date_id,ave in enumerate(ave_list):
                                 datadict[indx_x][el_id][date_id].insert(0,ave)
                                 #figure out the number of years that are in the record
-                                val_list = [stn_data['data'][l][0][date_id] for l in range(len(stn_data['data']))]
+                                val_list = [stn_data['data'][yr][el_id][date_id] for yr in range(len(stn_data['data']))]
                                 yrs_in_record = len(filter(lambda a: a != 'M', val_list))
                                 datadict[indx_x][el_id][date_id].append(yrs_in_record)
                     except:

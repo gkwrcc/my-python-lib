@@ -687,7 +687,7 @@ def get_dates(s_date, e_date, app_name):
             #note, these apps are grouped by year and return a 366 day year even for non-leap years
             if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                 if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
-                    dates.append('dates[-1][0:4]0229')
+                    dates.append(dates[-1][0:4]+'0229')
     #convert to acis format
     for i,date in enumerate(dates):
         dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])

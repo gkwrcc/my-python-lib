@@ -20,7 +20,7 @@ import WRCCUtils, AcisWS, WRCCDataApps
 # CLASSES
 #########
 class Wrapper:
-    def __init__(self, app_name, data_params, app_specific_params):
+    def __init__(self, app_name, data_params, app_specific_params=None):
         self.params = data_params
         self.app_specific_params = app_specific_params
         self.app_name = app_name
@@ -41,11 +41,15 @@ class Wrapper:
                     'dates':self.dates,
                     'station_names':self.station_names
                     }
-        app_params.update(self.app_specific_params)
+        if self.app_specific_params:
+            app_params.update(self.app_specific_params)
         Application = getattr(WRCCDataApps, self.app_name)
         if self.app_name == 'Sodxtrmts':
             results, fa_results = Application(**app_params)
             return results, fa_results
+        elif self.app_name == 'Soddyrec':
+            results = Application(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names)
+            return results
         else:
             results = Application(**app_params)
             return results
@@ -114,7 +118,7 @@ def sodxtrmts_wrapper(argv):
                 'frequency_analysis': 'F',
                 'departures_from_averages':departures_from_averages
                 }
-    SX_wrapper = Wrapper('Sodxtrmts', data_params, app_params)
+    SX_wrapper = Wrapper('Sodxtrmts', data_params, app_specific_params=app_params)
     #Get data
     SX_wrapper.get_data()
     #run app
@@ -150,12 +154,54 @@ def sodsumm_wrapper(argv):
                 'el_type':table_name,
                 'max_missing_days':max_missing_days,
                 }
-    SS_wrapper = Wrapper('Sodsumm', data_params, app_params)
+    SS_wrapper = Wrapper('Sodsumm', data_params, app_specific_params=app_params)
     #Get data
     SS_wrapper.get_data()
     #run app
     results = SS_wrapper.run_app()
     print results[0][table_name]
+
+def soddyrec_wrapper(argv):
+    '''
+    argv -- coop_station_id element_type start_date end_date
+
+    Explaination:
+            start/end date are 8 digits long, e.g 20100102
+            element_type choices:
+                'all' -- generates tables for  maxt, mint, pcpn, snow, snwd, hdd, cdd,
+                'tmp' -- generates tables for maxt, mint, pcpn,
+                'wtr' -- generates tables for pcpn, snow, snwd,
+                'pcpn'-- generates tables for Precipitation,
+                'snow'-- generates tables for Sowfall,
+                'snwd'-- generates tables for Snowdepth,
+                'maxt'-- generates tables for Maximum Temperature,
+                'mint'-- generates tables for Minimum Temperature,
+                'hdd'-- generates tables for Heating Degree Days,
+                'cdd'-- generates tables for Cooling Degree Days
+    Example: python WRCCWrappers.py soddyrec 266779 all 20000101 20101231
+    '''
+    #Sanity Check
+    if len(argv) != 4:
+        print 'soddyrec needs 4 input parameters: \
+               coop_station_id element_type start_date end_date.\
+               You gave: %s' %str(argv)
+        sys.exit(1)
+    #Assign input parameters:
+    coop_station_id = str(argv[0]);element = str(argv[1])
+    start_date = str(argv[2]);end_date = str(argv[3])
+    #Define parameters
+    data_params = {
+                'coop_station_id':coop_station_id,
+                'start_date':start_date,
+                'end_date':end_date,
+                'element':element
+                }
+    SS_wrapper = Wrapper('Soddyrec', data_params)
+    #Get data
+    SS_wrapper.get_data()
+    #run app
+    results = SS_wrapper.run_app()
+    print results
 
 
 #########
@@ -163,9 +209,10 @@ def sodsumm_wrapper(argv):
 #########
 if __name__ == "__main__":
     program = sys.argv[1]
-    programs = ['sodsumm', 'sodxtrmts']
+    programs = ['sodsumm', 'sodxtrmts','soddyrec']
     if program not in programs:
         print 'First argument to WRCCWrappers should be valid progam name.'
-        print 'Programs: ' + programs
+        print 'Programs: ' + str(programs)
     if program == 'sodsumm':sodsumm_wrapper(sys.argv[2:])
     if program == 'sodxtrmts':sodxtrmts_wrapper(sys.argv[2:])
+    if program == 'soddyrec':soddyrec_wrapper(sys.argv[2:])

@@ -905,6 +905,8 @@ def Sodxtrmts(**kwargs):
                     if kwargs['analysis_type'] in ['mmax', 'mmin']:
                         if value > -9998.0:
                             sumda+=1
+                            if kwargs['analysis_type'] == 'mmax' and value > xmax:xmax = value
+                            if kwargs['analysis_type'] == 'mmin' and value < xmin:xmin = value
                         else:
                             if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
                                 value = 0.0
@@ -917,8 +919,8 @@ def Sodxtrmts(**kwargs):
                                 if kwargs['analysis_type'] == 'mmin' and value < xmin:
                                     xmin = value
 
-                        if kwargs['analysis_type'] == 'mmax' and value > xmax:xmax = value
-                        if kwargs['analysis_type'] == 'mmin' and value < xmin:xmin = value
+                        #if kwargs['analysis_type'] == 'mmax' and value > xmax:xmax = value
+                        #if kwargs['analysis_type'] == 'mmin' and value < xmin:xmin = value
 
                         if nda  == mon_len -1:
                             if kwargs['analysis_type'] == 'mmax':table_1[yr][mon] = xmax
@@ -1016,7 +1018,7 @@ def Sodxtrmts(**kwargs):
                         nummsg = mon_len - sumda
                         if nda  == mon_len -1:
                             if el_type in ['hdd', 'cdd', 'gdd']:
-                                if nummsg != 0 and nummsg <= kwargs['max_missing_days'] and sumda > 0.5:
+                                if nummsg != 0 and nummsg < kwargs['max_missing_days'] and sumda > 0.5:
                                     summ = summ/sumda * float(mon_len -1)
 
                         if nda  == mon_len -1:
@@ -1052,7 +1054,7 @@ def Sodxtrmts(**kwargs):
                     sumann+=summon
 
                 elif kwargs['analysis_type'] in ['mave', 'ndays', 'msum']:
-                    if int(summon) <= int(kwargs['max_missing_days']):
+                    if int(summon) < int(kwargs['max_missing_days']):
                         sumann+=valmon
                         count+=1
 
@@ -1104,9 +1106,9 @@ def Sodxtrmts(**kwargs):
 
                 #Treat monthly totals and annual totals differently
                 #For annual totals, ignore years with at least one
-                #Month that does not meet teh missing day criterium
+                #Month that does not meet the missing day criterium
                 if mon <= 11:
-                    if missng <=int(kwargs['max_missing_days']):
+                    if missng < int(kwargs['max_missing_days']):
                         summ+=value
                         summ2+= value**2
                         summ3+=value**3
@@ -1114,8 +1116,8 @@ def Sodxtrmts(**kwargs):
                         if value > xmax:xmax=value
                         if value < xmin:xmin=value
                 else:
-                    ncheck = int(kwargs['max_missing_days'])
-                    #For annual: for ave, thresholds, sums, inclued only full years
+                    ncheck = int(kwargs['max_missing_days']-1)
+                    #For annual: for ave, thresholds, sums, include only full years
                     if kwargs['analysis_type']  in ['mave', 'ndays', 'msum']:
                         ncheck = 0
                     if missng <= ncheck:
@@ -1168,15 +1170,10 @@ def Sodxtrmts(**kwargs):
                 if annsav[yr][mon] != ' ':outchr[monind] = annsav[yr][mon]
 
                 if kwargs['departures_from_averages']  == 'F':
-                    if mon == 12:
-                        results[i][yr].append('%.2f' % table_1[yr][mon])
-                    else:
-                        results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
+                    results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
                 else:
-                    if mon == 12:
-                        results[i][yr].append('%.2f' %(table_1[yr][mon] - mean_out[monind]))
-                    else:
-                        results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
+                    results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
+
                 if table_1[yr][mon] < -9998.0:
                     if mon < 12:
                         results[i][yr][-1] = '-----z'
@@ -2674,13 +2671,14 @@ def Sodsumm(**kwargs):
                         dd_acc = 0
                         yr_dat = []
                         for yr in range(num_yrs):
+                            if cat_idx == 12:
+                                if x_miss[cat_idx]['maxt'][yr] > kwargs['max_missing_days'] or x_miss[cat_idx]['mint'][yr] > kwargs['max_missing_days']:
+                                    continue
                             #Take care of leap years
-                            '''
                             if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year) + yr):
                                 cat_l = 28
                             else:
                                 cat_l = time_cats_lens[cat_idx]
-                            '''
                             idx_start = cat_l * yr
                             idx_end = idx_start + cat_l
                             dd_sum = 0
@@ -2708,12 +2706,12 @@ def Sodsumm(**kwargs):
                                         dd = 0
                                     dd_sum+=dd
                                     dd_cnt+=1
-                            #Discard years wheremax_missing_days or more are missing
-                            if count_missing_days >= kwargs['max_missing_days']:
+                            #Discard years where max_missing_days or more are missing
+                            if cat_idx != 12 and count_missing_days > kwargs['max_missing_days']:
                                 continue
                             #Make adjustments for missing hdd - replace with mean days
                             if table in ['cdd', 'hdd']:
-                                if cat_l - dd_cnt <= kwargs['max_missing_days']:
+                                if cat_idx != 12 and cat_l - dd_cnt < kwargs['max_missing_days']:
                                     dd_sum = (dd_sum/dd_cnt)*float(cat_l)
                             yr_dat.append(dd_sum)
                         try:
