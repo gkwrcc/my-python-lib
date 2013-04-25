@@ -530,7 +530,7 @@ def get_sod_data(form_input, program):
     datadict = defaultdict(list)
     for i, stn in enumerate(coop_station_ids):
         if program == 'Soddyrec':
-            yr_list = [[['#', '#', '#', '#', '#'] for k in range(366)] for el in elements]
+            yr_list = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
             datadict[i] = yr_list
         elif program in ['Sodrun', 'Sodrunr']:
             datadict[i] = []
@@ -538,7 +538,13 @@ def get_sod_data(form_input, program):
             datadict[i] = [[] for el in elements]
 
     if program == 'Soddyrec':
-        smry_opts = {'reduce':'max', 'add':'date,mcnt'}
+        smry_opts = [{'reduce':'mean', 'add':'date,mcnt'}, {'reduce':'max', 'add':'date,mcnt'}, {'reduce':'min', 'add':'date,mcnt'}]
+        elts = []
+        for el in elements:
+            for sry in smry_opts:
+                elts.append(dict(name=str(el),smry=sry, groupby='year'))
+
+        '''
         if len(elements) >1 and 'mint'in elements:
             mint_indx = elements.index('mint')
             elements.remove('mint')
@@ -553,7 +559,7 @@ def get_sod_data(form_input, program):
         else:
             elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts, \
             groupby="year") for el in elements]
-
+        '''
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
     elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
@@ -622,7 +628,7 @@ def get_sod_data(form_input, program):
 
         except:
             pass
-
+    '''
     if program == 'Soddyrec':
         #need to get averages separately; add: date, mcnt fails if we ask for mean, max together
         elts_x = [dict(name='%s' % el, interval='dly', duration='dly', smry={'reduce':'mean'}, \
@@ -669,6 +675,7 @@ def get_sod_data(form_input, program):
             else:
                 'Unknown error ocurred when getting data'
                 sys.exit(1)
+        '''
     return datadict, dates, elements, coop_station_ids, station_names
 
 

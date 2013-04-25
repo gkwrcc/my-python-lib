@@ -3172,20 +3172,29 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     results = defaultdict(dict)
     #Loop over stations
     for i, stn in enumerate(coop_station_ids):
-        for j,el in enumerate(elements):
+        for j, el in enumerate(elements):
+            smry_start_idx = 3*j
+            smry_end_idx = 3*j +3
             results[i][j] = []
             stn_check_list = []
-            #check if the station returned valid data
             for k in range(366):
-                for l in range(len(data[i][j][k])):
-                    stn_check_list.append(data[i][j][k][l])
-            if all(map(lambda x: x == '#',stn_check_list)):
-                continue
-            for doy,vals in enumerate(data[i][j]):
-                mon, day = WRCCUtils.compute_mon_day(doy+1)
-                no  = vals[-1] #no of years with records
-                results[i][j].append([mon, day,vals[0], no, vals[1], vals[2][0:4]])
-
+                mon, day = WRCCUtils.compute_mon_day(k+1)
+                row=[mon, day]
+                #Loop over summaries: mean, max, min
+                for smry_idx in range(smry_start_idx, smry_end_idx):
+                    val = data[i][smry_idx][k][0]
+                    if smry_idx % 3 == 0:
+                        #we are on mean summary, record years missing and compute number of years with records
+                        mcnt = data[i][smry_idx][k][2]
+                        num_years = int(dates[-1][0:4]) - int(dates[0][0:4])
+                        row.append(val)
+                        row.append(num_years - mcnt)
+                    else:
+                        #high and low, record year of occurrence
+                        year = data[i][smry_idx][k][1][0:4]
+                        row.append(val)
+                        row.append(year)
+                results[i][j].append(row)
     return results
 
 
