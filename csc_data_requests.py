@@ -203,7 +203,7 @@ def worker(params,params_file,data_q, errors_q):
             data_request = getattr(AcisWS, 'get_grid_data')
             request_type ='grid'
         else:
-            data_request = getattr(AcisWS, 'get_point_data')
+            data_request = getattr(AcisWS, 'get_station_data')
             request_type = 'station'
         if request_type == 'grid':
             results = []

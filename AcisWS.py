@@ -256,7 +256,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
     return stn_json, f_name
 
 
-def get_point_data(form_input, program):
+def get_station_data(form_input, program):
     '''
     Retrieves Station Data from ACIS.
     Keyword arguments:
@@ -283,7 +283,7 @@ def get_point_data(form_input, program):
     elements = WRCCUtils.get_element_list(form_input, program)
     params = dict(sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
-        elems=[dict(name=el, add='f')for el in elements])
+        elems=[dict(name=el, add='f,t')for el in elements])
     if 'station_id' in form_input.keys():
         #Check for por:
         if s_date =='por' or e_date == 'por':

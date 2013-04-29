@@ -234,7 +234,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 wb.save(response)
     return response
 
-def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None, show_flags='F'):
+def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None, show_flags='F', show_observation_time='F'):
     '''
     Writes station data to a file.
 
@@ -284,10 +284,14 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 writer.writerow(row)
                 row = ['date']
                 for el in elements:
-                    if show_flags == 'F':
+                    if show_flags == 'F' and show_observation_time == 'F':
                         row.append(el)
-                    else:
+                    elif show_flags == 'T' and show_observation_time == 'F':
                         row.append(el);row.append('flag')
+                    elif show_flags == 'F' and show_observation_time == 'T':
+                        row.append(el);row.append('obs time')
+                    else:
+                        row.append(el);row.append('flag');row.append('obs time')
                 writer.writerow(row)
 
                 for j, vals in enumerate(dat):
@@ -295,11 +299,18 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     row = []
                     row.append(vals[0])
                     for val in vals[1:]:
-                        if show_flags == 'F':
+                        if show_flags == 'F' and show_observation_time == 'F':
                             row.append(val[0])
+                        elif show_flags == 'T' and show_observation_time == 'F':
+                            row.append(val[0])
+                            row.append(val[1])
+                        elif show_flags == 'F' and show_observation_time == 'T':
+                            row.append(val[0])
+                            row.append(val[2])
                         else:
                             row.append(val[0])
                             row.append(val[1])
+                            row.append(val[2])
                     writer.writerow(row)
         elif file_extension == 'json':
             with open(f, 'w+') as jsonf:
@@ -315,24 +326,42 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 idx = 0
                 for k, el in enumerate(elements):
                     idx+=1
-                    if show_flags == 'F':
+                    if show_flags == 'F' and show_observation_time == 'F':
                         ws.write(0, k+1, el)
-                    else:
+                    elif show_flags == 'T' and show_observation_time == 'F':
                         ws.write(0, idx, el)
                         ws.write(0, idx+1,'flag')
                         idx+=1
+                    elif show_flags == 'F' and show_observation_time == 'T':
+                        ws.write(0, idx, el)
+                        ws.write(0, idx+1,'obs time')
+                        idx+=1
+                    else:
+                        ws.write(0, idx, el)
+                        ws.write(0, idx+1,'flag')
+                        ws.write(0, idx+2,'obs time')
+                        idx+=2
                 #Data
                 for j, vals in enumerate(dat):
                     idx = 0
                     ws.write(j+1,0,vals[0])
                     for l,val in enumerate(vals[1:]):
                         idx+=1
-                        if show_flags == 'F':
+                        if show_flags == 'F' and show_observation_time == 'F':
                             ws.write(j+1, l, val[0])
-                        else:
+                        elif show_flags == 'T' and show_observation_time == 'F':
                             ws.write(j+1, idx, val[0]) #row, column, label
                             ws.write(j+1, idx+1, val[1])
                             idx+=1
+                        elif show_flags == 'F' and show_observation_time == 'T':
+                            ws.write(j+1, idx, val[0]) #row, column, label
+                            ws.write(j+1, idx+1, val[2])
+                            idx+=1
+                        else:
+                            ws.write(j+1, idx, val[0]) #row, column, label
+                            ws.write(j+1, idx+1, val[1])
+                            ws.write(j+1, idx+2, val[2])
+                            idx+=2
             if f:
                 try:
                     wb.save(f)
