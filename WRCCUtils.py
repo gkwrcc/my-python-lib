@@ -696,7 +696,7 @@ def get_dates(s_date, e_date, app_name):
     '''
     if not s_date or not e_date:
         dates = []
-    elif s_date == 'por' or e_date == 'por':
+    elif s_date.lower == 'por' or e_date.lower() == 'por':
         dates = []
     else:
         dates = []
@@ -743,7 +743,7 @@ def find_start_end_dates(form_input):
     '''
     if 'start_date' not in form_input.keys():
         s_date = 'por'
-    elif form_input['start_date'] == 'por':
+    elif form_input['start_date'].lower() == 'por':
         s_date = 'por'
     else:
         if str(form_input['start_date']) == '' or str(form_input['start_date']) == ' ':
@@ -760,7 +760,7 @@ def find_start_end_dates(form_input):
                 s_date = None
     if 'end_date' not in form_input.keys():
         e_date = 'por'
-    elif form_input['end_date'] == 'por':
+    elif form_input['end_date'].lower() == 'por':
         e_date = 'por'
     else:
         if str(form_input['end_date']) == '' or str(form_input['end_date']) == ' ':
@@ -850,11 +850,11 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
         windowed_data = []
         start_indices=[]
         end_indices=[]
-        if start_date == 'por':
+        if start_date.lower() == 'por':
             start_d = ''.join(data[0][0].split('-'))
         else:
             start_d = start_date
-        if end_date == 'por':
+        if end_date.lower() == 'por':
             end_d = ''.join(data[-1][0].split('-'))
         else:
             end_d = end_date

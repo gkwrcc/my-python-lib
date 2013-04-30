@@ -93,7 +93,7 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature(F)',
               '-46': {'name': 'gdd', 'name_long':'Growing Degree Days(Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
 
-def station_meta_to_json(by_type, val, el_list=None, time_range=None):
+def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraints=None):
     '''
     Requests station meta data from ACIS and writes results to a json file
     This json file is read by the javascript funcition initialize_station_map
@@ -146,34 +146,61 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None):
         #For alphabetic ordering of station names
         sorted_list =[]
         for i, stn in enumerate(request['meta']):
-            flag_empty = False
+            flag_invalid_station = False
             if not stn['valid_daterange']:
                 continue
             #check if we are looking for stations with particular elements
             if el_list is not None and time_range is not None:
+                #Check if ACIS produced correct output, i.e. one valid_daterange per element
                 if len(stn['valid_daterange']) < len(el_list):
                     continue
+
                 for el_idx, el_vX in enumerate(el_list):
-                    if not stn['valid_daterange'][el_idx]:
+                    #Sanity Check
+                    if not stn['valid_daterange'][el_idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
                         #data for this element does not exist at station
-                        flag_empty = True
+                        flag_invalid_station = True
                         break
-                    else: # data for this element found at station
-                        #check if data for that element lies in user given time_range
-                        por_start = datetime.datetime(int(stn['valid_daterange'][el_idx][0][0:4]), int(stn['valid_daterange'][el_idx][0][5:7]),int(stn['valid_daterange'][el_idx][0][8:10]))
-                        por_end = datetime.datetime(int(stn['valid_daterange'][el_idx][1][0:4]), int(stn['valid_daterange'][el_idx][1][5:7]),int(stn['valid_daterange'][el_idx][1][8:10]))
-                        if time_range[0] != 'por':
-                            user_start = datetime.datetime(int(time_range[0][0:4]), int(time_range[0][4:6]),int(time_range[0][6:8]))
-                        else:
-                            user_start = por_start
-                        if time_range[1] != 'por':
-                            user_end = datetime.datetime(int(time_range[1][0:4]), int(time_range[1][4:6]),int(time_range[1][6:8]))
-                        else:
-                            user_end = por_end
+                    elif not stn['valid_daterange'][el_idx] and (constraints == 'any_any' or constraints == 'any_all'):
+                        continue
+
+                    #Find period of record for this element and station
+                    por_start = datetime.datetime(int(stn['valid_daterange'][el_idx][0][0:4]), int(stn['valid_daterange'][el_idx][0][5:7]),int(stn['valid_daterange'][el_idx][0][8:10]))
+                    por_end = datetime.datetime(int(stn['valid_daterange'][el_idx][1][0:4]), int(stn['valid_daterange'][el_idx][1][5:7]),int(stn['valid_daterange'][el_idx][1][8:10]))
+                    if time_range[0].lower() != 'por':
+                        user_start = datetime.datetime(int(time_range[0][0:4]), int(time_range[0][4:6]),int(time_range[0][6:8]))
+                    else:
+                        user_start = por_start
+                    if time_range[1].lower() != 'por':
+                        user_end = datetime.datetime(int(time_range[1][0:4]), int(time_range[1][4:6]),int(time_range[1][6:8]))
+                    else:
+                        user_end = por_end
+
+                    #Check constraints logic for this element and station
+                    if constraints == 'all_all' or constraints is None:
+                        #all  elements have data records for all dates within start and end date given by user
                         if user_start < por_start or user_end > por_end:
-                            flag_empty =  True
+                            flag_invalid_station =  True
                             break
-                if flag_empty:
+                    elif constraints == 'any_any':
+                        #At least one element has one data record within user given time_range
+                        if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
+                            flag_invalid_station = False
+                            break
+                    elif constraints == 'all_any':
+                        #All elements have at least one data record within user given time_range
+                        if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
+                            continue
+                        else:
+                            flag_invalid_station =  True
+                            break
+                    elif constraints == 'any_all':
+                        #At least one elements has data records for all dates within given date_range
+                        if user_start >= por_start and user_end <= por_end:
+                            flag_invalid_station = False
+                            break
+                #Check if station is valid, if not, proceed to next station
+                if flag_invalid_station:
                     continue
 
 
@@ -276,7 +303,7 @@ def get_station_data(form_input, program):
     resultsdict = defaultdict(dict)
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #Sanity check for valid date input:
-    if (s_date == 'por' or e_date == 'por') and ('station_id' not in form_input.keys()):
+    if (s_date.lower() == 'por' or e_date.lower() == 'por') and ('station_id' not in form_input.keys()):
         resultsdict['error'] = 'Parameter error. Start/End date ="por" not supported for multi station call.'
         return resultsdict
 
@@ -286,7 +313,7 @@ def get_station_data(form_input, program):
         elems=[dict(name=el, add='f,t')for el in elements])
     if 'station_id' in form_input.keys():
         #Check for por:
-        if s_date =='por' or e_date == 'por':
+        if s_date.lower() =='por' or e_date.lower() == 'por':
             meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
             try:
                 meta_request = StnMeta(meta_params)
@@ -307,12 +334,12 @@ def get_station_data(form_input, program):
                 if new_end > end:
                     end = new_end
                     idx_e = el_idx
-            if s_date == 'por':
+            if s_date.lower() == 'por':
                 s_yr = meta_request['meta'][0]['valid_daterange'][idx_s][0][0:4]
                 s_mon = meta_request['meta'][0]['valid_daterange'][idx_s][0][5:7]
                 s_day = meta_request['meta'][0]['valid_daterange'][idx_s][0][8:10]
                 s_date = '%s%s%s' %(s_yr,s_mon,s_day)
-            if e_date == 'por':
+            if e_date.lower() == 'por':
                 e_yr = meta_request['meta'][0]['valid_daterange'][idx_e][1][0:4]
                 e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
                 e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
