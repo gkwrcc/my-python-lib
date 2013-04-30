@@ -111,8 +111,12 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     '''
     stn_list = []
     stn_json={'network_codes': kelly_network_codes, 'network_icons': kelly_network_icons}
-    vX_list= ['1','2','43','3','4','10','11','7','45']
-    vX_tuple = '1,2,43,3,4,10,11,7,45'
+    if el_list is None:
+        vX_list= ['1','2','43','3','4','10','11','7','45']
+        vX_tuple = '1,2,43,3,4,10,11,7,45'
+    else:
+        vX_list = el_list
+        vX_tuple = ','.join(el_list)
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     if by_type == 'county':
         params['county'] = val
@@ -132,12 +136,13 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         params['state'] = val
     elif by_type == 'sw_states':
         params['state'] = 'az,ca,co,nm,nv,ut'
+    elif by_type == 'station':
+        params['sids'] = val
     else:
         pass
 
     #Acis WS call
     request = StnMeta(params)
-
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
 
@@ -146,15 +151,19 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         #For alphabetic ordering of station names
         sorted_list =[]
         for i, stn in enumerate(request['meta']):
-            flag_invalid_station = False
             if not stn['valid_daterange']:
                 continue
             #check if we are looking for stations with particular elements
             if el_list is not None and time_range is not None:
+
                 #Check if ACIS produced correct output, i.e. one valid_daterange per element
                 if len(stn['valid_daterange']) < len(el_list):
                     continue
-
+                #Check if constraints are met for element list and date range
+                if constraints in ['any_any', 'any_all']:
+                    flag_invalid_station = True
+                elif constraints in ['all_all', 'all_any']:
+                    flag_invalid_station = False
                 for el_idx, el_vX in enumerate(el_list):
                     #Sanity Check
                     if not stn['valid_daterange'][el_idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
@@ -175,7 +184,6 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                         user_end = datetime.datetime(int(time_range[1][0:4]), int(time_range[1][4:6]),int(time_range[1][6:8]))
                     else:
                         user_end = por_end
-
                     #Check constraints logic for this element and station
                     if constraints == 'all_all' or constraints is None:
                         #all  elements have data records for all dates within start and end date given by user
