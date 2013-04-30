@@ -14,7 +14,7 @@ from ftplib import FTP
 
 from django.http import HttpResponse, HttpResponseRedirect
 
-import WRCCClasses
+import WRCCClasses, AcisWS
 
 ######################
 #Useful Dicts and List
@@ -687,6 +687,116 @@ def is_leap_year(year):
         return True
     else:
         return False
+
+def date_to_datetime(date_str):
+    '''
+    Function to convert acis date_str of forms
+    yyyy-mm-dd
+    yyyy/mm/dd
+    yyyy:mm:dd
+    yyyymmdd
+    to datetime. The datetime object is returned
+    '''
+    eight_date = date_str.replace('-','').replace('/','').replace(':','')
+    if len(eight_date) != 8:
+        return None
+    dt = datetime.datetime(int(eight_date[0:4]),int(eight_date[4:6]), int(eight_date[6:8]))
+    return dt
+
+def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, max_or_min='max'):
+    '''
+    This function makes a StnMeta call to find either the
+    maximum or minimum valid daterange for a
+    station with station ID sid and elements in the list of climate elements el_list.
+
+    Keyword arguments:
+    sid  -- station ID
+    el_list -- list of elements required.
+               If el-list==None, we query for the 8 base elements
+               [maxt,mint,pcpn,snow,snwd]
+
+    Each element has its own valid daterange.
+    If max_or_min == max, the largest daterange is returned.
+    If max_or_min == min, the smallest daterange is returned.
+    '''
+    #Format start/end date into 8 digit strings
+    s_date = start_date.replace('-','').replace('/','').replace(':','')
+    e_date = end_date.replace('-','').replace('/','').replace(':','')
+    if s_date.lower() != 'por' and e_date.lower() != 'por':
+        return [s_date, e_date]
+
+    if el_list is None:
+        el_tuple = 'maxt,mint,pcpn,snow,snwd,hdd,gdd,cdd'
+    else:
+        el_tuple = ','.join(el_list)
+    meta_params = {'sids':sid, 'elems':el_tuple, 'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'}
+    try:
+        request = AcisWS.StnMeta(meta_params)
+    except:
+        return []
+
+    if 'error' in request.keys() or not 'meta' in request.keys():
+        return []
+
+    #Find valid daterange
+    #format first test date
+    el_idx = 0
+    vd_start = None;vd_end = None
+    idx_start = 0
+    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange']):
+        if s_date.lower() != 'por':
+            vd_start = date_to_datetime(s_date)
+        else:
+            vd_start = date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][0])
+        if e_date.lower() != 'por':
+            vd_end = date_to_datetime(e_date)
+        else:
+            vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
+        print vd_start, vd_end
+        if vd_start is not None and vd_end is not None and vd_start <= vd_end:
+            vd_start, vd_end
+            idx_start = el_idx + 1
+            break
+    if vd_start is None or vd_end is None:
+        return []
+    #loop over valid dateranges for each elements and find max or min valid daterange
+    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange'][idx_start:]):
+        if s_date.lower() != 'por':
+            vd_start_test = None
+        else:
+            vd_start_test = date_to_datetime(el_vdr[0])
+        if e_date.lower() != 'por':
+            vd_end_test = None
+        else:
+            vd_end_test = date_to_datetime(el_vdr[1])
+        if max_or_min == 'min':
+            #print vd_start, vd_start_test, vd_end, vd_end_test
+            if vd_start_test is not None and vd_start_test > vd_start and vd_start_test <= vd_end:
+                vd_start = vd_start_test
+            if vd_end_test is not None and vd_end_test < vd_end and vd_end_test >= vd_start:
+                vd_end = vd_end_test
+        elif max_or_min == 'max':
+            if vd_start_test is not None and vd_start_test < vd_start and vd_start_test <= vd_end:
+                vd_start = vd_start_test
+            if vd_end_test is not None and vd_end_test > vd_end and vd_end_test >= vd_start:
+                vd_end = vd_end_test
+    #convert back to date string
+    if s_date.lower() == 'por':
+        yr_start = str(vd_start.year);mon_start=str(vd_start.month);day_start = str(vd_start.day)
+    else:
+        yr_start = s_date[0:4];mon_start = s_date[4:6];day_start = s_date[6:8]
+    if e_date.lower() == 'por':
+        yr_end = str(vd_end.year);mon_end=str(vd_end.month);day_end = str(vd_end.day)
+    else:
+        yr_end = e_date[0:4];mon_end = e_date[4:6];day_end = e_date[6:8]
+
+    if len(mon_start) ==1:mon_start='0' + mon_start
+    if len(day_start) ==1:day_start='0' + day_start
+    if len(mon_end) ==1:mon_end='0' + mon_end
+    if len(day_end) ==1:day_end='0' + day_end
+    vd_start_date = '%s%s%s' %(yr_start, mon_start, day_start)
+    vd_end_date = '%s%s%s' %(yr_end, mon_end, day_end)
+    return [vd_start_date, vd_end_date]
 
 def get_dates(s_date, e_date, app_name):
     '''
