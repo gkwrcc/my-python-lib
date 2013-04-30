@@ -111,12 +111,16 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     '''
     stn_list = []
     stn_json={'network_codes': kelly_network_codes, 'network_icons': kelly_network_icons}
+    vX_list= ['1','2','43','3','4','10','11','7','45']
+    vX_tuple = '1,2,43,3,4,10,11,7,45'
+    '''
     if el_list is None:
         vX_list= ['1','2','43','3','4','10','11','7','45']
         vX_tuple = '1,2,43,3,4,10,11,7,45'
     else:
         vX_list = el_list
         vX_tuple = ','.join(el_list)
+    '''
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     if by_type == 'county':
         params['county'] = val
@@ -165,17 +169,26 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 elif constraints in ['all_all', 'all_any']:
                     flag_invalid_station = False
                 for el_idx, el_vX in enumerate(el_list):
+                    #Find correct index in vX_list
+                    try:
+                        idx = vX_list.index(el_vX)
+                    except:
+                        if constraints in ['all_all', 'all_any']:
+                            flag_invalid_station = True
+                            break
+                        elif constraints in ['any_any', 'any_all']:
+                            continue
                     #Sanity Check
-                    if not stn['valid_daterange'][el_idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
+                    if not stn['valid_daterange'][idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
                         #data for this element does not exist at station
                         flag_invalid_station = True
                         break
-                    elif not stn['valid_daterange'][el_idx] and (constraints == 'any_any' or constraints == 'any_all'):
+                    elif not stn['valid_daterange'][idx] and (constraints == 'any_any' or constraints == 'any_all'):
                         continue
 
                     #Find period of record for this element and station
-                    por_start = datetime.datetime(int(stn['valid_daterange'][el_idx][0][0:4]), int(stn['valid_daterange'][el_idx][0][5:7]),int(stn['valid_daterange'][el_idx][0][8:10]))
-                    por_end = datetime.datetime(int(stn['valid_daterange'][el_idx][1][0:4]), int(stn['valid_daterange'][el_idx][1][5:7]),int(stn['valid_daterange'][el_idx][1][8:10]))
+                    por_start = datetime.datetime(int(stn['valid_daterange'][idx][0][0:4]), int(stn['valid_daterange'][idx][0][5:7]),int(stn['valid_daterange'][idx][0][8:10]))
+                    por_end = datetime.datetime(int(stn['valid_daterange'][idx][1][0:4]), int(stn['valid_daterange'][idx][1][5:7]),int(stn['valid_daterange'][idx][1][8:10]))
                     if time_range[0].lower() != 'por':
                         user_start = datetime.datetime(int(time_range[0][0:4]), int(time_range[0][4:6]),int(time_range[0][6:8]))
                     else:
