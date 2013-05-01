@@ -508,6 +508,15 @@ def format_grid_data(req, params):
                             data_out[idx].append(date_vals[el_idx][grid_idx][lat_idx])
         return data_out
 
+def get_station_meta(station_id):
+    meta_params = {"sids":station_id,"meta":"name,state,sids,ll ,elev,uid,county,climdiv"}
+    try:
+        stn_meta = AcisWS.StnMeta(meta_params)
+    except:
+        stn_meta = {'name':'', 'sids':[], 'county':'', 'state':'', \
+        'elev':-999, 'climdiv':'', 'uid':-999, 'll':''}
+    return stn_meta
+
 def get_el_and_base_temp(el):
     '''
     strips base temp xx from gddxx ( hddxx, cddxx)

@@ -13,16 +13,55 @@ from cStringIO import StringIO
 import cairo
 import AcisWS
 import base64
+import AcisWS, WRCCDataApps, WRCCUtils
 
 MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
-'''
-Class to retrieve data via Acis Webservice
-acis_data_call is one of StnMeta, StnData, MultiStnData, GridData, General
-given as a string argument,
-params is the parameter dictionary for the acis_data_call
-'''
+class SodDataJob:
+    pass
+
+class SODApplication:
+    def __init__(self, app_name, data_params, app_specific_params=None):
+        self.params = data_params
+        self.app_specific_params = app_specific_params
+        self.app_name = app_name
+        self.data = []; self.dates = []
+        self.elements  = [];self.coop_station_ids = []
+        self.station_names  = []
+
+    def get_data(self):
+        (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
+        AcisWS.get_sod_data(self.params, self.app_name)
+
+    def run_app(self):
+        app_params = {
+                    'app_name':self.app_name,
+                    'coop_station_ids': self.coop_station_ids,
+                    'data':self.data,
+                    'elements':self.elements,
+                    'dates':self.dates,
+                    'station_names':self.station_names
+                    }
+        if self.app_specific_params:
+            app_params.update(self.app_specific_params)
+        Application = getattr(WRCCDataApps, self.app_name)
+        if self.app_name == 'Sodxtrmts':
+            results, fa_results = Application(**app_params)
+            return results, fa_results
+        elif self.app_name == 'Soddyrec':
+            results = Application(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names)
+            return results
+        else:
+            results = Application(**app_params)
+            return results
+
 class StnDataJob:
+    '''
+    Class to retrieve data via Acis Webservice
+    acis_data_call is one of StnMeta, StnData, MultiStnData, GridData, General
+    given as a string argument,
+    params is the parameter dictionary for the acis_data_call
+    '''
     def __init__(self, acis_data_call, params):
         self.params = params
         self.acis_data_call = acis_data_call
@@ -81,6 +120,9 @@ class StnDataJob:
 
 
 class GridFigure(object) :
+    '''
+    ACIS Grid figure. Used in clim_sum_map
+    '''
     image_padding = 20,80
     title = 'Acis GridData map'
     def __init__(self, params, img_offset=10, text_offset=(50, 50)) :
