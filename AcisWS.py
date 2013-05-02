@@ -93,6 +93,22 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature(F)',
               '-46': {'name': 'gdd', 'name_long':'Growing Degree Days(Days)'}, 'vX':'45'}
               #bug fix needed for cdd = 44
 
+####################################
+#Functions
+#####################################
+def get_meta_data(search_area, val):
+        '''
+        Find meta data for  search_area = val
+        '''
+        meta_params = {
+                        search_area: val,
+                        'meta':'name,state,sids,ll,elev,uid,county,climdiv'
+                      }
+        request = StnMeta(meta_params)
+        if 'error' in request.keys() or not 'meta' in request.keys() or not request:
+            return {}
+        return request
+
 def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraints=None):
     '''
     Requests station meta data from ACIS and writes results to a json file

@@ -11,27 +11,352 @@ Defines classes used in my_acis project
 import time
 from cStringIO import StringIO
 import cairo
-import AcisWS
 import base64
+import datetime
+#WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils
 
 MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
 class SodDataJob:
-    pass
+    '''
+    SOD Data class.
 
-class SODApplication:
+    Keyword arguments:
+    app_name -- application name, on of the following
+    Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii, Soddynorm,
+    Sodrun, Soddd, Sodpct, Sodpad, Sodthr
+    data_params -- parameter dictionary for ACIS-WS call
+                   keys: start_date, end_date, elements
+                         and a key defining the search area, one of:
+                         sid, sids,county, climdiv, cwa, basin, state, bbox
+    '''
     def __init__(self, app_name, data_params, app_specific_params=None):
         self.params = data_params
         self.app_specific_params = app_specific_params
         self.app_name = app_name
-        self.data = []; self.dates = []
-        self.elements  = [];self.coop_station_ids = []
-        self.station_names  = []
+
+
+
+    def set_element_param(self):
+        if 'element' in self.params.keys():
+            el = 'element'
+        elif 'elements' in self.params.keys():
+            el= 'elements'
+        else:
+            el = None
+        return el
+
+    def set_area_params(self):
+        area = None; val=None
+        if 'sid' in self.params.keys():area = 'sids';val = self.params['sid']
+        if 'sids' in self.params.keys():area = 'sids';val = self.params['sids']
+        if 'county' in self.params.keys():area = 'county';val = self.params['county']
+        if 'climdiv' in self.params.keys():area = 'climdiv';val = self.params['climdiv']
+        if 'cwa' in self.params.keys():area = 'cwa';val = self.params['cwa']
+        if 'basin' in self.params.keys():area = 'basin';val = self.params['basin']
+        if 'state' in self.params.keys():area = 'state';val = self.params['state']
+        if 'bbox' in self.params.keys():area = 'bbox';val = self.params['bbox']
+        return area, val
+
+    def get_unique_sid(self, sids):
+        '''
+        sids  -- list of station ids produced by a StnMeta
+                 or MultiStnData call
+        Chooses coop id out of list of sids if
+        station has a coop id, else
+        chooses first id in list of sids
+        '''
+        #Take first station id listed
+        if not sids:
+            return None
+        #Pick first id in list
+        stn_id = sids[0].split(' ')[0]
+        if sids[0].split(' ')[1] != '2':
+            #Check if station has coop id, if so, use that
+            for sid in sids[1:]:
+                if sid.split(' ')[1] == '2':
+                    #Found coop id
+                    stn_id = sid.split(' ')[0]
+                    break
+            return stn_id
+
+    def set_start_end_date(self):
+        s_date = None; e_date = None
+        #Format yyyy, yyyymm data into yyyymmdd
+        if len(self.params['start_date']) == 4:
+            s_date = self.params['start_date'] + '0101'
+        elif len(self.params['start_date']) == 6:
+            s_date = self.params['start_date'] + '01'
+        elif len(self.params['start_date']) == 8:
+            s_date = self.params['start_date']
+
+        if len(self.params['end_date']) == 4:
+            e_date = self.params['end_date'] + '0101'
+        elif len(self.params['end_date']) == 6:
+            e_date = self.params['end_date'] + '01'
+        elif len(self.params['end_date']) == 8:
+            e_date = self.params['end_date']
+        #deal with por input
+        if self.params['start_date'] == 'por' or self.params['end_date'] == 'por':
+            if self.params['start_date'] == 'por' and self.params['end_date'] == 'por':
+                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max')
+            elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
+                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max', end_date=e_date)
+            elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
+                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max', end_date=e_date)
+            if vd:
+                s_date = vd[0];e_date=vd[1]
+        return s_date, e_date
+
+    def get_station_ids_names(self):
+        '''
+        Finds type of search area
+        and makes a call to Acis meta data to
+        find all station IDs lying within the search area
+        '''
+        stn_ids =[]
+        stn_names = []
+        area, val = self.set_area_params()
+        if area == 'sid':
+            return [val]
+        if area == 'sids':
+            if isinstance(val, list):
+                return val
+            if isinstance(val, basestring):
+                return  val.split(',')
+        if area and val:
+            request =  AcisWS.get_meta_data(area, val)
+        else:
+            request = {}
+        if request:
+            for i, stn in enumerate(request['meta']):
+                #remove appostrophes from name, gives trouble in json file
+                stn_names.append(str(stn['name']).replace("\'"," "))
+                sids = stn['sids']
+                stn_id = self.get_unique_sid(sids)
+                #Take first station id listed
+                if not stn_id:
+                    continue
+                stn_ids.append(stn_id)
+        return stn_ids, stn_names
+
+
+    def get_dates_list(self):
+        '''
+        Find list of dates lying within start and end date
+        Takes care of data formatting and por cases.
+        '''
+        dates = []
+        s_date, e_date = self.set_start_end_date()
+        if s_date and e_date and len(s_date) == 8 and len(e_date) == 8:
+            #convert to datetimes
+            start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
+            end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
+            for n in range(int ((end_date - start_date).days +1)):
+                next_date = start_date + datetime.timedelta(n)
+                n_year = str(next_date.year)
+                n_month = str(next_date.month)
+                n_day = str(next_date.day)
+                if len(n_month) == 1:n_month='0%s' % n_month
+                if len(n_day) == 1:n_day='0%s' % n_day
+                acis_next_date = '%s%s%s' %(n_year,n_month,n_day)
+                dates.append(acis_next_date)
+                #note, these apps are grouped by year and return a 366 day year even for non-leap years
+                if self.app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
+                    if dates[-1][4:8] == '0228' and not WRCCUtils.is_leap_year(int(dates[-1][0:4])):
+                        dates.append(dates[-1][0:4]+'0229')
+
+        #convert to acis format
+        for i,date in enumerate(dates):
+            dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
+        return dates
+
+    def get_element_list(self):
+        '''
+        Get element list for data request
+        Element list depends on self.app_name to be run
+        '''
+        el = self.set_element_param()
+        el_list = []
+        if self.app_name == 'Soddyrec':
+            if self.params[el] == 'all':
+                el_list = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
+            elif self.params[el] == 'tmp':
+                el_list = ['maxt', 'mint', 'pcpn']
+            elif self.params[el] == 'wtr':
+                el_list = ['pcpn', 'snow', 'snwd']
+            else:
+                elements = [self.params[el]]
+        elif self.app_name == 'Soddynorm':
+            el_list = ['maxt', 'mint', 'pcpn']
+        elif self.app_name == 'Sodsumm':
+            if self.params[el] == 'all':
+                el_list = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
+            elif self.params[el] == 'temp':
+                el_list = ['maxt', 'mint', 'avgt']
+            elif self.params[el] == 'prsn':
+                el_list = ['pcpn', 'snow']
+            elif self.params[el] == 'both':
+                el_list = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
+            elif self.params[el] in ['hc', 'g']:
+                el_list = ['maxt', 'mint']
+        elif self.app_name in ['Sodxtrmts', 'Sodpct', 'Sodpiii', 'Sodrunr', 'Sodrun', 'Sodthr']:
+            if self.app_name in ['Sodrun', 'Sodrunr'] and self.params['element'] == 'range':
+                el_list = ['maxt', 'mint']
+            elif self.app_name in ['Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
+                if self.params[el] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
+                    el_list = ['maxt', 'mint']
+                else:
+                    el_list = ['%s' % self.params['element']]
+            else:
+                el_list = ['%s' % self.params['element']]
+        elif self.app_name == 'Sodpad':
+            el_list = ['pcpn']
+        elif self.app_name == 'Soddd':
+            el_list = ['maxt', 'mint']
+        elif self.app_name in ['Sodmonline', 'Sodmonlinemy']:
+            el_list = [self.params['element']]
+        elif self.app_name == 'Sodlist':
+            el_list = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
+        elif self.app_name == 'Sodcnv':
+            el_list = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
+        else:
+            el_list = [str(el) for el in self.params[el]]
+        return el_list
+
+    def set_request_params(self):
+        '''
+        Depending on application, sets data request parameters
+        '''
+        elements = self.get_element_list()
+        area, val = self.set_area_params()
+        s_date, e_date = self.set_start_end_date()
+        if self.app_name == 'Soddyrec':
+            smry_opts = [{'reduce':'mean', 'add':'date,mcnt'}, \
+                        {'reduce':'max', 'add':'date,mcnt'}, \
+                        {'reduce':'min', 'add':'date,mcnt'}]
+            elts = []
+            for el in elements:
+                for sry in smry_opts:
+                    elts.append({'name':str(el),'smry':sry, 'groupby':'year'})
+            params = {area:val, 'sdate':s_date, 'edate':e_date, 'elems':elts}
+        elif self.app_name in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
+            elts = [{'name':el,'interval':'dly','duration':'dly','groupby':'year'} for el in elements]
+            params = {area:val, 'sdate':s_date, 'edate':e_date, 'elems':elts}
+        elif self.app_name in ['Sodlist', 'Sodcnv']:
+            elts=[{'name':el,'add':'t'} for el in elements]
+            params = {area:val, 'sdate':s_date, 'edate':e_date,'elems':elts}
+        else:
+            elts = [{'name':el} for el in elements]
+            params = {area:val, 'sdate':s_date, 'edate':e_date,'elems':elts}
+        return params
+
+    def format_data(self, request, station_ids, elements):
+        '''
+        Formats output of data request dependent on
+        application
+        request is the output of a MultiStnData call
+        '''
+        #Set up data output dictonary
+        error = ''
+        data = [[] for i in station_ids]
+        for i, stn in enumerate(station_ids):
+            if self.app_name == 'Soddyrec':
+                data[i] = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
+            elif self.app_name in ['Sodrun', 'Sodrunr']:
+                data[i] = []
+            else:
+                data[i] = [[] for el in elements]
+
+        #Sanity checks on request object
+        if not request:
+            error = 'Bad request, check params: %s'  % str(self.params)
+            return data, error
+        if 'error' in request.keys():
+            error = request['error']
+            return data, error
+        if not 'data' in request.keys():
+            error = 'No data found for parameters: %s' % str(self.params)
+            return data, error
+
+        for stn, stn_data in enumerate(request['data']):
+            if not 'data' in stn_data.keys():
+                continue
+
+            #find station_id, Note: MultiStnData call may not return the stations in order
+            sids = stn_data['meta']['sids']
+            stn_id = self.get_unique_sid(sids)
+            try:
+                index = station_ids.index(stn_id)
+            except:
+                continue
+
+            if self.app_name == 'Soddyrec':
+                if 'smry' not in stn_data.keys():
+                    continue
+                data[index] = stn_data['smry']
+            else:
+                if 'data' not in stn_data.keys():
+                    continue
+                if self.app_name in ['Soddynorm', 'Soddd', 'Sodpct']:
+                    for yr, el_data in enumerate(stn_data['data']):
+                        for el_idx, dat in enumerate(el_data):
+                            data[index][el_idx].append(dat)
+                else:
+                    data[index] = stn_data['data']
+        return data
 
     def get_data(self):
-        (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
-        AcisWS.get_sod_data(self.params, self.app_name)
+        elements = self.get_element_list()
+        dates = self.get_dates_list()
+        station_ids, station_names = self.get_station_ids_names()
+        #Set up resultsdict
+        resultsdict = {
+                    'data':[],
+                    'dates':dates,
+                    'elements':elements,
+                    'station_ids':station_ids,
+                    'station_names':station_names}
+
+        #Make data request
+        data_params = self.set_request_params()
+        print data_params
+        request = AcisWS.MultiStnData(data_params)
+        print request
+        data = self.format_data(request, station_ids, elements)
+        if data:
+            resultsdict['data'] = data
+        return resultsdict
+
+class SODApplication:
+    '''
+    SOD Application Class.
+
+
+    Keyword arguments:
+    app_name    -- application name, on of the following
+                    Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii,
+                    Sodrun, Soddd, Sodpct, Sodpad, Sodthr, Soddynorm
+    data_params -- parameter dictionary for ACIS-WS call
+                   keys: station_ID, start_date, end_date, elements
+    app_specific_params -- application specific parameters
+    '''
+    def __init__(self, app_name, data_params, app_specific_params=None):
+        self.params = data_params
+        self.app_specific_params = app_specific_params
+        self.app_name = app_name
+
+
+    def get_data(self):
+        if self.app_specific_params:
+            DJ = SodDataJob(self.app_name, self.params, appp_specific_params=self.app_specific_params)
+        else:
+            DJ = SodDataJob(self.app_name, self.params)
+        resultsdict = DJ.get_data()
+        return resultsdict
+        #(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
+        #AcisWS.get_sod_data(self.params, self.app_name)
 
     def run_app(self):
         app_params = {

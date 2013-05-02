@@ -722,7 +722,7 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
     sid  -- station ID
     el_list -- list of elements required.
                If el-list==None, we query for the 8 base elements
-               [maxt,mint,pcpn,snow,snwd]
+               [maxt,mint,pcpn,snow,snwd, hdd,cdd,gdd]
 
     Each element has its own valid daterange.
     If max_or_min == max, the largest daterange is returned.
@@ -761,7 +761,6 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
             vd_end = date_to_datetime(e_date)
         else:
             vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
-        print vd_start, vd_end
         if vd_start is not None and vd_end is not None and vd_start <= vd_end:
             vd_start, vd_end
             idx_start = el_idx + 1
@@ -815,7 +814,7 @@ def get_dates(s_date, e_date, app_name):
     '''
     if not s_date or not e_date:
         dates = []
-    elif s_date.lower == 'por' or e_date.lower() == 'por':
+    elif s_date.lower() == 'por' or e_date.lower() == 'por':
         dates = []
     else:
         dates = []
