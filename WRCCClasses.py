@@ -92,19 +92,20 @@ class SodDataJob:
             s_date = self.params['start_date']
 
         if len(self.params['end_date']) == 4:
-            e_date = self.params['end_date'] + '0101'
+            e_date = self.params['end_date'] + '1231'
         elif len(self.params['end_date']) == 6:
-            e_date = self.params['end_date'] + '01'
+            mon_len = WRCCUtils.find_mon_len(self.params['end_date'][0:4], self.params['end_date'][4:6])
+            e_date = self.params['end_date'] + str(mon_len)
         elif len(self.params['end_date']) == 8:
             e_date = self.params['end_date']
         #deal with por input
         if self.params['start_date'] == 'por' or self.params['end_date'] == 'por':
             if self.params['start_date'] == 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max')
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max')
             elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
-                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max', end_date=e_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', end_date=e_date)
             elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.coop_station_ids[0],max_or_min='max', end_date=e_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', end_date=e_date)
             if vd:
                 s_date = vd[0];e_date=vd[1]
         return s_date, e_date
@@ -118,13 +119,6 @@ class SodDataJob:
         stn_ids =[]
         stn_names = []
         area, val = self.set_area_params()
-        if area == 'sid':
-            return [val]
-        if area == 'sids':
-            if isinstance(val, list):
-                return val
-            if isinstance(val, basestring):
-                return  val.split(',')
         if area and val:
             request =  AcisWS.get_meta_data(area, val)
         else:
@@ -151,8 +145,8 @@ class SodDataJob:
         s_date, e_date = self.set_start_end_date()
         if s_date and e_date and len(s_date) == 8 and len(e_date) == 8:
             #convert to datetimes
-            start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
-            end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
+            start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6]), int(s_date[6:8]))
+            end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6]), int(e_date[6:8]))
             for n in range(int ((end_date - start_date).days +1)):
                 next_date = start_date + datetime.timedelta(n)
                 n_year = str(next_date.year)
@@ -321,9 +315,7 @@ class SodDataJob:
 
         #Make data request
         data_params = self.set_request_params()
-        print data_params
         request = AcisWS.MultiStnData(data_params)
-        print request
         data = self.format_data(request, station_ids, elements)
         if data:
             resultsdict['data'] = data
@@ -347,25 +339,26 @@ class SODApplication:
         self.app_specific_params = app_specific_params
         self.app_name = app_name
 
-
+    '''
     def get_data(self):
+        (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
+        AcisWS.get_sod_data(self.params, self.app_name)
+    '''
+
+    def run_app(self):
+        #Get Data
         if self.app_specific_params:
-            DJ = SodDataJob(self.app_name, self.params, appp_specific_params=self.app_specific_params)
+            DJ = SodDataJob(self.app_name, self.params, app_specific_params=self.app_specific_params)
         else:
             DJ = SodDataJob(self.app_name, self.params)
         resultsdict = DJ.get_data()
-        return resultsdict
-        #(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
-        #AcisWS.get_sod_data(self.params, self.app_name)
-
-    def run_app(self):
         app_params = {
                     'app_name':self.app_name,
-                    'coop_station_ids': self.coop_station_ids,
-                    'data':self.data,
-                    'elements':self.elements,
-                    'dates':self.dates,
-                    'station_names':self.station_names
+                    'coop_station_ids': resultsdict['station_ids'],
+                    'data':resultsdict['data'],
+                    'elements':resultsdict['elements'],
+                    'dates':resultsdict['dates'],
+                    'station_names':resultsdict['station_names']
                     }
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
@@ -374,7 +367,7 @@ class SODApplication:
             results, fa_results = Application(**app_params)
             return results, fa_results
         elif self.app_name == 'Soddyrec':
-            results = Application(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names)
+            results = Application(resultsdict['data'],resultsdict['dates'], reultsdict['elements'], resultsdict['station_ids'], resultsdict['station_names'])
             return results
         else:
             results = Application(**app_params)

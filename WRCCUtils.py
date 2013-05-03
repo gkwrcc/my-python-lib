@@ -131,6 +131,15 @@ def u_convert(data):
     else:
         return data
 
+def find_mon_len(year,mon):
+    if is_leap_year(int(year)):
+        feb = 29
+    else:
+        feb = 28
+    mon_lens = [31,feb, 31,30, 31,30, 31, 31,30, 31, 30, 31]
+    m_idx = int(str(mon).lstrip('0')) -1
+    return mon_lens[m_idx]
+
 def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, file_info=None):
     '''
     Writes gridded data to a file.
@@ -778,7 +787,6 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
         else:
             vd_end_test = date_to_datetime(el_vdr[1])
         if max_or_min == 'min':
-            #print vd_start, vd_start_test, vd_end, vd_end_test
             if vd_start_test is not None and vd_start_test > vd_start and vd_start_test <= vd_end:
                 vd_start = vd_start_test
             if vd_end_test is not None and vd_end_test < vd_end and vd_end_test >= vd_start:
@@ -897,7 +905,7 @@ def find_start_end_dates(form_input):
 
 def get_element_list(form_input, program):
     '''
-    Finds element liste for program data query
+    Finds element list for program data query
 
     Keyword arguments:
     form_input -- webpage user form fields
