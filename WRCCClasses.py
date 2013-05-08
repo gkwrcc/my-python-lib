@@ -105,7 +105,7 @@ class SodDataJob:
             elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
                 vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', end_date=e_date)
             elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', end_date=e_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', start_date=s_date)
             if vd:
                 s_date = vd[0];e_date=vd[1]
         return s_date, e_date
@@ -133,6 +133,7 @@ class SodDataJob:
                 if not stn_id:
                     continue
                 stn_ids.append(stn_id)
+        self.station_ids = stn_ids
         return stn_ids, stn_names
 
 
@@ -145,6 +146,11 @@ class SodDataJob:
         s_date, e_date = self.set_start_end_date()
         if s_date and e_date and len(s_date) == 8 and len(e_date) == 8:
             #convert to datetimes
+            if self.app_name in ['Soddyrec', 'Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
+                #data is grouped by year so we need to change start and end_dates
+                #to match whole year
+                s_date = s_date[0:4] + '0101'
+                e_date = e_date[0:4] + '1231'
             start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6]), int(s_date[6:8]))
             end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6]), int(e_date[6:8]))
             for n in range(int ((end_date - start_date).days +1)):
@@ -160,10 +166,11 @@ class SodDataJob:
                 if self.app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                     if dates[-1][4:8] == '0228' and not WRCCUtils.is_leap_year(int(dates[-1][0:4])):
                         dates.append(dates[-1][0:4]+'0229')
-
+        '''
         #convert to acis format
         for i,date in enumerate(dates):
             dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
+        '''
         return dates
 
     def get_element_list(self):
@@ -303,8 +310,8 @@ class SodDataJob:
 
     def get_data(self):
         elements = self.get_element_list()
-        dates = self.get_dates_list()
         station_ids, station_names = self.get_station_ids_names()
+        dates = self.get_dates_list()
         #Set up resultsdict
         resultsdict = {
                     'data':[],
@@ -330,15 +337,14 @@ class SODApplication:
     app_name    -- application name, on of the following
                     Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii,
                     Sodrun, Soddd, Sodpct, Sodpad, Sodthr, Soddynorm
-    data_params -- parameter dictionary for ACIS-WS call
-                   keys: station_ID, start_date, end_date, elements
+    datadict    --  dictionary containing results of SOdDataJob
+                    keys: data, dates, elements, station_ids, station_names
     app_specific_params -- application specific parameters
     '''
-    def __init__(self, app_name, data_params, app_specific_params=None):
-        self.params = data_params
-        self.app_specific_params = app_specific_params
+    def __init__(self, app_name, datadict, app_specific_params=None):
         self.app_name = app_name
-
+        self.datadict = datadict
+        self.app_specific_params = app_specific_params
     '''
     def get_data(self):
         (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
@@ -346,19 +352,13 @@ class SODApplication:
     '''
 
     def run_app(self):
-        #Get Data
-        if self.app_specific_params:
-            DJ = SodDataJob(self.app_name, self.params, app_specific_params=self.app_specific_params)
-        else:
-            DJ = SodDataJob(self.app_name, self.params)
-        resultsdict = DJ.get_data()
         app_params = {
                     'app_name':self.app_name,
-                    'coop_station_ids': resultsdict['station_ids'],
-                    'data':resultsdict['data'],
-                    'elements':resultsdict['elements'],
-                    'dates':resultsdict['dates'],
-                    'station_names':resultsdict['station_names']
+                    'coop_station_ids': self.datadict['station_ids'],
+                    'data':self.datadict['data'],
+                    'elements':self.datadict['elements'],
+                    'dates':self.datadict['dates'],
+                    'station_names':self.datadict['station_names']
                     }
         if self.app_specific_params:
             app_params.update(self.app_specific_params)

@@ -348,8 +348,9 @@ def get_station_data(form_input, program):
     params = dict(sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
         elems=[dict(name=el, add='f,t')for el in elements])
+    print 'params' +  params
+    #Chekc for por start end dates
     if 'station_id' in form_input.keys():
-        #Check for por:
         if s_date.lower() =='por' or e_date.lower() == 'por':
             meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
             try:
@@ -386,6 +387,15 @@ def get_station_data(form_input, program):
         params['sids'] = form_input['station_id']
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
+        #NOTE: ACIS quirk when data request are multiple stations
+                #If a station in the list has no data, nothing is returned instead of an empty list
+                # We need to registed an aempty stn data return for this list:
+                #check
+                #if id is in input_stn_list, if so, delete from that list
+                #any stn that is left over in input_stn_list after we run through all request data
+                #had no data returned
+        input_stn_list = form_input['station_ids']
+        stn_list_empty = form_input['station_ids']
     elif 'county' in form_input.keys():
         params['county'] = form_input['county']
     elif 'climate_division' in form_input.keys():
@@ -401,16 +411,26 @@ def get_station_data(form_input, program):
     else:
         params['sids'] =''
 
+    print params
     #Data request
     try:
         request = MultiStnData(params)
     except Exception, e:
-        resultsdict['error'] = 'Error at Data request. Pameters: %s. Error: %s' %(params, str(e))
+        resultsdict['error'] = 'Error at Data request. Error: %s. Pameters: %s.' %(str(e), params)
+        for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
+            resultsdict[key] = []
         return resultsdict
     try:
         request['data']
+        if not request['data']:
+            resultsdict['error'] = 'No data Found! Pameters: %s.' %(params)
+            for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
+                resultsdict[key] = []
+            return resultsdict
     except Exception, e:
-        resultsdict['error'] = 'Error at Data request: No data found. Pameters: %s. Error: %s' %(params, str(e))
+        resultsdict['error'] = 'No data found! Error: %s. Pameters: %s.' %(str(e), params)
+        for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
+            resultsdict[key] = []
         return resultsdict
     #Initialize outpout lists
     if s_date is not None and e_date is not None:
@@ -429,6 +449,11 @@ def get_station_data(form_input, program):
             stn_id_list = data['meta']['sids']
             for sid in stn_id_list:
                 stn_id = str(sid.split(' ')[0])
+                #Case: comma list of stations: if id is in input_stn_list, if so, delete from that list
+                #any stn that is left over in input_stn_list after we run through all request data
+                #had no data returned
+                if 'station_ids' in form_input.keys():
+                    if stn_id in stn_list_empty:stn_list_empty.remove(stn_id)
                 network_id_name = WRCCUtils.network_codes[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
@@ -455,6 +480,22 @@ def get_station_data(form_input, program):
                 stn_data[stn][idx].insert(0, date)
     resultsdict['stn_data'] = stn_data;resultsdict['dates'] = dates;resultsdict['stn_ids'] = stn_ids
     resultsdict['stn_names'] = stn_names;resultsdict['stn_errors'] = stn_errors;resultsdict['elements'] = elements
+    #final check on station data if comma separated list of stations
+    if 'station_ids' in form_input.keys():
+        for stn_empty_idx, stn_empty_id in enumerate(stn_list_empty):
+            try:
+                idx = input_stn_list.index(stn_empty_id)
+                idx
+                resultsdict['stn_ids'].insert(idx, [stn_empty_id + ' '])
+                resultsdict['stn_names'].insert(idx, '')
+                resultsdict['stn_errors'].insert(idx, 'No data found!')
+                resultsdict['stn_data'].insert(idx, [])
+            except:
+                resultsdict['stn_ids'].append([stn_empty_id + ' '])
+                resultsdict['stn_names'].append('')
+                resultsdict['stn_errors'].append('No data found!')
+                resultsdict['stn_data'].append([])
+    del stn_data, stn_names,stn_ids,stn_errors
     return resultsdict
 
 def get_grid_data(form_input, program):

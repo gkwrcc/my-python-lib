@@ -183,7 +183,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error! Cant open file' + str(e)
 
-            row = ['Date', 'Lat', 'Lon', 'Elev']
+            row = [':Date', 'Lat', 'Lon', 'Elev']
             for el in elements:row.append(el)
             writer.writerow(row)
             for date_idx, date_vals in enumerate(data):
@@ -225,7 +225,10 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                         row_number = 1
                         flag = 0
                     try:
-                        ws.write(date_idx+1, j, str(val))#row, column, label
+                        try:
+                            ws.write(date_idx+1, j, float(val))
+                        except:
+                            ws.write(date_idx+1, j, str(val))#row, column, label
                     except Exception, e:
                         response = 'Excel write error:' + str(e)
                         break
@@ -289,9 +292,9 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error!' + str(e)
             for stn, dat in enumerate(data):
-                row = ['Station ID: %s' %str(station_ids[stn]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
+                row = [':Station ID: %s' %str(station_ids[stn]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
-                row = ['date']
+                row = [':date']
                 for el in elements:
                     if show_flags == 'F' and show_observation_time == 'F':
                         row.append(el)
@@ -304,8 +307,8 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 writer.writerow(row)
 
                 for j, vals in enumerate(dat):
-                    #row = [dates[j]]
                     row = []
+                    #date
                     row.append(vals[0])
                     for val in vals[1:]:
                         if show_flags == 'F' and show_observation_time == 'F':
@@ -329,7 +332,8 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
             from xlwt import Workbook
             wb = Workbook()
             for stn, dat in enumerate(data):
-                ws = wb.add_sheet('Station_%s_%s' %(str(station_ids[stn][0]).split(' ')[0], str(stn)))
+                #ws = wb.add_sheet('Station_%s_%s' %(str(station_ids[stn][0]).split(' ')[0], str(stn)))
+                ws = wb.add_sheet('%s' %(str(station_ids[stn][0]).split(' ')[0]))
                 #Header
                 ws.write(0, 0, 'Date')
                 idx = 0
@@ -357,19 +361,25 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     for l,val in enumerate(vals[1:]):
                         idx+=1
                         if show_flags == 'F' and show_observation_time == 'F':
-                            ws.write(j+1, l, val[0])
+                            try:
+                                ws.write(j+1, idx, float(val[0]))
+                            except:
+                                ws.write(j+1, idx, val[0])
                         elif show_flags == 'T' and show_observation_time == 'F':
                             ws.write(j+1, idx, val[0]) #row, column, label
                             ws.write(j+1, idx+1, val[1])
                             idx+=1
                         elif show_flags == 'F' and show_observation_time == 'T':
                             ws.write(j+1, idx, val[0]) #row, column, label
-                            ws.write(j+1, idx+1, val[2])
+                            ws.write(j+1, idx+1, int(val[2]))
                             idx+=1
                         else:
-                            ws.write(j+1, idx, val[0]) #row, column, label
+                            try:
+                                ws.write(j+1, idx, float(val[0])) #row, column, label
+                            except:
+                                ws.write(j+1, idx, val[0])
                             ws.write(j+1, idx+1, val[1])
-                            ws.write(j+1, idx+2, val[2])
+                            ws.write(j+1, idx+2, int(val[2]))
                             idx+=2
             if f:
                 try:

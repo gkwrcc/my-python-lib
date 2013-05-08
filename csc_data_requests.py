@@ -29,44 +29,28 @@ from_address = 'csc-project@dri.edu'
 base_dir = '/tmp/data_requests/'
 pub_dir = '/pub/csc/test/'
 now = datetime.datetime.now()
-'''
-#pipe errors to file
-original_stderr = sys.stderr
-original_stdout = sys.stdout
-two_days_ago = now - datetime.timedelta(days=2)
-#Overwrite stdout, stder files if older than 2 days
-if not os.path.exists('/tmp/data_requests/data-request-stderr.txt'):
-    open('/tmp/data_requests/data-request-stderr.txt', 'w+').close()
-if not os.path.exists('/tmp/data_requests/data-request-stdout.txt'):
-    open('/tmp/data_requests/data-request-stdout.txt', 'w+').close()
-st=os.stat('/tmp/data_requests/data-request-stderr.txt')
-mtime = datetime.datetime.fromtimestamp(st.st_mtime)
-if mtime < two_days_ago:
-    f_err = open('/tmp/data_requests/data-request-stderr.txt', 'w+')
-    f_out = open('/tmp/data_requests/data-request-stdout.txt', 'w+')
-else:
-    try:
-        f_err = open('/tmp/data_requests/data-request-stdout.txt', 'a+')
-    except:
-        f_err = open('/tmp/data_requests/data-request-stdout.txt', 'w+')
-    try:
-        f_out = open('/tmp/data_requests/data-request-stderr.txt', 'a+')
-    except:
-        f_out = open('/tmp/data_requests/data-request-stderr.txt', 'w+')
-sys.stderr = f_err;sys.stdout = f_out
-'''
+
 x_mins_ago = now - datetime.timedelta(minutes=5) #cron job checking for param files runs every 5 minutes
 #time_out = 300
-time_out = 3600 #time out = 1hr = 3600 seconds
+time_out = 10800 #time out = 3hrs = 10800 seconds
 time_out_time = now - datetime.timedelta(seconds=time_out) #timeout for data request
 time_out_h = '1 hour'
 
 #Set up logger
-#logging.basicConfig(filename='/tmp/data_requests/csc_data_requests.log',level=logging.DEBUG)
+#start new log file for each day:
+today = datetime.datetime.today()
+day_stamp = '%s%s%s' %(str(today.year), str(today.month), str(today.day))
+log_file_test  = 'csc_data_requests_' + day_stamp + '.log'
+#Check if we need to create a new log file
+#look at most recent log file
+log_files = logfiles = sorted([ f for f in os.listdir(base_dir) if f.endswith('.log')])
+log_file = logfiles[-1]
+if log_file_test != log_files[-1]:
+    log_file = log_file_test
 logger = logging.getLogger('csc_data_requests')
 logger.setLevel(logging.DEBUG)
 #Create file and shell handlers
-fh = logging.FileHandler('/tmp/data_requests/csc_data_requests.log')
+fh = logging.FileHandler(base_dir + log_file)
 sh = logging.StreamHandler()
 fh.setLevel(logging.DEBUG)
 sh.setLevel(logging.DEBUG)
@@ -203,7 +187,7 @@ def worker(params,params_file,data_q, errors_q):
         #Check if we need to split up the data request:
         params_list = split_data_request(params)
         if len(params_list) > 1:
-            logger.info('Splitting data request into' + str(len(params_list)) + 'requests. Params: ' + str(params))
+            logger.info('Splitting data request into ' + str(len(params_list)) + ' requests. Params: ' + str(params))
         #Determine weather we have station or grid requests
         if 'select_grid_by' in params_list[0].keys():
             data_request = getattr(AcisWS, 'get_grid_data')
@@ -421,8 +405,9 @@ for params_file in files:
             #data request timed out
             error = 'Data request timed out. Please consider a smaller request.'+ \
             'Parameter File: ' + params_file + \
-            'Your parameters were: %s' %params
+            '. Your parameters were: %s' %params
             write_error(error_dict, error, user_name, user_email)
+            os.remove(params_file)
         else:
             logger.info('Data request in progress for params_file: ' + str(params_file))
             continue
@@ -497,7 +482,7 @@ for user_name, err_list in error_dict.iteritems():
 ##########################
 #Final Check for errors:
 
-log = open('/tmp/data_requests/csc_data_requests.log', 'r')
+log = open(base_dir + log_file, 'r')
 errs = ''
 for line in log.readlines():
     if 'ERROR' in line:
