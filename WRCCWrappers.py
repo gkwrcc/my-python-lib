@@ -14,7 +14,7 @@ The wrapper will then format the output of the WRCCData app
 to a list and pass this list pack to the perl script
 '''
 import sys
-import WRCCUtils, AcisWS, WRCCDataApps
+import WRCCUtils, AcisWS, WRCCDataApps, WRCCClasses
 
 #########
 # CLASSES
@@ -29,52 +29,23 @@ class Wrapper:
         self.station_names  = []
 
     def get_data(self):
-        (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
-        AcisWS.get_sod_data(self.params, self.app_name)
+        #(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
+        #AcisWS.get_sod_data(self.params, self.app_name)
+        DJ = WRCCClasses.SodDataJob(self.app_name,self.params)
+        data = DJ.get_data()
+        return data
 
-    def run_app(self):
-        app_params = {
-                    'app_name':self.app_name,
-                    'coop_station_ids': self.coop_station_ids,
-                    'data':self.data,
-                    'elements':self.elements,
-                    'dates':self.dates,
-                    'station_names':self.station_names
-                    }
-        if self.app_specific_params:
-            app_params.update(self.app_specific_params)
-        Application = getattr(WRCCDataApps, self.app_name)
-        if self.app_name == 'Sodxtrmts':
-            results, fa_results = Application(**app_params)
-            return results, fa_results
-        elif self.app_name == 'Soddyrec':
-            results = Application(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names)
-            return results
-        else:
-            results = Application(**app_params)
-            return results
-        '''
-        try:
-            Application = getattr(WRCCDataApps, self.app_name)
-            if self.app_name == 'Sodxtrmts':
-                results, fa_results = Application(**app_params)
-                return results, fa_results
-            else:
-                results = Application(**app_params)
-                return results
-        except:
-            if self.app_name == 'Sodxtrmts':
-                return [], []
-            else:
-                return []
-        '''
+    def run_app(self, data):
+        SSApp = WRCCClasses.SODApplication(self.app_name,data,app_specific_params=self.app_specific_params)
+        results = SSApp.run_app()
+        return results
 ################################################
 #Wrapper functions for Kelly's SOD applications
 ################################################
 def sodxtrmts_wrapper(argv):
     '''
     NOTE: Runs without frequency analysis
-    argv -- coop_station_id start_year end_year element analysis_type
+    argv -- stn_id start_year end_year element analysis_type
             max_missing_days start_month departure_from_averages
     Explaination:
             element choices: pcpn, snow, snwd, maxt, mint, avgt, dtr, hdd, cdd, gdd
@@ -93,19 +64,19 @@ def sodxtrmts_wrapper(argv):
     #Sanity Check
     if len(argv) != 8:
         print 'Error: sodxtrmts  needs 8 input parameters: \
-               coop_station_id start_year end_year element analysis_type max_missing_days \
+               stn_id start_year end_year element analysis_type max_missing_days \
                start_month departures_from_averages.'
         sys.exit(1)
 
     #Assign input parameters:
-    coop_station_id = str(argv[0])
+    stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
     element = str(argv[3]);analysis_type = str(argv[4])
     max_missing_days = int(argv[5]); start_month = str(argv[6])
     departures_from_averages=str(argv[7])
     #Define parameters
     data_params = {
-                'coop_station_id':coop_station_id,
+                'sid':stn_id,
                 'start_date':start_year,
                 'end_date':end_year,
                 'element':element
@@ -118,16 +89,16 @@ def sodxtrmts_wrapper(argv):
                 'frequency_analysis': 'F',
                 'departures_from_averages':departures_from_averages
                 }
-    SX_wrapper = Wrapper('Sodxtrmts', data_params, app_specific_params=app_params)
+    SX_wrapper = Wrapper('Sodxtrmts',data_params, app_specific_params=app_params)
     #Get data
-    SX_wrapper.get_data()
+    data = SX_wrapper.get_data()
     #run app
-    results, fa_results = SX_wrapper.run_app()
+    results, fa_results = SX_wrapper.run_app(data)
     print results[0]
 
 def sodsumm_wrapper(argv):
     '''
-    argv -- coop_station_id table_name start_year end_year max_missing_days
+    argv -- stn_id table_name start_year end_year max_missing_days
 
     Explaination:
             table_name choices: temp, prsn, hdd, cdd, gdd, corn
@@ -140,12 +111,12 @@ def sodsumm_wrapper(argv):
                You gave: %s' %str(argv)
         sys.exit(1)
     #Assign input parameters:
-    coop_station_id = str(argv[0]);table_name = str(argv[1])
+    stn_id = str(argv[0]);table_name = str(argv[1])
     start_year = str(argv[2]);end_year = str(argv[3])
     max_missing_days = int(argv[3])
     #Define parameters
     data_params = {
-                'coop_station_id':coop_station_id,
+                'sid':stn_id,
                 'start_date':start_year,
                 'end_date':end_year,
                 'element':'all'
@@ -156,14 +127,14 @@ def sodsumm_wrapper(argv):
                 }
     SS_wrapper = Wrapper('Sodsumm', data_params, app_specific_params=app_params)
     #Get data
-    SS_wrapper.get_data()
-    #run app
-    results = SS_wrapper.run_app()
+    data = SS_wrapper.get_data()
+    #Run app
+    results = SS_wrapper.run_app(data)
     print results[0][table_name]
 
 def soddyrec_wrapper(argv):
     '''
-    argv -- coop_station_id element_type start_date end_date
+    argv -- stn_id_id element_type start_date end_date
 
     Explaination:
             start/end date are 8 digits long, e.g 20100102
@@ -183,24 +154,24 @@ def soddyrec_wrapper(argv):
     #Sanity Check
     if len(argv) != 4:
         print 'soddyrec needs 4 input parameters: \
-               coop_station_id element_type start_date end_date.\
+               stn_id element_type start_date end_date.\
                You gave: %s' %str(argv)
         sys.exit(1)
     #Assign input parameters:
-    coop_station_id = str(argv[0]);element = str(argv[1])
+    stn_id = str(argv[0]);element = str(argv[1])
     start_date = str(argv[2]);end_date = str(argv[3])
     #Define parameters
     data_params = {
-                'coop_station_id':coop_station_id,
+                'sid':stn_id,
                 'start_date':start_date,
                 'end_date':end_date,
                 'element':element
                 }
     SS_wrapper = Wrapper('Soddyrec', data_params)
     #Get data
-    SS_wrapper.get_data()
+    data = SS_wrapper.get_data()
     #run app
-    results = SS_wrapper.run_app()
+    results = SS_wrapper.run_app(data)
     print results
 
 

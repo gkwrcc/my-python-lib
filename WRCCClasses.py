@@ -341,9 +341,9 @@ class SODApplication:
                     keys: data, dates, elements, station_ids, station_names
     app_specific_params -- application specific parameters
     '''
-    def __init__(self, app_name, datadict, app_specific_params=None):
+    def __init__(self, app_name, data, app_specific_params=None):
         self.app_name = app_name
-        self.datadict = datadict
+        self.data = data
         self.app_specific_params = app_specific_params
     '''
     def get_data(self):
@@ -354,11 +354,11 @@ class SODApplication:
     def run_app(self):
         app_params = {
                     'app_name':self.app_name,
-                    'coop_station_ids': self.datadict['station_ids'],
-                    'data':self.datadict['data'],
-                    'elements':self.datadict['elements'],
-                    'dates':self.datadict['dates'],
-                    'station_names':self.datadict['station_names']
+                    'coop_station_ids': self.data['station_ids'],
+                    'data':self.data['data'],
+                    'elements':self.data['elements'],
+                    'dates':self.data['dates'],
+                    'station_names':self.data['station_names']
                     }
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
@@ -367,7 +367,7 @@ class SODApplication:
             results, fa_results = Application(**app_params)
             return results, fa_results
         elif self.app_name == 'Soddyrec':
-            results = Application(resultsdict['data'],resultsdict['dates'], reultsdict['elements'], resultsdict['station_ids'], resultsdict['station_names'])
+            results = Application(app_params['data'],app_params['dates'], app_params['elements'], app_params['coop_station_ids'], app_params['station_names'])
             return results
         else:
             results = Application(**app_params)

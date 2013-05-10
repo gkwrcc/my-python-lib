@@ -2485,14 +2485,14 @@ def Sodsumm(**kwargs):
 
                 val_list.append(int(round(max_max,0)))
                 if cat_idx >=12:
-                    val_list.append('%s%s%s' % (date_max[0:4],date_max[5:7],date_max[8:10]))
+                    val_list.append('%s%s%s' % (date_max[0:4],date_max[4:6],date_max[6:8]))
                 else:
-                    val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
+                    val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
                 val_list.append(int(round(min_min,0)))
                 if cat_idx >=12:
-                    val_list.append('%s%s%s' % (date_min[0:4],date_min[5:7],date_min[8:10]))
+                    val_list.append('%s%s%s' % (date_min[0:4],date_min[4:6],date_min[6:8]))
                 else:
-                    val_list.append('%s/%s' % (date_min[8:10], date_min[0:4]))
+                    val_list.append('%s/%s' % (date_min[6:8], date_min[0:4]))
 
                 #3)  Mean Extremes (over yrs)
                 means_yr=[]

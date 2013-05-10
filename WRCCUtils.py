@@ -506,7 +506,7 @@ def format_grid_data(req, params):
         idx = -1
         for date_idx, date_vals in enumerate(data['data']):
             if 'location' in prms.keys():
-                data_out[date_idx].append(str(date_vals[0]))
+                data_out[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
                 data_out[date_idx].append(lons[0][0])
                 data_out[date_idx].append(lats[0][0])
                 data_out[date_idx].append(elevs[0][0])
@@ -518,7 +518,7 @@ def format_grid_data(req, params):
                 for grid_idx, lat_grid in enumerate(lats):
                     for lat_idx, lat in enumerate(lat_grid):
                         idx+=1
-                        data_out[idx].append(str(date_vals[0]))
+                        data_out[idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
                         data_out[idx].append(lons[grid_idx][lat_idx])
                         data_out[idx].append(lat)
                         data_out[idx].append(elevs[grid_idx][lat_idx])
@@ -853,9 +853,6 @@ def get_dates(s_date, e_date, app_name):
             if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                 if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
                     dates.append(dates[-1][0:4]+'0229')
-    #convert to acis format
-    for i,date in enumerate(dates):
-        dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
     return dates
 
 def strip_n_sort(station_list):

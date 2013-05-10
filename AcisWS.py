@@ -348,8 +348,7 @@ def get_station_data(form_input, program):
     params = dict(sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
         elems=[dict(name=el, add='f,t')for el in elements])
-    print 'params' +  params
-    #Chekc for por start end dates
+    #Check for por start end dates
     if 'station_id' in form_input.keys():
         if s_date.lower() =='por' or e_date.lower() == 'por':
             meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
