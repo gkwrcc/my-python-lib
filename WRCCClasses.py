@@ -464,9 +464,12 @@ class GridFigure(object) :
         self.text_offset = text_offset
 
 
-    def get_grid(self) :
+    def get_grid(self, data=None) :
         try:
-            result = AcisWS.GridData(self.params)
+            if not data:
+                result = AcisWS.GridData(self.params)
+            else:
+                result = data
             if not result or 'error' in result.keys() or not 'data' in result.keys():
                 with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())

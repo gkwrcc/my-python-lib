@@ -2623,7 +2623,7 @@ def Sodsumm(**kwargs):
                         idx_max = el_data['pcpn'].index(prec_max)
                         date_max = el_dates['pcpn'][idx_max]
                         val_list.append('%.2f' %prec_max)
-                        val_list.append('%s/%s' % (date_max[8:10], date_max[0:4]))
+                        val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
 
                 #3) Precip Thresholds
                 threshs = [0.01, 0.10, 0.50, 1.00]
