@@ -459,17 +459,20 @@ class GridFigure(object) :
             self.date = params['this']['date']
         else:
             self.date = date = time.strftime('%Y%m%d')
-
+        if 'data' in params.keys():
+            self.data = params['data']
+        else:
+            self.data = None
         self.image_offset = img_offset
         self.text_offset = text_offset
 
 
-    def get_grid(self, data=None) :
+    def get_grid(self) :
         try:
-            if not data:
+            if not self.data:
                 result = AcisWS.GridData(self.params)
             else:
-                result = data
+                result = self.data
             if not result or 'error' in result.keys() or not 'data' in result.keys():
                 with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())

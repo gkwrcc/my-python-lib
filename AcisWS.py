@@ -337,7 +337,7 @@ def get_station_data(form_input, program):
     'elements'   -- list of elements of request
     '''
     #Set up parameters for data request
-    resultsdict = defaultdict(dict)
+    resultsdict = defaultdict(list)
     s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
     #Sanity check for valid date input:
     if (s_date.lower() == 'por' or e_date.lower() == 'por') and ('station_id' not in form_input.keys()):
@@ -436,15 +436,17 @@ def get_station_data(form_input, program):
         dates = WRCCUtils.get_dates(s_date, e_date, program)
     else:
         dates = []
-    stn_errors = ['' for stn in request['data']]
-    stn_names = ['' for stn in request['data']]
-    stn_ids = [[] for stn in request['data']]
-    stn_data = [[] for stn in request['data']]
+    resultsdict['dates'] = dates
+    resultsdict['elements'] = elements
+    resultsdict['stn_errors'] = ['' for stn in request['data']]
+    resultsdict['stn_names'] = ['' for stn in request['data']]
+    resultsdict['stn_ids'] = [[] for stn in request['data']]
+    resultsdict['stn_data'] = [[] for stn in request['data']]
     for stn, data in enumerate(request['data']):
         if 'error' in data.keys():
-            stn_errors[stn] = str(data['error'])
+            resultsdict['stn_errors'][stn] = str(data['error'])
         try:
-            stn_ids[stn] = []
+            resultsdict['stn_ids'][stn] = []
             stn_id_list = data['meta']['sids']
             for sid in stn_id_list:
                 stn_id = str(sid.split(' ')[0])
@@ -457,28 +459,27 @@ def get_station_data(form_input, program):
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
                 if network_id_name == "COOP":
-                    stn_ids[stn].insert(0, ids)
+                    resultsdict['stn_ids'][stn].insert(0, ids)
                 else:
-                    stn_ids[stn].append(ids)
+                    resultsdict['stn_ids'][stn].append(ids)
         except:
-            stn_ids[stn] = []
+            resultsdict['stn_ids'][stn] = []
         try:
-            stn_names[stn] = str(data['meta']['name'])
+            resultsdict['stn_names'][stn] = str(data['meta']['name'])
         except:
-            stn_names[stn] = ''
+            resultsdict['stn_names'][stn] = ''
         try:
-            stn_data[stn] = data['data']
+            resultsdict['stn_data'][stn] = data['data']
         except:
-            stn_data[stn] = []
+            resultsdict['stn_data'][stn] = []
 
-        if not stn_data[stn]:
-            stn_errors[stn] = 'No data found for this station!'
+        if not resultsdict['stn_data'][stn]:
+            resultsdict['stn_errors'][stn] = 'No data found for this station!'
         #Add dates
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
-                stn_data[stn][idx].insert(0, date)
-    resultsdict['stn_data'] = stn_data;resultsdict['dates'] = dates;resultsdict['stn_ids'] = stn_ids
-    resultsdict['stn_names'] = stn_names;resultsdict['stn_errors'] = stn_errors;resultsdict['elements'] = elements
+                resultsdict['stn_data'][stn][idx].insert(0, date)
+
     #final check on station data if comma separated list of stations
     if 'station_ids' in form_input.keys():
         for stn_empty_idx, stn_empty_id in enumerate(stn_list_empty):
@@ -494,7 +495,7 @@ def get_station_data(form_input, program):
                 resultsdict['stn_names'].append('')
                 resultsdict['stn_errors'].append('No data found!')
                 resultsdict['stn_data'].append([])
-    del stn_data, stn_names,stn_ids,stn_errors
+    #del stn_data, stn_names,stn_ids,stn_errors
     return resultsdict
 
 def get_grid_data(form_input, program):
