@@ -775,27 +775,27 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
         if s_date.lower() != 'por':
             vd_start = date_to_datetime(s_date)
         else:
-            vd_start = date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][0])
+            if request['meta'][0]['valid_daterange'][el_idx]:
+                vd_start = date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][0])
         if e_date.lower() != 'por':
             vd_end = date_to_datetime(e_date)
         else:
-            vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
+            if request['meta'][0]['valid_daterange'][el_idx]:
+                vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
         if vd_start is not None and vd_end is not None and vd_start <= vd_end:
-            vd_start, vd_end
             idx_start = el_idx + 1
             break
     if vd_start is None or vd_end is None:
         return []
     #loop over valid dateranges for each elements and find max or min valid daterange
     for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange'][idx_start:]):
-        if s_date.lower() != 'por':
-            vd_start_test = None
-        else:
-            vd_start_test = date_to_datetime(el_vdr[0])
-        if e_date.lower() != 'por':
-            vd_end_test = None
-        else:
-            vd_end_test = date_to_datetime(el_vdr[1])
+        vd_start_test = None;vd_end_test = None
+        if s_date.lower() == 'por':
+            if el_vdr:
+                vd_start_test = date_to_datetime(el_vdr[0])
+        if e_date.lower() == 'por':
+            if el_vdr:
+                vd_end_test = date_to_datetime(el_vdr[1])
         if max_or_min == 'min':
             if vd_start_test is not None and vd_start_test > vd_start and vd_start_test <= vd_end:
                 vd_start = vd_start_test

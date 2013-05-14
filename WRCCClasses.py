@@ -79,10 +79,12 @@ class SodDataJob:
                     #Found coop id
                     stn_id = sid.split(' ')[0]
                     break
-            return stn_id
+        return str(stn_id)
 
     def set_start_end_date(self):
         s_date = None; e_date = None
+        if not self.station_ids:
+            return s_date, e_date
         #Format yyyy, yyyymm data into yyyymmdd
         if len(self.params['start_date']) == 4:
             s_date = self.params['start_date'] + '0101'
@@ -306,7 +308,7 @@ class SodDataJob:
                             data[index][el_idx].append(dat)
                 else:
                     data[index] = stn_data['data']
-        return data
+        return data, error
 
     def get_data(self):
         elements = self.get_element_list()
@@ -323,9 +325,7 @@ class SodDataJob:
         #Make data request
         data_params = self.set_request_params()
         request = AcisWS.MultiStnData(data_params)
-        data = self.format_data(request, station_ids, elements)
-        if data:
-            resultsdict['data'] = data
+        resultsdict['data'], resultsdict['error'] = self.format_data(request, station_ids, elements)
         return resultsdict
 
 class SODApplication:
@@ -362,6 +362,9 @@ class SODApplication:
                     }
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
+        #Sanity check, make sure data has data
+        #if 'error' in self.data.keys() or not self.data['data']:
+        #    return {}
         Application = getattr(WRCCDataApps, self.app_name)
         if self.app_name == 'Sodxtrmts':
             results, fa_results = Application(**app_params)

@@ -2402,8 +2402,8 @@ def Sodsumm(**kwargs):
                         else:
                             if cat_idx == 12:mon_l = range(0,12)
                             if cat_idx == 14:mon_l = [2,3,4]
-                            if cat_idx == 14:mon_l = [5,6,7]
-                            if cat_idx == 14:mon_l = [8,9,10]
+                            if cat_idx == 15:mon_l = [5,6,7]
+                            if cat_idx == 16:mon_l = [8,9,10]
                             for ct in mon_l:
                                 if x_miss[ct][element][yr] > kwargs['max_missing_days']:
                                     flag = True
@@ -2441,8 +2441,8 @@ def Sodsumm(**kwargs):
                 #1) Averages and Daily extremes
                 max_max = -9999.0
                 min_min = 9999.0
-                date_min ='0000-00-00'
-                date_max = '0000-00-00'
+                date_min ='00000000'
+                date_max = '00000000'
                 for el in ['maxt', 'mint', 'avgt']:
                     #Omit data yrs for month where max_missing day threshold is not met
                     data_list = []
@@ -2462,7 +2462,6 @@ def Sodsumm(**kwargs):
                             continue
                         data_list.extend(el_data[el][idx_start:idx_end])
                         dates_list.extend(el_dates[el][idx_start:idx_end])
-
                     #Statistics
                     sm = 0
                     cnt = 0
@@ -2548,15 +2547,20 @@ def Sodsumm(**kwargs):
                             idx_start = time_cats_lens[cat_idx]*yr
                             idx_end = idx_start + time_cats_lens[cat_idx]
                             yr_dat = numpy.array(el_data[el][idx_start:idx_end])
+                            if cat_idx ==12:
+                                print yr_dat
                             if thresh == '90':
                                 yr_dat_thresh = numpy.where((yr_dat >= 90) & (abs(yr_dat + 9999.0) >= 0.05))
                             else:
                                 yr_dat_thresh = numpy.where((yr_dat <= float(thresh)) & (abs(yr_dat + 9999.0) >= 0.05))
                             cnt_days.append(len(yr_dat_thresh[0]))
-                        try:
-                            val_list.append('%.1f' % numpy.mean(cnt_days))
-                        except:
-                            val_list.append('0.0')
+                        if cnt_days:
+                            try:
+                                val_list.append('%.1f' % numpy.mean(cnt_days))
+                            except:
+                                val_list.append('***')
+                        else:
+                            val_list.append('***')
                 results[i]['temp'].append(val_list)
 
             #2) Precip/Snow Stats
