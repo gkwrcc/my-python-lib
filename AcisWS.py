@@ -354,6 +354,9 @@ def get_station_data(form_input, program):
             meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
             try:
                 meta_request = StnMeta(meta_params)
+                if not meta_request['meta']:
+                    resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s.' %(meta_params)
+                return resultsdict
             except Exception, e:
                 resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(meta_params, str(e))
                 return resultsdict
@@ -410,7 +413,6 @@ def get_station_data(form_input, program):
     else:
         params['sids'] =''
 
-    print params
     #Data request
     try:
         request = MultiStnData(params)
