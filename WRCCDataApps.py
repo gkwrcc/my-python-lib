@@ -1970,8 +1970,8 @@ def Sodrun(**kwargs):
     coop_station_ids = kwargs['coop_station_ids']
     elements = kwargs['elements']
     dates = kwargs['dates']
-    jd_start = WRCCUtils.JulDay(int(dates[0][0:4]), int(dates[0][5:7]), int(dates[0][8:10]))#Julian day odf start date
-    jd_end = WRCCUtils.JulDay(int(dates[-1][0:4]), int(dates[-1][5:7]), int(dates[-1][8:10]))#Julian day of end date
+    jd_start = WRCCUtils.JulDay(int(dates[0][0:4]), int(dates[0][4:6]), int(dates[0][6:8]))#Julian day of start date
+    jd_end = WRCCUtils.JulDay(int(dates[-1][0:4]), int(dates[-1][4:6]), int(dates[-1][6:8]))#Julian day of end date
     app_name = kwargs['app_name']
     op = kwargs['op']
     if elements == ['maxt', 'mint']:
@@ -2059,8 +2059,7 @@ def Sodrun(**kwargs):
                 jd_old = jd_start
             else:
                 jd_old = jd
-            date_split = date_val[0].split('-')
-            jd = WRCCUtils.JulDay(int(date_split[0]), int(date_split[1]), int(date_split[2]))
+            jd = WRCCUtils.JulDay(int(date_val[0][0:4]), int(date_val[0][4:6]), int(date_val[0][6:8]))
             gap_days = jd - jd_old
             if idx == 0 and gap_days >0: #found gap between user given start data and  first data point
                 print_str =  write_str_missing(str(gap_days), convert_date(date_val[0]))

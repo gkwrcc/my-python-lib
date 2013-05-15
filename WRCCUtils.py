@@ -10,6 +10,7 @@ import numpy
 import re
 from collections import defaultdict, Mapping, Iterable
 import smtplib
+from email.mime.text import MIMEText
 from ftplib import FTP
 
 from django.http import HttpResponse, HttpResponseRedirect
@@ -103,14 +104,16 @@ def upload(ftp_server,pub_dir,f):
     return error
 
 
-def write_email(mail_server,fromaddr,toaddr,message):
+def write_email(mail_server,fromaddr,toaddr,subject, message):
     '''
     Write e-mail via pythons  smtp module
     '''
+    msg = "From: %s\nTo: %s\nSubject:%s\n\n%s" % ( fromaddr, toaddr, subject, message )
+
     try:
         server = smtplib.SMTP(mail_server)
         server.set_debuglevel(1)
-        server.sendmail(fromaddr, toaddr, message)
+        server.sendmail(fromaddr, toaddr, msg)
         server.quit()
         error = None
     except Exception, e:
@@ -292,7 +295,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error!' + str(e)
             for stn, dat in enumerate(data):
-                row = [':Station ID: %s' %str(station_ids[stn]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
+                row = [':Station ID: %s' %str(station_ids[stn][0]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
                 row = [':date']
                 for el in elements:
@@ -400,7 +403,7 @@ def format_grid_data(req, params):
     Format grid data. Output are lists of form [date, lat, lon, value_element1, value_element2, ...]
 
     Keyword arguments:
-    req    -- Data request object
+    req    -- Data request object, result of GridData call to ACIS-WS
     params -- parameter dictionary
     '''
     #Make sure params are formatted correctly
@@ -638,8 +641,8 @@ def strip_data(val):
             if pos_val in ['M', 'T', 'S', 'A', ' ']:
                 flag = pos_val
             else:
-                print 'Error! Found invalid flag: %s' % pos_val
-                sys.exit(0)
+                strp_val = ' '
+                flag = ' '
     else: #len(pos_val) >1
         if not pos_val[-1].isdigit():
             flag = val[-1]
@@ -684,9 +687,7 @@ def compute_mon_day(doy):
     mon = 0
     day = 0
     if ndoy >366 or ndoy < 1:
-        print 'Error in WRCCUtils.compute_mon_day , day of year: %s not in [1,366]' %ndoy
-        sys.exit(1)
-
+        return None,None
     mon_day_sum = [31,60,91,121,152,182,213,244,274,305,335,366]
     for i in range(12):
         if i == 0:
@@ -1034,9 +1035,7 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
                 end_indices.insert(len(dates),len(dates)-1)
         #Sanity check
         if len(start_indices)!= len(end_indices):
-            print 'Index error when finidng window. Maybe your window is not chronologically defined?'
-            sys.exit(1)
-
+            return []
         for j in range(len(start_indices)):
             add_data = data[start_indices[j]:end_indices[j]+1]
             windowed_data = windowed_data + add_data

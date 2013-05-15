@@ -396,8 +396,8 @@ def get_station_data(form_input, program):
                 #if id is in input_stn_list, if so, delete from that list
                 #any stn that is left over in input_stn_list after we run through all request data
                 #had no data returned
-        input_stn_list = form_input['station_ids']
-        stn_list_empty = form_input['station_ids']
+        #input_stn_list = form_input['station_ids']
+        stn_list_in = form_input['station_ids']
     elif 'county' in form_input.keys():
         params['county'] = form_input['county']
     elif 'climate_division' in form_input.keys():
@@ -444,6 +444,7 @@ def get_station_data(form_input, program):
     resultsdict['stn_names'] = ['' for stn in request['data']]
     resultsdict['stn_ids'] = [[] for stn in request['data']]
     resultsdict['stn_data'] = [[] for stn in request['data']]
+    idx_empty_list = []
     for stn, data in enumerate(request['data']):
         if 'error' in data.keys():
             resultsdict['stn_errors'][stn] = str(data['error'])
@@ -456,7 +457,11 @@ def get_station_data(form_input, program):
                 #any stn that is left over in input_stn_list after we run through all request data
                 #had no data returned
                 if 'station_ids' in form_input.keys():
-                    if stn_id in stn_list_empty:stn_list_empty.remove(stn_id)
+                    if stn_id in stn_list_in:
+                        idx = stn_list_in.index(stn_id)
+                        #Omit duplicates
+                        if not idx in idx_empty_list:
+                            idx_empty_list.append(idx)
                 network_id_name = WRCCUtils.network_codes[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
@@ -484,20 +489,11 @@ def get_station_data(form_input, program):
 
     #final check on station data if comma separated list of stations
     if 'station_ids' in form_input.keys():
-        for stn_empty_idx, stn_empty_id in enumerate(stn_list_empty):
-            try:
-                idx = input_stn_list.index(stn_empty_id)
-                idx
-                resultsdict['stn_ids'].insert(idx, [stn_empty_id + ' '])
-                resultsdict['stn_names'].insert(idx, '')
-                resultsdict['stn_errors'].insert(idx, 'No data found!')
-                resultsdict['stn_data'].insert(idx, [])
-            except:
-                resultsdict['stn_ids'].append([stn_empty_id + ' '])
-                resultsdict['stn_names'].append('')
-                resultsdict['stn_errors'].append('No data found!')
-                resultsdict['stn_data'].append([])
-    #del stn_data, stn_names,stn_ids,stn_errors
+        for idx in idx_empty_list:
+            resultsdict['stn_ids'].insert(idx, [stn_list_in[idx] + ' '])
+            resultsdict['stn_names'].insert(idx, '')
+            resultsdict['stn_errors'].insert(idx, 'No data found!')
+            resultsdict['stn_data'].insert(idx, [])
     return resultsdict
 
 def get_grid_data(form_input, program):

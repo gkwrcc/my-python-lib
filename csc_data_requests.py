@@ -31,8 +31,8 @@ pub_dir = '/pub/csc/test/'
 now = datetime.datetime.now()
 
 x_mins_ago = now - datetime.timedelta(minutes=5) #cron job checking for param files runs every 5 minutes
-#time_out = 300
-time_out = 10800 #time out = 3hrs = 10800 seconds
+time_out = 3600 #1hr
+#time_out = 10800 #time out = 3hrs = 10800 seconds
 time_out_time = now - datetime.timedelta(seconds=time_out) #timeout for data request
 time_out_h = '1 hour'
 
@@ -44,8 +44,11 @@ log_file_test  = 'csc_data_requests_' + day_stamp + '.log'
 #Check if we need to create a new log file
 #look at most recent log file
 log_files = logfiles = sorted([ f for f in os.listdir(base_dir) if f.endswith('.log')])
-log_file = logfiles[-1]
-if log_file_test != log_files[-1]:
+if not log_files:
+    log_file = ''
+else:
+    log_file = logfiles[-1]
+if log_file_test != log_file:
     log_file = log_file_test
 logger = logging.getLogger('csc_data_requests')
 logger.setLevel(logging.DEBUG)
@@ -122,7 +125,11 @@ def split_data_request(params):
     s_date = ''.join(params['start_date'].split('-'))
     e_date = ''.join(params['end_date'].split('-'))
     if s_date.lower() == 'por' or e_date.lower() == 'por':
-        s_date = WRCCUtils.find_valid_daterange(sid, start_date=s_date, end_date=e_date, el_list=params['elements'], max_or_min='max')
+        s_date,e_date = WRCCUtils.find_valid_daterange(sid, el_list=params['elements'], max_or_min='max')
+    if not s_date or not e_date:
+        logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
+    else:
+        logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
     day_limit = None
     params_list = [params]
     #find out if we need to split up the request
@@ -136,18 +143,18 @@ def split_data_request(params):
         #request one year at a time
         start = WRCCUtils.date_to_datetime(s_date)
         end = WRCCUtils.date_to_datetime(e_date)
-        '''
-        start = datetime.datetime(int(s_date[0:4]), int(s_date[4:6]), int(s_date[6:8]))
-        end = datetime.datetime(int(e_date[0:4]), int(e_date[4:6]), int(e_date[6:8]))
-        '''
         #Find days between start/end date
-        days = (end -  start).days
+        try:
+            days = (end -  start).days
+        except:
+            days = 0
         if 'select_stations_by' in params.keys():
             num_requests = days / (day_limit + 1)
         else:
             num_requests = days / day_limit
 
         if 'select_stations_by' in params.keys() and days%(day_limit) != 0:num_requests+=1
+        logger.info('Number of requests: %s' %str(num_requests))
         #contstruct params dict for the different requests
         params_list = [dict(params) for k in range(num_requests)]
         #Change start/end dates for the individual reuests
@@ -155,9 +162,8 @@ def split_data_request(params):
             if k==0:
                 start_new = start
             else:
-                start_new = start + k*datetime.timedelta(days=day_limit)
+                start_new = start + k*datetime.timedelta(days=day_limit + 1)
             if k < num_requests - 1:
-
                 end_new = start_new + datetime.timedelta(days=day_limit)
             else:
                 end_new = end
@@ -183,11 +189,9 @@ def worker(params,params_file,data_q, errors_q):
         logger.info('Starting: ' +  str(name))
         logger.info('Parameters: ' +  str(params))
 
-
         #Check if we need to split up the data request:
         params_list = split_data_request(params)
-        if len(params_list) > 1:
-            logger.info('Splitting data request into ' + str(len(params_list)) + ' requests. Params: ' + str(params))
+        #logger.info('parameters: ' + str(params_list))
         #Determine weather we have station or grid requests
         if 'select_grid_by' in params_list[0].keys():
             data_request = getattr(AcisWS, 'get_grid_data')
@@ -201,22 +205,34 @@ def worker(params,params_file,data_q, errors_q):
             results = {}
         error =  ''
         #Loop over params list, get data, patch results into one dict
-        for idx, params in enumerate(params_list):
+        for idx, p in enumerate(params_list):
+            logger.info('Executing %s out of %s requests. Params: %s' %(str(idx), str(len(params_list)), str(p)))
             error_out = ''
             if request_type == 'grid':data_out = []
             if request_type == 'station':data_out = {}
-            try:
-                data_out = data_request(dict(params), 'sodlist_web')
-                if request_type == 'grid':
-                    data_out = WRCCUtils.format_grid_data(data_out, params)
-            except:
-                error_out = 'Process %s failed at data request. System info: %s' %(name, sys.exc_info())
+            data_out = data_request(dict(p), 'sodlist_web')
+            if not data_out:
+                logger.info('No data found!')
+                error_out = 'Process failed at data request.'
+            elif 'error' in data_out.keys():
+                logger.info('Error when requesting data. Error: %s.' % (str(data_out['error'])))
+                error_out = 'Process failed at data request.'
+            elif 'errors' in data_out.keys():
+                logger.info('Error when requesting data. Error: %s.' % (str(data_out['errors'])))
+                error_out = 'Process failed at data request.'
+            if request_type == 'grid':
+                try:
+                    data_out = WRCCUtils.format_grid_data(data_out, p)
+                except:
+                    logger.error('Could not format grid data. Parameters: %s ' %str(p))
+                    error_out = 'Process %s failed at datta formating. Parameters: %s' %str(p)
 
             if error_out is not '':
                 if error is '':
                     error+=error_out
                 else:
                     error = error + ', ' + error_out
+            #Add data output to results
             if request_type == 'grid':
                 results=results + data_out
             if request_type == 'station':
@@ -233,8 +249,7 @@ def worker(params,params_file,data_q, errors_q):
                         if results_idx is None:
                             data_empty = []
                             for date in results['dates']:
-                                vals_empty = ['M' for el in params['elements']]
-                                #vals_empty.insert(0, date)
+                                vals_empty = ['M' for el in p['elements']]
                                 data_empty.append(vals_empty)
 
                             results['stn_data'].append(data_empty + data_out['stn_data'][stn_idx])
@@ -259,6 +274,7 @@ def worker(params,params_file,data_q, errors_q):
 
         if error:
             logger.error('Error occurred during processing. Terminated: ' + str(name))
+            logger.error('Error:' + str(error))
             multiprocessing.current_process().terminate
         else:
             logger.info('Ending successfully: ' + str(name))
@@ -363,8 +379,9 @@ params_list= []
 error_dict = {} #keys are the user names each entry will be a list two  entries [email, ['error message_list']]
 files = filter(os.path.isfile, glob.glob(base_dir + '*_params.json'))
 files.sort(key=lambda x: os.path.getmtime(x))
+if not files:
+    logger.info('No params files found!')
 for params_file in files:
-    logger.info('Params file found!: ' + str(params_file))
     #if file was created less than five minutes ago, it is a new parameter file
     #and we need to run the data request:
     #path = os.path.join(base_dir,fname)
@@ -397,6 +414,9 @@ for params_file in files:
         logger.info('Results found!: ' +  str(results_file))
         results_file_list.append([params,results_file])
     else:
+        logger.info('New parameter file found!: ' + str(params_file))
+        params_list.append([params,params_file])
+        '''
         if mtime > x_mins_ago:
             #File is less than 5 minutes old or has been modified within last x mins
             #need to run data request
@@ -411,9 +431,10 @@ for params_file in files:
         else:
             logger.info('Data request in progress for params_file: ' + str(params_file))
             continue
-
+        '''
 #Upload result files if any and notify user
 for param_result_f in results_file_list:
+    params_file = param_result_f[1].split('.')[0] + '_params.json'
     upload_error = WRCCUtils.upload(ftp_server, pub_dir, param_result_f[1])
     #upload_error=[]
     user_name = param_result_f[0]['user_name']
@@ -433,29 +454,41 @@ for param_result_f in results_file_list:
         now = datetime.datetime.now()
         date = now.strftime( '%d/%m/%Y %H:%M' )
         pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
-        message_text = 'Your data requests has been processed :-).\nThe data is available at ftp://' + \
-        ftp_server  + pub_dir + \
-        ' The name of your file is:' + os.path.split(results_file)[1] + \
-        '\nYou can pick up your data until: ' + str(pick_up_latest) + '.\nYour parameters were:' + str(params)
-        msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s" % ( fromaddr, toaddr, subj, date, message_text )
-        email_error = WRCCUtils.write_email(mail_server, fromaddr,toaddr,msg)
+        message_text ='''
+        Date: %s
+        Your data requests has been processed :-).
+        The data is available here:
+        %s
+        The name of your file is:
+        %s
+        You can pick up your data until: %s.
+        Your parameters were:
+        %s
+        '''%(date, 'ftp://' + ftp_server  + pub_dir, os.path.split(results_file)[1], str(pick_up_latest), str(params))
+        #msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s" % ( fromaddr, toaddr, subj, date, message_text )
+        email_error = WRCCUtils.write_email(mail_server, fromaddr,toaddr,subj, message_text)
         if email_error:
             error =  'Data request: %s. Data on ftp but user email notification failed. Error: %s' % (param_result_f[1], str(email_error))
             logger.error('Data request: ' + str(param_result_f[1]) + 'E-mail error: ' + str(email_error))
         else:
             logger.info('Notified user: ' + str(toaddr) + ' of successful data upload')
+            os.remove(param_result_f[1])
             os.remove(params_file)
-            os.remove(results_file)
 
 #Multi process data requests:
-logger.info('Starting to multiprocess data requests.')
 num_requests = len(params_list)
-logger.info('Number of requests: ' +  str(num_requests))
+if num_requests >0:
+    logger.info('Starting to multiprocess data requests.')
+    logger.info('Number of requests: ' +  str(num_requests))
+else:
+    logger.info('Nothing to process.')
 loop_no = num_requests / nprocs #number of loops with nprocs processes each to be executed
 left_procs = num_requests % nprocs
 if left_procs !=0:loop_no+=1
-logger.info( 'loop number:' + str(loop_no))
-logger.info('leftover processes' + str(left_procs))
+if loop_no > 0:
+    logger.info( 'loop number:' + str(loop_no))
+if left_procs > 0:
+    logger.info('leftover processes' + str(left_procs))
 for l in range(loop_no):
     if l == loop_no -1 and left_procs != 0:
         n = left_procs
@@ -471,43 +504,13 @@ for user_name, err_list in error_dict.iteritems():
         subj = 'Data request Error'
         now = datetime.datetime.now()
         date = now.strftime( '%d/%m/%Y %H:%M' )
-        message_text = 'The following errors occurred:' + str(err_list[1])
-        msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s" % ( fromaddr, toaddr, subj, date, message_text )
-        error = WRCCUtils.write_email(mail_server, fromaddr,toaddr,msg)
+        message_text = '''
+        The following errors occurred:
+        %s
+        '''%( str(err_list[1]))
+        #msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s" % ( fromaddr, toaddr, subj, date, message_text )
+        error = WRCCUtils.write_email(mail_server, fromaddr,toaddr,subj, message_text)
         if error:
             logger.error('Email error when notifying: ' + str(toaddr) + ' Error: ' + str(error))
         else:
             logger.info('Notified user ' + str(toaddr) +  ' of data errors.')
-
-##########################
-#Final Check for errors:
-
-log = open(base_dir + log_file, 'r')
-errs = ''
-for line in log.readlines():
-    if 'ERROR' in line:
-        errs = errs + str(line) + '\n'
-
-if errs != '':
-    #Notify me of error
-    fromaddr = 'bdaudert@dri.edu'
-    toaddr = 'bdaudert@dri.edu'
-    subj = 'Data request errors'
-    now = datetime.datetime.now()
-    date = now.strftime( '%d/%m/%Y %H:%M' )
-    message_text = 'Data request error!!\n File:' + params_file + '\n Params: ' + str(params) + \
-    '\n System errors:\n' + errs
-    msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s" % ( fromaddr, toaddr, subj, date, message_text )
-    error = WRCCUtils.write_email(mail_server, fromaddr,toaddr,msg)
-    if error:
-        logger.error('Email error when notifying: ' + str(toaddr) + ' Error: ' + str(error))
-    else:
-        logger.info('Notified user ' + str(toaddr) + ' of data request errors.')
-
-##################################
-'''
-sys.stderr = original_stderr
-sys.stdout = original_stdout
-f_err.close()
-f_out.close()
-'''
