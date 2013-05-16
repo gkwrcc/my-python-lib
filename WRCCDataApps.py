@@ -722,6 +722,8 @@ def Sodxtrmts(**kwargs):
     results = defaultdict(list)
     fa_results = defaultdict(list)
     dates = kwargs['dates']
+    if not dates:
+        return results, fa_results
     start_year = int(dates[0][0:4])
     end_year = int(dates[-1][0:4])
     #Initialize analysis parameters
