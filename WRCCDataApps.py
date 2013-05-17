@@ -973,12 +973,12 @@ def Sodxtrmts(**kwargs):
 
                         if value > -9998.0:
                             sumda+=1
-                            if kwargs['lgb'] == 'l' and value < float(kwargs['threshold']):
+                            if kwargs['less_greater_or_between'] == 'l' and value < float(kwargs['threshold_for_less_or_greater']):
                                 summ+=1
-                            elif kwargs['lgb'] == 'g' and value > float(kwargs['threshold']):
+                            elif kwargs['less_greater_or_between'] == 'g' and value > float(kwargs['threshold_for_less_or_greater']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
-                            elif kwargs['lgb'] == 'b' and value > float(kwargs['threshold_1']) and value < float(kwargs['threshold_2']):
+                            elif kwargs['less_greater_or_between'] == 'b' and value > float(kwargs['threshold_low_for_between']) and value < float(kwargs['threshold_high_for_between']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
 

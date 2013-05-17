@@ -354,11 +354,11 @@ def get_station_data(form_input, program):
             meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
             try:
                 meta_request = StnMeta(meta_params)
-                if not meta_request['meta']:
-                    resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s.' %(meta_params)
-                return resultsdict
+                if not 'meta' in meta_request.keys():
+                    resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s.' %(str(meta_params))
+                    return resultsdict
             except Exception, e:
-                resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(meta_params, str(e))
+                resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(str(meta_params), str(e))
                 return resultsdict
             #Find largest daterange
             start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][0][8:10]))
@@ -384,6 +384,7 @@ def get_station_data(form_input, program):
                 e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
                 e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
                 e_date = '%s%s%s' %(e_yr,e_mon,e_day)
+        print s_date, e_date
         params['sdate']= s_date
         params['edate'] = e_date
         params['sids'] = form_input['station_id']
@@ -521,6 +522,7 @@ def get_grid_data(form_input, program):
     if 'location' in form_input.keys():params['loc'] = form_input['location']
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
+    print params
     request = GridData(params)
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
