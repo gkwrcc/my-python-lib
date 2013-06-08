@@ -31,7 +31,7 @@ class Wrapper:
     def get_data(self):
         #(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
         #AcisWS.get_sod_data(self.params, self.app_name)
-        DJ = WRCCClasses.SodDataJob(self.app_name,self.params)
+        DJ = WRCCClasses.SODDataJob(self.app_name,self.params)
         data = DJ.get_data()
         return data
 
@@ -45,11 +45,11 @@ class Wrapper:
 def sodxtrmts_wrapper(argv):
     '''
     NOTE: Runs without frequency analysis
-    argv -- stn_id start_year end_year element analysis_type
+    argv -- stn_id start_year end_year element monthly_statistic
             max_missing_days start_month departure_from_averages
     Explaination:
             element choices: pcpn, snow, snwd, maxt, mint, avgt, dtr, hdd, cdd, gdd
-            analysis_type choices:   mmax --> Monthly Maximun
+            monthly_statistic choices:   mmax --> Monthly Maximun
                                      mmin --> Monthly Minimum
                                      mave --> Monthly Avergage
                                      sd   --> Standard Deviation
@@ -64,14 +64,14 @@ def sodxtrmts_wrapper(argv):
     #Sanity Check
     if len(argv) != 8:
         print 'Error: sodxtrmts  needs 8 input parameters: \
-               stn_id start_year end_year element analysis_type max_missing_days \
+               stn_id start_year end_year element monthly_statistic max_missing_days \
                start_month departures_from_averages.'
         sys.exit(1)
 
     #Assign input parameters:
     stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
-    element = str(argv[3]);analysis_type = str(argv[4])
+    element = str(argv[3]);monthly_statistic = str(argv[4])
     max_missing_days = int(argv[5]); start_month = str(argv[6])
     departures_from_averages=str(argv[7])
     #Define parameters
@@ -85,7 +85,7 @@ def sodxtrmts_wrapper(argv):
                 'el_type':element,
                 'max_missing_days':max_missing_days,
                 'start_month':start_month,
-                'analysis_type': analysis_type,
+                'monthly_statistic': monthly_statistic,
                 'frequency_analysis': 'F',
                 'departures_from_averages':departures_from_averages
                 }

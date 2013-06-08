@@ -18,7 +18,7 @@ import AcisWS, WRCCDataApps, WRCCUtils
 
 MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
-class SodDataJob:
+class SODDataJob:
     '''
     SOD Data class.
 
@@ -35,7 +35,6 @@ class SodDataJob:
         self.params = data_params
         self.app_specific_params = app_specific_params
         self.app_name = app_name
-
 
 
     def set_element_param(self):
@@ -168,11 +167,6 @@ class SodDataJob:
                 if self.app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                     if dates[-1][4:8] == '0228' and not WRCCUtils.is_leap_year(int(dates[-1][0:4])):
                         dates.append(dates[-1][0:4]+'0229')
-        '''
-        #convert to acis format
-        for i,date in enumerate(dates):
-            dates[i] = '%s-%s-%s' % (dates[i][0:4], dates[i][4:6], dates[i][6:8])
-        '''
         return dates
 
     def get_element_list(self):
@@ -337,7 +331,7 @@ class SODApplication:
     app_name    -- application name, on of the following
                     Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii,
                     Sodrun, Soddd, Sodpct, Sodpad, Sodthr, Soddynorm
-    datadict    --  dictionary containing results of SOdDataJob
+    datadict    --  dictionary containing results of SODDataJob
                     keys: data, dates, elements, station_ids, station_names
     app_specific_params -- application specific parameters
     '''
@@ -345,11 +339,6 @@ class SODApplication:
         self.app_name = app_name
         self.data = data
         self.app_specific_params = app_specific_params
-    '''
-    def get_data(self):
-        (self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
-        AcisWS.get_sod_data(self.params, self.app_name)
-    '''
 
     def run_app(self):
         app_params = {
@@ -375,6 +364,24 @@ class SODApplication:
         else:
             results = Application(**app_params)
             return results
+
+class SodGraphicsJob:
+    '''
+    SOD Graphics Class.
+
+
+    Keyword arguments:
+    app_name    -- application name, on of the following
+                    Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii,
+                    Sodrun, Soddd, Sodpct, Sodpad, Sodthr, Soddynorm
+    datadict    --  dictionary containing results of SODDataJob
+                    keys: data, dates, elements, station_ids, station_names
+    app_specific_params -- application specific parameters
+    '''
+    def __init__(self, app_name, data, app_specific_params=None):
+        self.app_name = app_name
+        self.data = data
+        self.app_specific_params = app_specific_params
 
 class StnDataJob:
     '''

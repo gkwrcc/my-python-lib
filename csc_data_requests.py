@@ -416,7 +416,6 @@ for params_file in files:
     else:
         logger.info('New parameter file found!: ' + str(params_file))
         params_list.append([params,params_file])
-        '''
         if mtime > x_mins_ago:
             #File is less than 5 minutes old or has been modified within last x mins
             #need to run data request
@@ -431,7 +430,6 @@ for params_file in files:
         else:
             logger.info('Data request in progress for params_file: ' + str(params_file))
             continue
-        '''
 #Upload result files if any and notify user
 for param_result_f in results_file_list:
     params_file = param_result_f[1].split('.')[0] + '_params.json'
