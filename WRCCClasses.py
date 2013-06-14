@@ -36,8 +36,8 @@ class SODDataJob:
         self.app_specific_params = app_specific_params
         self.app_name = app_name
         self.el_type_element_dict = {
-            'all_small':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
-            'all_large':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
+            'all_sodsumm':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
+            'all':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
             'tmp':['maxt', 'mint', 'pcpn'],
             'both':['max', 'mint', 'avgt', 'pcpn', 'snow'],
             'temp':['maxt', 'mint', 'avgt'],
@@ -59,8 +59,31 @@ class SODDataJob:
             'obst':['obst'],
             'hdd':['hdd'],
             'cdd':['cdd'],
-            'gdd':['gdd']
+            'gdd':['gdd'],
+            'evap':['7.1'],
+            'wind':['12.1']
         }
+        self.app_elems_params = {
+            'Soddyrec': {'name':None,'groupby':'year'},
+            'Soddynorm':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodsumm':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodrun':{'name':None},
+            'Sodrunr':{'name':None},
+            'Sodxtrmts':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpct':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodthr':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpiii':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpad':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Soddd':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodmonline':{'name':None},
+            'Sodsum':{'name':None},
+            'Sodmonlinemy':{'name':None},
+            'Sodlist':{'name':None,'add':'t'},
+            'Sodcnv':{'name':None,'add':'t'}
+        }
+        self.soddyrec_smry_opts = [{'reduce':'mean', 'add':'date,mcnt'}, \
+                        {'reduce':'max', 'add':'date,mcnt'}, \
+                        {'reduce':'min', 'add':'date,mcnt'}]
 
     def set_element_param(self):
         if 'element' in self.params.keys():
@@ -200,10 +223,8 @@ class SODDataJob:
         Element list depends on self.app_name to be run
         '''
         el_type = self.set_element_param()
-        if self.app_name == 'Soddyrec' and self.params[el_type] == 'all':
-            el_list = self.el_type_element_dict['all_large']
-        elif self.app_name == 'Sodsumm' and self.params[el_type] == 'all':
-            el_list = self.el_type_element_dict['all_small']
+        if self.app_name == 'Sodsumm' and self.params[el_type] == 'all':
+            el_list = self.el_type_element_dict['all_sodsumm']
         elif self.app_name == 'Soddynorm':
              el_list = self.el_type_element_dict['tmp']
         elif self.app_name == 'Sodxtrmts' and self.params[el_type] in ['hdd','cdd', 'gdd']:
@@ -212,32 +233,36 @@ class SODDataJob:
             el_list = self.el_type_element_dict[self.params[el_type]]
         return el_list
 
-    def set_request_params(self):
+
+    def set_request_elements(self):
         '''
-        Depending on application, sets data request parameters
+        Function to set elems value needed in ACIS data call
         '''
         elements = self.get_element_list()
+        elems = []
+        for el in elements:
+            el_dict = self.app_elems_params[self.app_name]
+            el_dict['name'] = el
+            #We have to add three types of summaries for each element of Soddyrec
+            if self.app_name == 'Soddyrec':
+                for smry in self.soddyrec_smry_opts:
+                    el_dict['smry'] = smry
+                    elems.append(el_dict)
+            else:
+                elems.append(el_dict)
+        #FIX ME: should need to treat Sodsumm separately
+        #but somehow the above code jumbles up the elements
+        if self.app_name == 'Sodsumm':
+            elems  = [{'name':el,'interval':'dly','duration':'dly','groupby':'year'} for el in elements]
+        return elems
+
+    def set_request_params(self):
         area, val = self.set_area_params()
-        s_date, e_date = self.set_start_end_date()
-        if self.app_name == 'Soddyrec':
-            smry_opts = [{'reduce':'mean', 'add':'date,mcnt'}, \
-                        {'reduce':'max', 'add':'date,mcnt'}, \
-                        {'reduce':'min', 'add':'date,mcnt'}]
-            elts = []
-            for el in elements:
-                for sry in smry_opts:
-                    elts.append({'name':str(el),'smry':sry, 'groupby':'year'})
-            params = {area:val, 'sdate':s_date, 'edate':e_date, 'elems':elts}
-        elif self.app_name in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
-            elts = [{'name':el,'interval':'dly','duration':'dly','groupby':'year'} for el in elements]
-            params = {area:val, 'sdate':s_date, 'edate':e_date, 'elems':elts}
-        elif self.app_name in ['Sodlist', 'Sodcnv']:
-            elts=[{'name':el,'add':'t'} for el in elements]
-            params = {area:val, 'sdate':s_date, 'edate':e_date,'elems':elts}
-        else:
-            elts = [{'name':el} for el in elements]
-            params = {area:val, 'sdate':s_date, 'edate':e_date,'elems':elts}
+        sdate, edate = self.set_start_end_date()
+        elems = self.set_request_elements()
+        params = {area:val, 'sdate':sdate, 'edate':edate,'elems':elems}
         return params
+
 
     def format_data(self, request, station_ids, elements):
         '''
