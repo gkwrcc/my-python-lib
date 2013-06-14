@@ -35,7 +35,32 @@ class SODDataJob:
         self.params = data_params
         self.app_specific_params = app_specific_params
         self.app_name = app_name
-
+        self.el_type_element_dict = {
+            'all_small':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
+            'all_large':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
+            'tmp':['maxt', 'mint', 'pcpn'],
+            'both':['max', 'mint', 'avgt', 'pcpn', 'snow'],
+            'temp':['maxt', 'mint', 'avgt'],
+            'prsn':['pcpn', 'snow'],
+            'wtr':['pcpn', 'snow', 'snwd'],
+            'hcd':['hdd','cdd','gdd'],
+            'dd':['hdd','cdd'],
+            'hc':['maxt','mint'],
+            'g':['maxt','mint'],
+            'range':['maxt', 'mint'],
+            'avgt':['maxt', 'mint'],
+            'dtr':['maxt', 'mint'],
+            'dd_raw':['maxt', 'mint'],
+            'pcpn':['pcpn'],
+            'snow':['snow'],
+            'snwd':['snwd'],
+            'maxt':['maxt'],
+            'mint':['mint'],
+            'obst':['obst'],
+            'hdd':['hdd'],
+            'cdd':['cdd'],
+            'gdd':['gdd']
+        }
 
     def set_element_param(self):
         if 'element' in self.params.keys():
@@ -174,52 +199,17 @@ class SODDataJob:
         Get element list for data request
         Element list depends on self.app_name to be run
         '''
-        el = self.set_element_param()
-        el_list = []
-        if self.app_name == 'Soddyrec':
-            if self.params[el] == 'all':
-                el_list = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
-            elif self.params[el] == 'tmp':
-                el_list = ['maxt', 'mint', 'pcpn']
-            elif self.params[el] == 'wtr':
-                el_list = ['pcpn', 'snow', 'snwd']
-            else:
-                elements = [self.params[el]]
+        el_type = self.set_element_param()
+        if self.app_name == 'Soddyrec' and self.params[el_type] == 'all':
+            el_list = self.el_type_element_dict['all_large']
+        elif self.app_name == 'Sodsumm' and self.params[el_type] == 'all':
+            el_list = self.el_type_element_dict['all_small']
         elif self.app_name == 'Soddynorm':
-            el_list = ['maxt', 'mint', 'pcpn']
-        elif self.app_name == 'Sodsumm':
-            if self.params[el] == 'all':
-                el_list = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
-            elif self.params[el] == 'temp':
-                el_list = ['maxt', 'mint', 'avgt']
-            elif self.params[el] == 'prsn':
-                el_list = ['pcpn', 'snow']
-            elif self.params[el] == 'both':
-                el_list = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
-            elif self.params[el] in ['hc', 'g']:
-                el_list = ['maxt', 'mint']
-        elif self.app_name in ['Sodxtrmts', 'Sodpct', 'Sodpiii', 'Sodrunr', 'Sodrun', 'Sodthr']:
-            if self.app_name in ['Sodrun', 'Sodrunr'] and self.params['element'] == 'range':
-                el_list = ['maxt', 'mint']
-            elif self.app_name in ['Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
-                if self.params[el] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
-                    el_list = ['maxt', 'mint']
-                else:
-                    el_list = ['%s' % self.params['element']]
-            else:
-                el_list = ['%s' % self.params['element']]
-        elif self.app_name == 'Sodpad':
-            el_list = ['pcpn']
-        elif self.app_name == 'Soddd':
-            el_list = ['maxt', 'mint']
-        elif self.app_name in ['Sodmonline', 'Sodmonlinemy']:
-            el_list = [self.params['element']]
-        elif self.app_name == 'Sodlist':
-            el_list = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
-        elif self.app_name == 'Sodcnv':
-            el_list = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
+             el_list = self.el_type_element_dict['tmp']
+        elif self.app_name == 'Sodxtrmts' and self.params[el_type] in ['hdd','cdd', 'gdd']:
+            el_list = self.el_type_element_dict['dd_raw']
         else:
-            el_list = [str(el) for el in self.params[el]]
+            el_list = self.el_type_element_dict[self.params[el_type]]
         return el_list
 
     def set_request_params(self):
