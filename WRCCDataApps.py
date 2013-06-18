@@ -2577,8 +2577,6 @@ def Sodsumm(**kwargs):
                             idx_start = time_cats_lens[cat_idx]*yr
                             idx_end = idx_start + time_cats_lens[cat_idx]
                             yr_dat = numpy.array(el_data[el][idx_start:idx_end])
-                            if cat_idx ==12:
-                                print yr_dat
                             if thresh == '90':
                                 yr_dat_thresh = numpy.where((yr_dat >= 90) & (abs(yr_dat + 9999.0) >= 0.05))
                             else:

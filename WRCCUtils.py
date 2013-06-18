@@ -41,24 +41,50 @@ network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purpl
 #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
 
 acis_elements = defaultdict(dict)
-acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'}, \
-              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'}, \
-              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'}, \
-              '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'}, \
-              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'}, \
-              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'}, \
-              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'}, \
-              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'}, \
-              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'}, \
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':'44'}, \
-              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':'45'}, \
+acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':'1'},
+              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':'2'},
+              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':'43'},
+              '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'},
+              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'},
+              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'},
+              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'},
+              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':'7'},
+              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':'45'},
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':'44'},
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':'45'},
               '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':'45'}}
               #bug fix needed for cdd = 44
+
+acis_elements_dict = {
+              'maxt':{'name':'maxt', 'name_long': 'Max Daily Temperature (F)', 'vX':'1'},
+              'mint':{'name':'mint', 'name_long': 'Min Daily Temperature (F)', 'vX':'2'},
+              'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F)', 'vX':'43'},
+              'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range (F)', 'vX':None},
+              'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':'3'},
+              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':'4'},
+              'snow': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':'10'},
+              'snwd': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':'11'},
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':'45'},
+              'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (F)', 'vX':'45'},
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':'45'},
+              'evap': {'name': 'evap', 'name_long':'Evaporation (In)', 'vX':'7'},
+              'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':'12'}
+              #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
+}
 acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
                       ['pcpn', 'Precipitation (In)'], ['snow', 'Snowfall (In)'], \
                       ['snwd', 'Snow Depth (In)'], ['cdd', 'Cooling Degree Days (F)'], \
                       ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)']]
+
+month_names_long = ['January', 'February', 'March', 'April', 'May', 'June',\
+               'July', 'August', 'September', 'October', 'November', 'December']
+month_names_short_cap = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'ANN']
+
+mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+####################################
+#FUNCTIONS
+#####################################
 
 def upload(ftp_server,pub_dir,f):
     '''
