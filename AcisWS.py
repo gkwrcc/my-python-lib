@@ -15,7 +15,7 @@ import sys
 from collections import defaultdict
 #############################################################################
 #WRCC specific modules
-import WRCCUtils, WRCCClasses
+import WRCCUtils, WRCCClasses, WRCCData
 ##############################################################################
 # import modules required by Acis
 import urllib2
@@ -66,32 +66,6 @@ def General(params):
 #Southwest CSC DATA PORTAL modules
 ###################################
 
-#Utilities
-
-kelly_network_codes = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
-'8':'CoCoRaHS', '9':'RCC', '10':'Threadex', '11':'Misc'}
-kelly_network_icons = {'1': 'blue-dot', '2': 'orange-dot', '3': 'ltblue-dot','4':'pink-dot', '5': 'green-dot', \
-'6': 'purple-dot', '7': 'yellow-dot', '8': 'purple', '9':'yellow', '10':'green', '11': 'red'}
-network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
-'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
-network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
-'6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
-#1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
-
-acis_elements = defaultdict(dict)
-acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature(F)', 'vX':'1'}, \
-              '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature(F)', 'vX':'2'}, \
-              '43': {'name':'avgt', 'name_long': 'Average Daily Temperature(F)', 'vX':'43'}, \
-              '3':{'name':'obst', 'name_long': 'Observation Time Temp.(F)', 'vX':'3'}, \
-              '4': {'name': 'pcpn', 'name_long':'Precipitation(In)', 'vX':'4'}, \
-              '10': {'name': 'snow', 'name_long':'Snowfall(In)', 'vX':'10'}, \
-              '11': {'name': 'snwd', 'name_long':'Snow Depth(In)', 'vX':'11'}, \
-              '7': {'name': 'evap', 'name_long':'Pan Evaporation(In)', 'vX':'7'}, \
-              '45': {'name': 'dd', 'name_long':'Degree Days(Days)', 'vX':'45'}, \
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days(Days)'}, 'vX':'44', \
-              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days(Days)'}, 'vX':'45', \
-              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days(Days)'}, 'vX':'45'}
-              #bug fix needed for cdd = 44
 
 ####################################
 #Functions
@@ -126,7 +100,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     for the given time range are listed.
     '''
     stn_list = []
-    stn_json={'network_codes': kelly_network_codes, 'network_icons': kelly_network_icons}
+    stn_json={'network_codes': WRCCData.kelly_network_codes, 'network_icons': WRCCData.kelly_network_icons}
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
     '''
@@ -252,17 +226,17 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 if str(sid_split[1]) == '2':
                     stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.insert(0, str(sid_split[1]))
-                    marker_icons.insert(0, network_icons[str(sid_split[1])])
-                    stn_networks.insert(0,network_codes[str(sid_split[1])])
+                    marker_icons.insert(0, WRCCData.network_icons[str(sid_split[1])])
+                    stn_networks.insert(0,WRCCData.network_codes[str(sid_split[1])])
                 else:
                     stn_sids.append(str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.append(str(sid_split[1]))
                     if int(sid_split[1]) <= 10:
-                        stn_networks.append(network_codes[str(sid_split[1])])
-                        marker_icons.append(network_icons[str(sid_split[1])])
+                        stn_networks.append(WRCCData.network_codes[str(sid_split[1])])
+                        marker_icons.append(WRCCData.network_icons[str(sid_split[1])])
                     else:
                         stn_networks.append('Misc')
-                        marker_icons.append(network_icons['11'])
+                        marker_icons.append(WRCCData.network_icons['11'])
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -283,7 +257,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 available_elements = []
                 for j,rnge in enumerate(valid_date_range_list):
                     if rnge:
-                        available_elements.append([acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
+                        available_elements.append([WRCCData.acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
 
                 if available_elements:
                     stn_dict['available_elements'] = available_elements
@@ -466,7 +440,7 @@ def get_station_data(form_input, program):
                         #Omit duplicates
                         if not idx in idx_empty_list:
                             idx_empty_list.append(idx)
-                network_id_name = WRCCUtils.network_codes[str(sid.split(' ')[1])]
+                network_id_name = WRCCData.network_codes[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
                 if network_id_name == "COOP":
