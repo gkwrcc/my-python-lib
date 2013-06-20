@@ -1169,6 +1169,14 @@ def Sodxtrmts(**kwargs):
                 if annsav[yr][mon] != ' ':
                     outchr[monind] = annsav[yr][mon]
 
+                if (table_1[yr][mon]> 9998.5 or table_1[yr][mon] < -9998.0):
+                    if kwargs['monthly_statistic'] == 'msum' and el_type == 'hdd' and table_1[yr][mon]> 9998.5:
+                        continue
+                    else:
+                        results[i][yr].append('-----')
+                        results[i][yr].append('z')
+                        continue
+
                 if kwargs['departures_from_averages']  == 'F':
                     #results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
                     results[i][yr].append('%.2f' % table_1[yr][mon])
@@ -1177,16 +1185,18 @@ def Sodxtrmts(**kwargs):
                     #results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
                     results[i][yr].append('%.2f' % (table_1[yr][mon] - mean_out[monind]))
                     results[i][yr].append('%s' % outchr[monind])
+
+                '''
                 if table_1[yr][mon] < -9998.0:
                     if mon < 12:
                         #results[i][yr][-1] = '-----z'
-                        results[i][yr][-2] = '-----'
-                        results[i][yr][-1] = 'z'
+                        results[i][yr].append('-----')
+                        results[i][yr].append('z')
                         #results[i][yr].append('z')
                     else:
                         #results[i][yr][-1] = 9999.0
-                        results[i][yr][-2] = 9999.0
-                        results[i][yr][-1] = ' '
+                        results[i][yr].append('-----')
+                        results[i][yr].append(' ')
                         #results[i][yr].append(' ')
 
                 if table_1[yr][mon] > 9998.5:
@@ -1195,11 +1205,12 @@ def Sodxtrmts(**kwargs):
                     else:
                         if mon < 12:
                             #results[i][yr][-1] = '-----z'
-                            results[i][yr][-1] = '-----'
+                            results[i][yr].append('-----')
                             results[i][yr].append('z')
                         else:
-                            results[i][yr][-1] = 9999.0
+                            results[i][yr].append('-----')
                             results[i][yr].append(' ')
+                '''
             #End month loop
         #End of year loop
         #Start for frequency analysis
