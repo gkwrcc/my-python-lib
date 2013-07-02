@@ -873,9 +873,9 @@ def Sodxtrmts(**kwargs):
                             try:
                                 nval_x = int(val_x)
                                 nval_n = int(val_n)
-
                                 if el_type == 'dtr':
                                     value = nval_x - nval_n
+                                    print value
                                 elif el_type == 'avgt':
                                     value = (nval_x + nval_n)/2.0
                                 elif el_type in ['hdd','cdd', 'gdd']:
@@ -888,7 +888,6 @@ def Sodxtrmts(**kwargs):
                                         value = 0
                             except:
                                 value = xmiss
-
                     if kwargs['monthly_statistic'] in ['mmax', 'mmin']:
                         if value > -9998.0:
                             sumda+=1
@@ -1169,7 +1168,7 @@ def Sodxtrmts(**kwargs):
                 if annsav[yr][mon] != ' ':
                     outchr[monind] = annsav[yr][mon]
 
-                if (table_1[yr][mon]> 9998.5 or table_1[yr][mon] < -9998.0):
+                if (table_1[yr][mon]> 9998.5 or table_1[yr][mon] < -9998.0 or outchr[monind] =='z'):
                     if kwargs['monthly_statistic'] == 'msum' and el_type == 'hdd' and table_1[yr][mon]> 9998.5:
                         continue
                     else:
@@ -1738,9 +1737,9 @@ def Sodpct(**kwargs):
                     elif el_type in ['hdd','cdd']:
                         ave = val = (nval_x + nval_n)/2.0
                         if el_type == 'hdd':
-                            val = kwargs['base_temperature'] - ave
+                            val = float(kwargs['base_temperature']) - ave
                         else:
-                            val = ave - kwargs['base_temperature']
+                            val = ave - float(kwargs['base_temperature'])
                         if val < 0:
                             val = 0
                     elif el_type == 'gdd':
@@ -1750,7 +1749,7 @@ def Sodpct(**kwargs):
                             high = kwargs['max_temperature']
                         if low < kwargs['min_temperature']:
                             low = kwargs['min_temperature']
-                        val = (high + low)/2.0 - kwargs['base_temperature']
+                        val = (high + low)/2.0 - float(kwargs['base_temperature'])
                 elif el_type in ['snow', 'snwd', 'pcpn']: #Deal with T,S,A flags
                     dat = el_data[yr][doy]
                     val, flag = WRCCUtils.strip_data(dat)
@@ -2927,9 +2926,9 @@ def Soddd(**kwargs):
                     ave = numpy.ceil(ave)
                 #Compute dd
                 if kwargs['a_b'] == 'b':
-                    dd[yr][doy] = kwargs['base_temp'] - ave
+                    dd[yr][doy] = float(kwargs['base_temp']) - ave
                 else:
-                    dd[yr][doy] = ave - kwargs['base_temp']
+                    dd[yr][doy] = ave - float(kwargs['base_temp'])
                 if dd[yr][doy] < 0:
                     dd[yr][doy] = 0
                 #NCDC roundoff of dd if desired

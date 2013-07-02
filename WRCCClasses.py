@@ -227,7 +227,7 @@ class SODDataJob:
             el_list = self.el_type_element_dict['all_sodsumm']
         elif self.app_name == 'Soddynorm':
              el_list = self.el_type_element_dict['tmp']
-        elif self.app_name == 'Sodxtrmts' and self.params[el_type] in ['hdd','cdd', 'gdd']:
+        elif self.app_name == 'Sodxtrmts' and self.params[el_type] in ['hdd','cdd', 'gdd','dtr']:
             el_list = self.el_type_element_dict['dd_raw']
         else:
             el_list = self.el_type_element_dict[self.params[el_type]]
@@ -240,16 +240,21 @@ class SODDataJob:
         '''
         elements = self.get_element_list()
         elems = []
+        el_dict = self.app_elems_params[self.app_name]
         for el in elements:
-            el_dict = self.app_elems_params[self.app_name]
-            el_dict['name'] = el
+            el_dict_new = {}
+            for key, val in el_dict.iteritems():
+                if key == 'name':
+                    el_dict_new['name'] = el
+                else:
+                    el_dict_new[key] = val
             #We have to add three types of summaries for each element of Soddyrec
             if self.app_name == 'Soddyrec':
                 for smry in self.soddyrec_smry_opts:
-                    el_dict['smry'] = smry
-                    elems.append(el_dict)
+                    el_dict_new['smry'] = smry
+                    elems.append(el_dict_new)
             else:
-                elems.append(el_dict)
+                elems.append(el_dict_new)
         #FIX ME: should need to treat Sodsumm separately
         #but somehow the above code jumbles up the elements
         if self.app_name == 'Sodsumm':
@@ -369,6 +374,7 @@ class SODApplication:
         #Sanity check, make sure data has data
         #if 'error' in self.data.keys() or not self.data['data']:
         #    return {}
+        print app_params.keys()
         Application = getattr(WRCCDataApps, self.app_name)
         if self.app_name == 'Sodxtrmts':
             results, fa_results = Application(**app_params)

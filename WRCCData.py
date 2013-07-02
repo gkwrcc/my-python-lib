@@ -116,7 +116,7 @@ SXTR_ELEMENT_CHOICES = (
     ('maxt', 'Maximum Temperature '),
     ('mint', 'Minimum Temperature'),
     ('avgt', 'Mean Temperature'),
-    ('dtr', 'Temperature Range'),
+    ('dtr', 'Daily Temperature Range'),
     ('hdd', 'Heating Degree Days'),
     ('cdd', 'Cooling Degree Days'),
     ('gdd', 'Growing degree days'),

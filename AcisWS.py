@@ -656,7 +656,6 @@ def get_sod_data(form_input, program):
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
         elems=[dict(name=el)for el in elements])
     request = MultiStnData(params)
-
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
 
@@ -682,9 +681,14 @@ def get_sod_data(form_input, program):
                 if sid_split[1] == '2':
                     #station_id = str(stn_data['meta']['sids'][1].split()[0])
                     station_id = str(sid_split[0])
-                    break
+                    try:
+                        index = coop_station_ids.index(str(station_id))
+                        break
+                    except:
+                        continue
+            index = coop_station_ids.index(str(station_id))
             try:
-                index = coop_station_ids.index(station_id)
+                index = coop_station_ids.index(str(station_id))
                 station_names[index] = str(stn_data['meta']['name'])
                 if program == 'Soddyrec':
                     try:
