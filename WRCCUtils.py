@@ -715,9 +715,14 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
         return [s_date, e_date]
 
     if el_list is None:
-        el_tuple = 'maxt,mint,pcpn,snow,snwd,hdd,gdd,cdd'
+        #el_tuple = 'maxt,mint,pcpn,snow,snwd,hdd,gdd,cdd'
+        el_tuple = '1,2,4,10,11,45'
     else:
-        el_tuple = ','.join(el_list)
+        el_tuple =''
+        for el in el_list:
+            el_tuple+=str(WRCCData.acis_elements_dict[el]['vX'])
+
+        #el_tuple = ','.join(el_list)
     meta_params = {'sids':sid, 'elems':el_tuple, 'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'}
     try:
         request = AcisWS.StnMeta(meta_params)

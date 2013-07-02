@@ -60,26 +60,26 @@ class SODDataJob:
             'hdd':['hdd'],
             'cdd':['cdd'],
             'gdd':['gdd'],
-            'evap':['7.1'],
-            'wind':['12.1']
+            'evap':['evap'],
+            'wdmv':['wdmv']
         }
         self.app_elems_params = {
-            'Soddyrec': {'name':None,'groupby':'year'},
-            'Soddynorm':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodsumm':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodrun':{'name':None},
-            'Sodrunr':{'name':None},
-            'Sodxtrmts':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodpct':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodthr':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodpiii':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodpad':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Soddd':{'name':None,'interval':'dly','duration':'dly','groupby':'year'},
-            'Sodmonline':{'name':None},
-            'Sodsum':{'name':None},
-            'Sodmonlinemy':{'name':None},
-            'Sodlist':{'name':None,'add':'t'},
-            'Sodcnv':{'name':None,'add':'t'}
+            'Soddyrec': {'vX':None,'groupby':'year'},
+            'Soddynorm':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodsumm':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodrun':{'vX':None},
+            'Sodrunr':{'vX':None},
+            'Sodxtrmts':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpct':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodthr':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpiii':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodpad':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Soddd':{'vX':None,'interval':'dly','duration':'dly','groupby':'year'},
+            'Sodmonline':{'vX':None},
+            'Sodsum':{'vX':None},
+            'Sodmonlinemy':{'vX':None},
+            'Sodlist':{'vX':None,'add':'t'},
+            'Sodcnv':{'vX':None,'add':'t'}
         }
         self.soddyrec_smry_opts = [{'reduce':'mean', 'add':'date,mcnt'}, \
                         {'reduce':'max', 'add':'date,mcnt'}, \
@@ -148,13 +148,15 @@ class SODDataJob:
         elif len(self.params['end_date']) == 8:
             e_date = self.params['end_date']
         #deal with por input
+        element_list = self.get_element_list()
+        print element_list
         if self.params['start_date'] == 'por' or self.params['end_date'] == 'por':
             if self.params['start_date'] == 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max')
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max')
             elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', end_date=e_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max', end_date=e_date)
             elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],max_or_min='max', start_date=s_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max', start_date=s_date)
             if vd:
                 s_date = vd[0];e_date=vd[1]
         return s_date, e_date
@@ -244,8 +246,8 @@ class SODDataJob:
         for el in elements:
             el_dict_new = {}
             for key, val in el_dict.iteritems():
-                if key == 'name':
-                    el_dict_new['name'] = el
+                if key == 'vX':
+                    el_dict_new[key] = WRCCData.acis_elements_dict[el]['vX']
                 else:
                     el_dict_new[key] = val
             #We have to add three types of summaries for each element of Soddyrec
