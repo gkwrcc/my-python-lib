@@ -319,13 +319,42 @@ def get_station_data(form_input, program):
         return resultsdict
 
     elements = WRCCUtils.get_element_list(form_input, program)
+    elems_list = []
+    for el in elements:
+        el_strip = el[0:3]
+        try:
+            base_temp = int(el[3:])
+        except:
+            base_temp = None
+        if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
+            elems_list.append(dict(vX=WRCCData.acis_elements_dict[el_strip]['vX'], base=base_temp, add='f,t'))
+        else:
+            elems_list.append(dict(vX=WRCCData.acis_elements_dict[el]['vX'],add='f,t'))
+    params = dict(sdate=s_date, edate=e_date, \
+    meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
+    elems=elems_list)
+    '''
     params = dict(sdate=s_date, edate=e_date, \
         meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
         elems=[dict(name=el, add='f,t')for el in elements])
+    '''
     #Check for por start end dates
     if 'station_id' in form_input.keys():
         if s_date.lower() =='por' or e_date.lower() == 'por':
-            meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
+            #meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
+            elems_list =[]
+            for el in elements:
+                el_strip = el[0:3]
+                try:
+                    base_temp = int(el[3:])
+                except:
+                    base_temp = None
+                if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
+                    elems_list.append(dict(vX=WRCCData.acis_elements_dict[el_strip]['vX'], base=base_temp))
+                else:
+                    elems_list.append(dict(vX=WRCCData.acis_elements_dict[el]['vX']))
+
+            meta_params = dict(sids=form_input['station_id'],elems=elems_list, meta='valid_daterange')
             try:
                 meta_request = StnMeta(meta_params)
                 if not 'meta' in meta_request.keys() or not meta_request['meta']:
@@ -334,7 +363,7 @@ def get_station_data(form_input, program):
             except Exception, e:
                 resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(str(meta_params), str(e))
                 return resultsdict
-            #Find largest daterangie
+            #Find largest daterange
             try:
                 start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][0][8:10]))
                 end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][1][8:10]))
@@ -365,6 +394,7 @@ def get_station_data(form_input, program):
         params['sdate']= s_date
         params['edate'] = e_date
         params['sids'] = form_input['station_id']
+        #print params
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
         #NOTE: ACIS quirk when data request are multiple stations

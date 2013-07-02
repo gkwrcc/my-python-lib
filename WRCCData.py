@@ -49,7 +49,7 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':45},
               '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':44},
               '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':45},
-              '-46': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':45}}
+              '-44': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':44}}
               #bug fix needed for cdd = 44
 
 acis_elements_dict = {
@@ -61,9 +61,9 @@ acis_elements_dict = {
               'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':4},
               'snow': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':10},
               'snwd': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':11},
-              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':45},
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':44},
               'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (F)', 'vX':45},
-              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':45},
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':44},
               'evap': {'name': 'evap', 'name_long':'Evaporation (In)', 'vX':7},
               'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12}
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
