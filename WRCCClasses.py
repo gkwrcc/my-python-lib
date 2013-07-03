@@ -18,12 +18,60 @@ import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
 MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
+class DownloadDataJob:
+    '''
+    Download data to excel, .dat or .txt
+
+    Keyword arguments:
+    app_name         --  Application name, one of the following
+                         Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii, Soddynorm,
+                         Sodrun, Soddd, Sodpct, Sodpad, Sodthr
+    data_fomat       --  One of dlm (.dat), clm (.txt), xl (.xls)
+    delimiter        --  Delimiter separating the data values. One of:
+                         space, tab, comma, colon, pipe
+    json_file        --  File containing the data
+    output_file_name --  Output file name. If None, file name = 'Output'+ time_stamp+ file_extension
+    request          --
+    f                --
+    '''
+    def __init__(self,app_name, data_format, delimiter, json_file, output_file_name=None, request=None, f=None):
+        self.app_name = app_name
+        self.data_format = data_format
+        self.delimiter = delimiter
+        self.json_file = json_file
+        self.output_file_name = output_file_name
+        self.app_data_dict = {
+            'Sodxtrmts':'data'
+        }
+        self.file_extension = {
+            'dlm': '.dat',
+            'clm': '.txt',
+            'xl': '.xls'
+        }
+        self.delimiter = {
+            'space':' ',
+            'tab':'    ',
+            'comma':',',
+            'colon':':',
+            'pipe':'|'
+        }
+
+    def get_time_stamp():
+        return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
+
+    def set_output_file():
+        if self.output_file_name is None:
+            self.output_file_name = 'Output'
+
+    def write_to_file():
+        pass
+
 class SODDataJob:
     '''
     SOD Data class.
 
     Keyword arguments:
-    app_name -- application name, on of the following
+    app_name -- application name, one of the following:
     Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii, Soddynorm,
     Sodrun, Soddd, Sodpct, Sodpad, Sodthr
     data_params -- parameter dictionary for ACIS-WS call
@@ -149,14 +197,13 @@ class SODDataJob:
             e_date = self.params['end_date']
         #deal with por input
         element_list = self.get_element_list()
-        print element_list
         if self.params['start_date'] == 'por' or self.params['end_date'] == 'por':
             if self.params['start_date'] == 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max')
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min')
             elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max', end_date=e_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min', end_date=e_date)
             elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
-                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='max', start_date=s_date)
+                vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min', start_date=s_date)
             if vd:
                 s_date = vd[0];e_date=vd[1]
         return s_date, e_date
@@ -394,7 +441,7 @@ class SodGraphicsJob:
 
 
     Keyword arguments:
-    app_name    -- application name, on of the following
+    app_name    -- application name, one of the following
                     Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii,
                     Sodrun, Soddd, Sodpct, Sodpad, Sodthr, Soddynorm
     datadict    --  dictionary containing results of SODDataJob

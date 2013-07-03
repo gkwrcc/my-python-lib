@@ -790,7 +790,7 @@ def Sodxtrmts(**kwargs):
             else:
                 results[i][yr] = [str(year)]
         results[i][num_yrs] = ['MEAN'];results[i][num_yrs+1]=['S.D.']
-        results[i][num_yrs+2] = ['SKW10'];results[i][num_yrs+3]=['MAX']
+        results[i][num_yrs+2] = ['SKW'];results[i][num_yrs+3]=['MAX']
         results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YEARS']
         #Read in Pearson III lookup tables/to be done
         #PIII = []
@@ -1134,7 +1134,7 @@ def Sodxtrmts(**kwargs):
                 xm3 = h3 - 3.0*h1*h2 + 2.0*h1**3
                 if abs(xm2) > 0.00001:
                     try:
-                        sk = xm3 * 10 / (xm2*numpy.sqrt(xm2))
+                        sk = xm3 / (xm2*numpy.sqrt(xm2))
                     except:
                         sk = 0.0
 
