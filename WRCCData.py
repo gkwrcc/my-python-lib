@@ -7,6 +7,7 @@ Contains useful dicts and lists
 CAPS names imply use in django forms
 '''
 from collections import defaultdict
+from collections import OrderedDict
 
 #################################
 #General
@@ -104,9 +105,32 @@ delimiters = {
     'pipe':'|'
 }
 
+#width, height in pixels
+image_sizes = {
+    'small':[510, 290],
+    'medium':[650, 370],
+    'large':[850, 480],
+    'larger':[1150, 610],
+    'extra_large':[1450, 820],
+    'wide':[1850, 610],
+    'wider':[2450, 610],
+    'widest':[3450, 610],
+}
+
 ###################################
 #SODS
 ###################################
+IMAGE_SIZES = (
+    ('small', 'Small (510x290)'),
+    ('medium', 'Medium (650x370)'),
+    ('large', 'Large (850x480)'),
+    ('larger', 'Larger (1150x610)'),
+    ('extra_large', 'Extra Large (1450x820)'),
+    ('wide', 'Wide (1850x610)'),
+    ('wider', 'Wider (2450x610)'),
+    ('widest', 'Widest (3450x610)'),
+)
+
 ###########
 #SODXTRMTS
 ###########
@@ -173,14 +197,19 @@ sodxtrmts_params = {
     'frequency_analysis': 'Frequency Analysis',
     'T':True,
     'F':False,
-    'less_greater_or_between': 'Less Than, Greater or Between?',
-    'l':'Less Than',
-    'g':'Greater Than',
+    'pearson':'Pearson III',
+    'gev':'Generalized Extreme Value',
+    'less_greater_or_between': 'Number of days',
+    'l':'Below',
+    'g':'Above',
     'b':'Between',
     'threshold_low_for_between':'Lower Threshold',
     'threshold_high_for_between':'Upper Threshold',
-    'threshold_for_less_or_greater':'Threshold'
+    'threshold_for_less_or_greater':'Threshold',
+    'less':'Threshold',
+    'greater':'Threshold',
 }
+
 
 sodxtrmts_visualize_params = {
     'months': 'Months analized',
