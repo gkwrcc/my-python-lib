@@ -42,10 +42,10 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':2},
               '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':43},
               '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':3},
-              '4': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':4},
-              '10': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':10},
-              '11': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':11},
-              '7': {'name': 'evap', 'name_long':'Pan Evaporation (In)', 'vX':7},
+              '4': {'name': 'pcpn', 'name_long':'Precipitation (in)', 'vX':4},
+              '10': {'name': 'snow', 'name_long':'Snowfall (in)', 'vX':10},
+              '11': {'name': 'snwd', 'name_long':'Snow Depth (in)', 'vX':11},
+              '7': {'name': 'evap', 'name_long':'Pan Evaporation (in)', 'vX':7},
               '12': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12},
               '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':45},
               '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':44},
@@ -59,21 +59,21 @@ acis_elements_dict = {
               'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F)', 'vX':43},
               'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range (F)', 'vX':None},
               'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':3},
-              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (In)', 'vX':4},
-              'snow': {'name': 'snow', 'name_long':'Snowfall (In)', 'vX':10},
-              'snwd': {'name': 'snwd', 'name_long':'Snow Depth (In)', 'vX':11},
+              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (in)', 'vX':4},
+              'snow': {'name': 'snow', 'name_long':'Snowfall (in)', 'vX':10},
+              'snwd': {'name': 'snwd', 'name_long':'Snow Depth (in)', 'vX':11},
               'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':44},
               'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (F)', 'vX':45},
               'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':44},
-              'evap': {'name': 'evap', 'name_long':'Evaporation (In)', 'vX':7},
+              'evap': {'name': 'evap', 'name_long':'Evaporation (in)', 'vX':7},
               'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12}
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
 }
 
 acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
-                      ['pcpn', 'Precipitation (In)'], ['snow', 'Snowfall (In)'], \
-                      ['snwd', 'Snow Depth (In)'], ['cdd', 'Cooling Degree Days (F)'], \
+                      ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
+                      ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days (F)'], \
                       ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)']]
 
 month_names_long = ['January', 'February', 'March', 'April', 'May', 'June',\
@@ -135,18 +135,18 @@ IMAGE_SIZES = (
 #SODXTRMTS
 ###########
 SXTR_ELEMENT_CHOICES = (
-    ('pcpn', 'Precipitation'),
-    ('snow', 'Snowfall'),
-    ('snwd', 'Snowdepth'),
-    ('maxt', 'Maximum Temperature '),
-    ('mint', 'Minimum Temperature'),
-    ('avgt', 'Mean Temperature'),
+    ('pcpn', 'Daily Precipitation'),
+    ('snow', 'Daily Snowfall'),
+    ('snwd', 'Daily Snowdepth'),
+    ('maxt', 'Daily Maximum Temperature '),
+    ('mint', 'Daily Minimum Temperature'),
+    ('avgt', 'Daily Mean Temperature'),
     ('dtr', 'Daily Temperature Range'),
-    ('hdd', 'Heating Degree Days'),
-    ('cdd', 'Cooling Degree Days'),
-    ('gdd', 'Growing degree days'),
-    ('evap', 'Evaporation'),
-    ('wind', 'Wind Movement'),
+    ('hdd', 'Daily Heating Degree Days'),
+    ('cdd', 'Daily Cooling Degree Days'),
+    ('gdd', 'DailyGrowing degree days'),
+    ('evap', 'Daily Evaporation'),
+    ('wind', 'Daily Wind Movement'),
 )
 
 SXTR_ANALYSIS_CHOICES = (
@@ -172,7 +172,15 @@ SXTR_SUMMARY_CHOICES = (
     ('min', 'Minimium over months'),
     ('sum', 'Sum over months'),
     ('mean', 'Avererage over months'),
-    ('individual', 'Plot months separately')
+    ('individual', 'Plot months separately'),
+)
+
+MARKER_CHOICES = (
+    ('diamond', 'Diamond'),
+    ('circle', 'Circle'),
+    ('square', 'Square'),
+    ('triangle', 'Upward Triangle'),
+    ('triangle-down', 'Downward Triangle'),
 )
 
 sodxtrmts_params = {

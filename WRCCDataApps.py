@@ -790,7 +790,7 @@ def Sodxtrmts(**kwargs):
             else:
                 results[i][yr] = [str(year)]
         results[i][num_yrs] = ['MEAN'];results[i][num_yrs+1]=['S.D.']
-        results[i][num_yrs+2] = ['SKW'];results[i][num_yrs+3]=['MAX']
+        results[i][num_yrs+2] = ['SKEW'];results[i][num_yrs+3]=['MAX']
         results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YEARS']
         #Read in Pearson III lookup tables/to be done
         #PIII = []
@@ -1004,7 +1004,7 @@ def Sodxtrmts(**kwargs):
                         nummsg = mon_len - sumda
                         if nda  == mon_len -1:
                             if el_type in ['hdd', 'cdd', 'gdd']:
-                                if nummsg != 0 and nummsg < kwargs['max_missing_days'] and sumda > 0.5:
+                                if nummsg != 0 and nummsg <= kwargs['max_missing_days'] and sumda > 0.5:
                                     summ = summ/sumda * float(mon_len -1)
 
                         if nda  == mon_len -1:
@@ -1040,7 +1040,7 @@ def Sodxtrmts(**kwargs):
                     sumann+=summon
 
                 elif kwargs['monthly_statistic'] in ['mave', 'ndays', 'msum']:
-                    if int(summon) < int(kwargs['max_missing_days']):
+                    if int(summon) <= int(kwargs['max_missing_days']):
                         sumann+=valmon
                         count+=1
 
@@ -1094,7 +1094,7 @@ def Sodxtrmts(**kwargs):
                 #For annual totals, ignore years with at least one
                 #Month that does not meet the missing day criterium
                 if mon <= 11:
-                    if missng < int(kwargs['max_missing_days']):
+                    if missng <= int(kwargs['max_missing_days']):
                         summ+=value
                         summ2+= value**2
                         summ3+=value**3
@@ -1239,7 +1239,7 @@ def Sodxtrmts(**kwargs):
                 dat = table_1[nyear][nmo]
                 misng = table_2[nyear][nmo]
                 if abs(dat) < 9998.5:
-                    if int(misng) < kwargs['max_missing_days']:
+                    if int(misng) <= kwargs['max_missing_days']:
                         numdat+=1
                         xdata[numdat-1] = dat
                         if dat > 0.005:numnz+=1
