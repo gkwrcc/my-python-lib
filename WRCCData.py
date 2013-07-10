@@ -131,6 +131,12 @@ IMAGE_SIZES = (
     ('widest', 'Widest (3450x610)'),
 )
 
+HEADERS = {
+    'Sodxtrmts': ['YEAR', 'JAN', 'FLAG', 'FEB', 'FLAG', 'MAR', 'FLAG', 'APR', 'FLAG', 'MAY', 'FLAG', \
+                  'JUN', 'FLAG', 'JUL', 'FLAG', 'AUG', 'FLAG', 'SEP', 'FLAG', 'OCT', 'FLAG', 'NOV', \
+                  'FLAG', 'DEC', 'FLAG', 'ANN', 'FLAG']
+}
+
 ###########
 #SODXTRMTS
 ###########

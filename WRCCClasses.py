@@ -16,6 +16,7 @@ import base64
 import datetime
 import csv
 from xlwt import Workbook
+from django.http import HttpResponse
 
 #WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
@@ -35,17 +36,19 @@ class DownloadDataJob:
                          space, tab, comma, colon, pipe
     json_in_file     --  Abs path to  file containing the data, json file content must be a dict
     data             --  List object containg the row data
-    output_file      --  Abs Path to output file. Default: '/tmp/Output'+ time_stamp+ file_extension
-    request          --
-    f                --
+    output_file_name --  Output file name. Default: Output. will be saved to /tmp/output_file_name_time_stamp
+    request          --  html request object. If None, data will be saved to '/tmp/Output_time_stamp.file_extension'.
+                         If request object is given , data will be saved in output file on the client.
     '''
-    def __init__(self,app_name, data_format, delimiter,request=None, output_file=None, json_in_file=None, data=[]):
+    def __init__(self,app_name, data_format, delimiter, output_file_name, request=None, json_in_file=None, data=[], flags=None):
         self.app_name = app_name
         self.data = data
         self.data_format = data_format
         self.delimiter = delimiter
+        self.request = request
         self.json_in_file = json_in_file
-        self.output_file = output_file
+        self.output_file_name = output_file_name
+        self.flags = flags
         self.app_data_dict = {
             'Sodxtrmts':'data'
         }
@@ -56,27 +59,32 @@ class DownloadDataJob:
         }
         self.delimiter_dict = {
             'space':' ',
-            'tab':'    ',
+            'tab':'\t',
             'comma':',',
             'colon':':',
             'pipe':'|'
         }
         self.headers = {
-            'Sodxtrmts':['YEAR'] + WRCCData.month_names_short_cap + ['ANN']
+            'Sodxtrmts':WRCCData.HEADERS['Sodxtrmts']
         }
-    def get_time_stamp():
+    def get_time_stamp(self):
         return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
 
-    def set_output_file_name():
-        f = self.output_file.split('/')[-1]
-        return f.split('.')[-1]
+    def set_output_file_path(self):
+        file_extension = self.file_extension[self.data_format]
+        if self.output_file_name == 'Output':
+            time_stamp = self.get_time_stamp()
+            f_path = '/tmp/' + 'Output_' + time_stamp + file_extension
+        else:
+            f_path = '/tmp/' + self.output_file_name + file_extension
+        return f_path
 
-    def get_row_data():
-        if data:
-            return data
+    def get_row_data(self):
+        if self.data:
+            return self.data
 
         try:
-            with open(json_in_file, 'r') as json_f:
+            with open(self.json_in_file, 'r') as json_f:
                 #need unicode converter since json.loads writes unicode
                 json_data = WRCCUtils.u_convert(json.loads(json_f.read()))
         except Exception, e:
@@ -87,20 +95,21 @@ class DownloadDataJob:
             data = []
         return data
 
-    def write_to_csv(header, data, output_file_name):
-        if request:
+    def write_to_csv(self,header, data):
+        if self.request:
             response = HttpResponse(mimetype='text/csv')
-            response['Content-Disposition'] = 'attachment;filename=%s_%s%s' % (output_file_name,time_stamp,self.file_extension[data_format])
-            writer = csv.writer(response, delimiter=self.delimiter_dict[delimiter])
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
+            writer = csv.writer(response, delimiter=self.delimiter_dict[self.delimiter])
 
-        else: #file f given
+        else: #write to file
             try:
+                output_file = self.set_output_file_path()
                 csvfile = open(output_file, 'w+')
-                writer = csv.writer(csvfile, delimiter=self.delimiter_dict[delimiter])
+                writer = csv.writer(csvfile, delimiter=self.delimiter_dict[self.delimiter])
                 response = None
             except Exception, e:
                 #Can' open user given file, create emergency writer object
-                writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[delimiter])
+                writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[self.delimiter])
                 response = 'Error! Cant open file' + str(e)
         row = header
         writer.writerow(row)
@@ -112,7 +121,7 @@ class DownloadDataJob:
             pass
         return response
 
-    def write_to_excel(header, data, output_file_name):
+    def write_to_excel(self,header, data):
         wb = Workbook()
         #Note row number limit is 65536 in some excel versions
         row_number = 0
@@ -142,49 +151,46 @@ class DownloadDataJob:
                 except Exception, e:
                     response = 'Excel write error:' + str(e)
                     break
-        if output_file:
+        if self.request:
+            response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
+            response['Content-Disposition'] = 'attachment;filename=%s.%s' % (self.output_file_name,self.file_extension[self.data_format])
+            wb.save(response)
+        else: #write to file
             try:
+                output_file = self.set_output_file_path()
                 wb.save(output_file)
                 response = None
             except Exception, e:
                 response = 'Excel save error:' + str(e)
-        else: # request
-            response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-            response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (output_file_name,time_stamp,self.file_extension[data_format])
-            wb.save(response)
         return response
 
-    def write_to_json(header, data, output_file_name):
-        if f:
-            with open(f, 'w+') as jsonf:
+    def write_to_json(self,header, data):
+        if request:
+            response = json.dumps({'header':header,'data':data})
+        else:
+            output_file = self.set_output_file_path()
+            with open(output_file, 'w+') as jsonf:
                 json.dump(data, jsonf)
                 response = None
-        else:
-            response = json.dumps({'header':header,'data':data})
         return response
 
-    def write_to_file():
-        output_file_name = set_output_file_name()
+    def write_to_file(self):
         time_stamp = self.get_time_stamp()
         header = self.headers[self.app_name]
         data = self.get_row_data()
         #Sanity Check
-        if not f and not request:
-            return 'Error! Need either a file or a reqest object!'
-        elif f and request:
-            return 'Error! Only one allowed: file or request'
-        if not json_in_file and not data:
+        if not self.json_in_file and not self.data:
             return 'Error! Need either a data object or a json file that contains data!'
-        if json_in_file and data:
+        if self.json_in_file and self.data:
             return 'Error! Only one allowed: json_file path OR data'
 
         #Write data to file
         if self.data_format in ['dlm', 'clm']:
-            response = self.write_to_csv(header, data, output_file_name)
+            response = self.write_to_csv(header, data)
         elif self.data_format == 'json':
-            response = self.write_to_json(header, data, output_file_name)
+            response = self.write_to_json(header, data)
         elif self.data_format == 'xl':
-            response = self.write_to_excel(header, data, output_file_name)
+            response = self.write_to_excel(header, data)
 
         return response
 
