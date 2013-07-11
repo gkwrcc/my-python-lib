@@ -102,38 +102,40 @@ def find_mon_len(year,mon):
     m_idx = int(str(mon).lstrip('0')) -1
     return mon_lens[m_idx]
 
-def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, file_info=None):
+def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, output_file_name=None):
     '''
     Writes gridded data to a file.
 
     Keyword aruments:
-    data           -- data to write to file
-    elements       -- list of climate elements
-    delim          -- delimiter used to separate data vaules
-    file_extension -- format of output data file (.dat, .txt, .xls)
-    f              -- file name (default None)
-    request        -- data request object (default None)
-    file_info      -- extra information about name of output file (if f not given)
+    data             -- data to write to file
+    elements         -- list of climate elements
+    delim            -- delimiter used to separate data vaules
+    file_extension   -- format of output data file (.dat, .txt, .xls)
+    f                -- file name (default None)
+    request          -- data request object (default None)
+    output_file_name -- Name of output file. If default DataRequest, a time stamp will be added.
 
     If a file f is given, data will be written to file.
     If a request object is given, the file will be generated
     via the CSC webpages
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    #set file name
+    if not output_file_name or output_file_name == 'DataRequest':
+        file_name = 'DataRequest_'+ time_stamp
+    else:
+        file_name = output_file_name
     #sanity check:
     if not f and not request:
         response = 'Error! Need either a file or a reqest object!'
     elif f and request:
         response = 'Error! Choose one of file f or request object'
     else:
-        if file_extension in ['dat', 'txt']:
+        if file_extension in ['.dat', '.txt']:
             import csv
             if request:
-                #make sure file_info is given
-                if not file_info:
-                    file_info = ['data', 'request']
                 response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
                 writer = csv.writer(response, delimiter=delim )
             else: #file f given
                 try:
@@ -154,7 +156,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 csvfile.close()
             except:
                 pass
-        elif file_extension == 'json':
+        elif file_extension == '.json':
             with open(f, 'w+') as jsonf:
                 import json
                 json.dump(data, jsonf)
@@ -201,48 +203,48 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                 except Exception, e:
                     response = 'Excel save error:' + str(e)
             else: # request
-                if not file_info:
-                    file_info = ['data', 'request']
                 response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
                 wb.save(response)
     return response
 
-def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, file_info=None, show_flags='F', show_observation_time='F'):
+def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
     '''
     Writes station data to a file.
 
     Keyword aruments:
-    data           -- data to write to file
-    dates          -- list of dates of data request
-    station_names  -- list of station names of data request
-    station_ids    -- list of station ids of data request
-    elements       -- list of climate elements
-    delim          -- delimiter used to separate data vaules
-    file_extension -- format of output data file (.dat, .txt, .xls)
-    f              -- file name (default None)
-    request        -- data request object (default None)
-    file_info      -- extra information about name of output file (if f not given)
+    data             -- data to write to file
+    dates            -- list of dates of data request
+    station_names    -- list of station names of data request
+    station_ids      -- list of station ids of data request
+    elements         -- list of climate elements
+    delim            -- delimiter used to separate data vaules
+    file_extension   -- format of output data file (.dat, .txt, .xls)
+    f                -- file name (default None)
+    request          -- data request object (default None)
+    output_file_name -- Name of output file. If default DataRequest, a time stamp will be added.
 
     If a file f is given, data will be written to file.
     If a request object is given, the file will be generated
     via the CSC webpages
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    #set file name
+    if not output_file_name or output_file_name == 'DataRequest':
+        file_name = 'DataRequest_'+ time_stamp
+    else:
+        file_name = output_file_name
     #sanity check:
     if not f and not request:
         response = 'Error! Need either a file or a reqest object!'
     elif f and request:
         response = 'Error! Choose one of file f or request object'
     else:
-        if file_extension in ['dat', 'txt']:
+        if file_extension in ['.dat', '.txt']:
             import csv
             if request:
-                #make sure file_info is given
-                if not file_info:
-                    file_info = ['data', 'request']
                 response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp,file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
                 writer = csv.writer(response, delimiter=delim )
             else: #file f given
                 try:
@@ -286,11 +288,11 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                             row.append(val[1])
                             row.append(val[2])
                     writer.writerow(row)
-        elif file_extension == 'json':
+        elif file_extension == '.json':
             with open(f, 'w+') as jsonf:
                 jsonf.write(json.dumps(data))
                 response = None
-        else: #Excel
+        elif file_extension == '.xls': #Excel
             from xlwt import Workbook
             wb = Workbook()
             for stn, dat in enumerate(data):
@@ -350,10 +352,8 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                 except:
                     response = 'Error saving excel work boook to file %s' % f
             else: # request
-                if not file_info:
-                    file_info = ['data', 'request']
                 response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s_%s_%s.%s' % (file_info[0], file_info[1], time_stamp, file_extension)
+                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name, file_extension)
                 wb.save(response)
         return response
 

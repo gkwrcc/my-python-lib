@@ -82,6 +82,15 @@ month_names_short_cap = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
 
 month_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
+delimiters = {
+    'comma':',',
+    'tab':' ',
+    'colon': ':',
+    'space': ' ',
+    'pipe':'|'
+}
+
+#FORM CHOICES
 MONTH_CHOICES = (
     ('01', 'January'),
     ('02', 'February'),
@@ -97,13 +106,22 @@ MONTH_CHOICES = (
     ('12', 'December'),
 )
 
-delimiters = {
-    'comma':',',
-    'tab':' ',
-    'colon': ':',
-    'space': ' ',
-    'pipe':'|'
+#Data Formats
+file_extensions= {
+    'json':'.json',
+    'clm':'.txt',
+    'dlm':'.dat',
+    'xl':'.xls',
+    'html':'.html'
 }
+
+DATA_FORMAT_CHOICES_LTD = (
+    #('json', 'JSON, .json'),
+    ('dlm', 'Delimited, .dat'),
+    ('clm', 'Columnar, .txt'),
+    ('xl', 'Excel, .xls'),
+
+)
 
 #width, height in pixels
 image_sizes = {
@@ -116,6 +134,7 @@ image_sizes = {
     'wider':[2450, 610],
     'widest':[3450, 610],
 }
+
 
 ###################################
 #SODS
