@@ -147,11 +147,26 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
                     writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
                     response = 'Error! Cant open file' + str(e)
 
-            row = [':Date', 'Lat', 'Lon', 'Elev']
-            for el in elements:row.append(el)
+            #Find length of date values
+            date_len = len(data[0][0])
+            spaces = date_len - 5
+            date_space = ''
+            for i in range(spaces):
+                date_space+= ' '
+            row = [':date' + date_space, '     Lat', '     Lon', '   Elev']
+            for el in elements:row.append('%7s' % str(el))
             writer.writerow(row)
             for date_idx, date_vals in enumerate(data):
-                writer.writerow(date_vals)
+                row = []
+                for idx, dat in enumerate(date_vals):
+                    if idx == 0:
+                        row.append(dat)
+                    elif idx in [1,2]:
+                        row.append('%8s' % str(dat))
+                    else:
+                        row.append('%7s' % str(dat))
+                writer.writerow(row)
+                #writer.writerow(date_vals)
             try:
                 csvfile.close()
             except:
@@ -258,16 +273,16 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
             for stn, dat in enumerate(data):
                 row = [':Station ID: %s' %str(station_ids[stn][0]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
                 writer.writerow(row)
-                row = [':date']
+                row = [':date   ']
                 for el in elements:
                     if show_flags == 'F' and show_observation_time == 'F':
-                        row.append(el)
+                        row.append('%7s' % str(el))
                     elif show_flags == 'T' and show_observation_time == 'F':
-                        row.append(el);row.append('flag')
+                        row.append(el);row.append('   flag')
                     elif show_flags == 'F' and show_observation_time == 'T':
-                        row.append(el);row.append('obs time')
+                        row.append('%7s' % str(el));row.append('ObsTime')
                     else:
-                        row.append(el);row.append('flag');row.append('obs time')
+                        row.append('%7s' % str(el));row.append('   flag');row.append('ObsTime')
                 writer.writerow(row)
 
                 for j, vals in enumerate(dat):
@@ -276,17 +291,17 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     row.append(vals[0])
                     for val in vals[1:]:
                         if show_flags == 'F' and show_observation_time == 'F':
-                            row.append(val[0])
+                            row.append('%7s' % str(val[0]))
                         elif show_flags == 'T' and show_observation_time == 'F':
-                            row.append(val[0])
-                            row.append(val[1])
+                            row.append('%7s' % str(val[0]))
+                            row.append('%7s' % str(val[1]))
                         elif show_flags == 'F' and show_observation_time == 'T':
-                            row.append(val[0])
-                            row.append(val[2])
+                            row.append('%7s' % str(val[0]))
+                            row.append('%7s' % str(val[2]))
                         else:
-                            row.append(val[0])
-                            row.append(val[1])
-                            row.append(val[2])
+                            row.append('%7s' % str(val[0]))
+                            row.append('%7s' % str(val[1]))
+                            row.append('%7s' % str(val[2]))
                     writer.writerow(row)
         elif file_extension == '.json':
             with open(f, 'w+') as jsonf:
@@ -429,7 +444,7 @@ def format_grid_data(req, params):
         date_range = '%s - %s' %(start_date, end_date)
         if 'location' in prms.keys():
             #Single gridpoint format
-            data_out = [[date_range, lons[0][0], lats[0][0]]]
+            data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]
             for val in data['data']:
                 data_out[0].append(val)
         else:
@@ -445,8 +460,8 @@ def format_grid_data(req, params):
                 for lat_idx, lat in enumerate(lat_grid):
                     idx+=1
                     data_out[idx].append(date_range)
-                    data_out[idx].append(lons[grid_idx][lat_idx])
-                    data_out[idx].append(lat)
+                    data_out[idx].append(round(lons[grid_idx][lat_idx],2))
+                    data_out[idx].append(round(lat,2))
                     data_out[idx].append(elevs[grid_idx][lat_idx])
 
                     for el_idx in range(len(data['data'])):
@@ -469,8 +484,8 @@ def format_grid_data(req, params):
         for date_idx, date_vals in enumerate(data['data']):
             if 'location' in prms.keys():
                 data_out[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
-                data_out[date_idx].append(lons[0][0])
-                data_out[date_idx].append(lats[0][0])
+                data_out[date_idx].append(round(lons[0][0],2))
+                data_out[date_idx].append(round(lats[0][0],2))
                 data_out[date_idx].append(elevs[0][0])
 
                 for el_idx in range(1,len(el_list) + 1):
@@ -481,8 +496,8 @@ def format_grid_data(req, params):
                     for lat_idx, lat in enumerate(lat_grid):
                         idx+=1
                         data_out[idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
-                        data_out[idx].append(lons[grid_idx][lat_idx])
-                        data_out[idx].append(lat)
+                        data_out[idx].append(round(lons[grid_idx][lat_idx],2))
+                        data_out[idx].append(round(lat,2))
                         data_out[idx].append(elevs[grid_idx][lat_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
