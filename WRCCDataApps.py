@@ -1023,7 +1023,11 @@ def Sodxtrmts(**kwargs):
             annminh = 9999.001
             sumann = 0.0
             for mon in range(12):
-                valmon = table_1[yr][mon]
+                if el_type in ['snow', 'pcpn', 'snwd']:
+                    valmon = round(table_1[yr][mon],2)
+                else:
+                    valmon = table_1[yr][mon]
+                #valmon = table_1[yr][mon]
                 summon = table_2[yr][mon]
                 if kwargs['monthly_statistic'] == 'mmax':
                     if el_type in ['snow', 'pcpn']:
@@ -1087,7 +1091,12 @@ def Sodxtrmts(**kwargs):
             count = 0.0
 
             for yr in range(num_yrs):
-                value = table_1[yr][mon]
+                if el_type in ['snow', 'pcpn', 'snwd']:
+                    value = round(table_1[yr][mon],2)
+                else:
+                    value = table_1[yr][mon]
+
+                #value = table_1[yr][mon]
                 missng = table_2[yr][mon]
 
                 #Treat monthly totals and annual totals differently

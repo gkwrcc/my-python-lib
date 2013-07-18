@@ -50,7 +50,8 @@ class DownloadDataJob:
         self.output_file_name = output_file_name
         self.flags = flags
         self.app_data_dict = {
-            'Sodxtrmts':'data'
+            'Sodxtrmts':'data',
+            'Sodsumm':'table_data'
         }
         self.file_extension = {
             'dlm': '.dat',
@@ -65,7 +66,8 @@ class DownloadDataJob:
             'pipe':'|'
         }
         self.headers = {
-            'Sodxtrmts':WRCCData.HEADERS['Sodxtrmts']
+            'Sodxtrmts':WRCCData.HEADERS['Sodxtrmts'],
+            'Sodsumm':None
         }
     def get_time_stamp(self):
         return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
@@ -178,6 +180,15 @@ class DownloadDataJob:
         time_stamp = self.get_time_stamp()
         header = self.headers[self.app_name]
         data = self.get_row_data()
+        if self.app_name == 'Sodsumm':
+            try:
+                header = data[0]
+            except:
+                header = []
+            try:
+                data = data[1:]
+            except:
+                data = []
         #Sanity Check
         if not self.json_in_file and not self.data:
             return 'Error! Need either a data object or a json file that contains data!'

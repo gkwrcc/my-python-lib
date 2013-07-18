@@ -54,8 +54,8 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               #bug fix needed for cdd = 44
 
 acis_elements_dict = {
-              'maxt':{'name':'maxt', 'name_long': 'Max Daily Temperature (F)', 'vX':1},
-              'mint':{'name':'mint', 'name_long': 'Min Daily Temperature (F)', 'vX':2},
+              'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':1},
+              'mint':{'name':'mint', 'name_long': 'Mininimum Daily Temperature (F)', 'vX':2},
               'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F)', 'vX':43},
               'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range (F)', 'vX':None},
               'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':3},
@@ -68,6 +68,9 @@ acis_elements_dict = {
               'evap': {'name': 'evap', 'name_long':'Evaporation (in)', 'vX':7},
               'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12}
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
+}
+
+units = {
 }
 
 acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
@@ -153,7 +156,8 @@ IMAGE_SIZES = (
 HEADERS = {
     'Sodxtrmts': ['YEAR', 'JAN', 'FLAG', 'FEB', 'FLAG', 'MAR', 'FLAG', 'APR', 'FLAG', 'MAY', 'FLAG', \
                   'JUN', 'FLAG', 'JUL', 'FLAG', 'AUG', 'FLAG', 'SEP', 'FLAG', 'OCT', 'FLAG', 'NOV', \
-                  'FLAG', 'DEC', 'FLAG', 'ANN', 'FLAG']
+                  'FLAG', 'DEC', 'FLAG', 'ANN', 'FLAG'],
+    'Sodsumm':None
 }
 
 ###########
@@ -254,4 +258,58 @@ sodxtrmts_visualize_params = {
     'individual':'Plot months separately'
 }
 
+#SODSUMM
+tab_names_with_graphics = {
+'all': ['Temp', 'Precip', 'Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
+'both':['Temperature', 'Precip', 'Snow'],
+'temp':['Temperature'],
+'prsn':['Precip', 'Snow'],
+'hc':['Hdd', 'Cdd'],
+'g':['Gdd', 'Corn']
+}
 
+tab_names_no_graphics = {
+'all':['Temp', 'Precip/Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
+'both':['Temp', 'Precip/Snow'],
+'temp':['Temperature'],
+'prsn':['Precip/Snow'],
+'hc':['Hdd', 'Cdd'],
+'g':['Gdd', 'Corn']
+}
+
+
+tab_list_with_graphics = {
+'all': ['temp', 'pcpn', 'snow', 'hdd', 'cdd', 'gdd', 'corn'],
+'both':['temp', 'pcpn', 'snow'],
+'temp':['temp'],
+'prsn':['pcpn', 'snow'],
+'hc':['hdd', 'cdd'],
+'g':['gdd', 'corn']
+}
+
+tab_list_no_graphics = {
+'all':['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn'],
+'both':['temp', 'prsn'],
+'temp':['temp'],
+'prsn':['prsn'],
+'hc':['hdd', 'cdd'],
+'g':['gdd', 'corn']
+}
+
+table_list_with_graphics = {
+'all':['temp', 'prsn', 'prsn', 'hdd', 'cdd', 'gdd', 'corn'],
+'both':['temp', 'prsn', 'prsn'],
+'temp':['temp'],
+'prsn':['prsn', 'prsn'],
+'hc':['hdd', 'cdd'],
+'g':['gdd', 'corn']
+}
+
+table_list_no_graphics = {
+'all':['temp','prsn', 'hdd', 'cdd', 'gdd', 'corn'],
+'both':['temp''prsn'],
+'temp':['temp'],
+'prsn':['prsn'],
+'hc':['hdd', 'cdd'],
+'g':['gdd', 'corn']
+}
