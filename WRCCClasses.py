@@ -113,10 +113,15 @@ class DownloadDataJob:
                 #Can' open user given file, create emergency writer object
                 writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[self.delimiter])
                 response = 'Error! Cant open file' + str(e)
-        row = header
+        #row = header
+        row = ['%8s' %str(h) for h in header]
         writer.writerow(row)
         for row_idx, row in enumerate(data):
-            writer.writerow(row)
+            row_formatted = []
+            for idx, r in enumerate(row):
+                row_formatted.append('%8s' %str(r))
+            writer.writerow(row_formatted)
+            #writer.writerow(row)
         try:
             csvfile.close()
         except:
