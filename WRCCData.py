@@ -83,11 +83,26 @@ month_names_long = ['January', 'February', 'March', 'April', 'May', 'June',\
                'July', 'August', 'September', 'October', 'November', 'December']
 month_names_short_cap = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
+month_name_to_number = {
+    'Jan':'01',
+    'Feb':'02',
+    'Mar':'03',
+    'Apr':'04',
+    'May':'05',
+    'Jun':'06',
+    'Jul':'07',
+    'Aug':'08',
+    'Sep':'09',
+    'Oct':'10',
+    'Nov':'11',
+    'Dec':'12',
+}
+
 month_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 delimiters = {
     'comma':',',
-    'tab':' ',
+    'tab':chr(9),
     'colon': ':',
     'space': ' ',
     'pipe':'|'

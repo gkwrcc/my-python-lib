@@ -19,6 +19,61 @@ import WRCCClasses, AcisWS, WRCCData
 ####################################
 #FUNCTIONS
 #####################################
+def check_for_int(string):
+    try:
+        int(string)
+        return True
+    except:
+        return False
+
+def convert_db_dates(messy_date):
+    '''
+    Converts postgres dates into format yyyy-mm-dd
+    For metadata tool: metadata load tables population
+    '''
+    #Check if input is datetime object, convert if necessary
+    if type(messy_date) is datetime.date or type(messy_date) is datetime.datetime:
+        year = str(messy_date.year)
+        month = str(messy_date.month)
+        day = str(messy_date.day)
+        if len(month) == 1:month = '0' + month
+        if len(day) == 1:month = '0' + day
+        return year + '-' + month  + '-' + day
+
+    #Check if data is already in form yyyy-mm-dd
+    date_list = messy_date.split('-')
+    if len(date_list) == 3 and len(date_list[0]) == 4:
+        if check_for_int(date_list[0]) and check_for_int(date_list[1]) and check_for_int(date_list[2]):
+            for idx,dat in enumerate(date_list[1:3]):
+                if len(dat) ==1:date_list[idx] = '0' + dat
+            return '-'.join(date_list)
+    date_list = messy_date.split(' ')
+    #Sanity check
+    if len(date_list)!= 3:
+        return '0000-00-00'
+
+    try:
+        mon = WRCCData.month_name_to_number[date_list[0][0:3]]
+    except:
+        mon = '00'
+    try:
+        day = date_list[1][0:2]
+        if day[-1] == ',':
+            day = '0' + day[0]
+    except:
+        day = '00'
+    year = date_list[2]
+    if len(year) != 4:
+        year = '0000'
+    try:
+        int(year)
+    except:
+        year = '0000'
+
+    return '-'.join([year, mon, day])
+
+
+
 def upload(ftp_server,pub_dir,f):
     '''
     Uploads file to ftp_server
