@@ -77,7 +77,8 @@ acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
                       ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
                       ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days (F)'], \
-                      ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)']]
+                      ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)'], \
+                      ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
 
 month_names_long = ['January', 'February', 'March', 'April', 'May', 'June',\
                'July', 'August', 'September', 'October', 'November', 'December']

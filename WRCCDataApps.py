@@ -894,9 +894,9 @@ def Sodxtrmts(**kwargs):
                             if kwargs['monthly_statistic'] == 'mmax' and value > xmax:xmax = value
                             if kwargs['monthly_statistic'] == 'mmin' and value < xmin:xmin = value
                         else:
-                            if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                            if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                                 value = 0.0
-                            elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                            elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                                 value -=100.0
 
                                 if kwargs['monthly_statistic'] == 'mmax' and value > xmax:
@@ -914,9 +914,9 @@ def Sodxtrmts(**kwargs):
                             table_2[yr][mon] = mon_len - sumda
 
                     elif kwargs['monthly_statistic'] == 'mave':
-                        if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                        if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                             value = 0.0
-                        elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                        elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                             value-=100.0
 
                         if value > -9998.0:
@@ -928,9 +928,9 @@ def Sodxtrmts(**kwargs):
                                 table_2[yr][mon] = mon_len - sumda
 
                     elif kwargs['monthly_statistic'] == 'sd':
-                        if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                        if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                             value = 0
-                        elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                        elif el_type in ['snow', 'pcpn','evap'] and value > 99.99 and value < 240.0: #A flag
                             value-=100.0
                             annfl[mon] = 'A'
 
@@ -949,9 +949,9 @@ def Sodxtrmts(**kwargs):
 
                     elif kwargs['monthly_statistic'] == 'ndays':
                         flag = ' '
-                        if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                        if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                             value = 0
-                        elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                        elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                             value-=100
                             flag = 'A'
 
@@ -971,9 +971,9 @@ def Sodxtrmts(**kwargs):
                             table_2[yr][mon] = mon_len - sumda
 
                     elif kwargs['monthly_statistic'] == 'rmon':
-                        if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                        if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                             value = 0
-                        elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                        elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                             value-=100
                             flag = 'A'
 
@@ -991,10 +991,10 @@ def Sodxtrmts(**kwargs):
 
                     elif kwargs['monthly_statistic'] == 'msum':
                         flag = ' '
-                        if el_type in ['snow', 'pcpn'] and abs(value - 245.0) < 0.01: #S flag
+                        if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                             value = 0.0
                             if nda == mon_len -1:flag = 'S'
-                        elif el_type in ['snow', 'pcpn'] and value > 99.99 and value < 240.0: #A flag
+                        elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                             value-=100
 
                         if value > -9998.0:
@@ -1030,7 +1030,7 @@ def Sodxtrmts(**kwargs):
                 #valmon = table_1[yr][mon]
                 summon = table_2[yr][mon]
                 if kwargs['monthly_statistic'] == 'mmax':
-                    if el_type in ['snow', 'pcpn']:
+                    if el_type in ['snow', 'pcpn', 'evap']:
                         if valmon > 99.99 and valmon <= 240.0:
                             continue
                         else:
@@ -1091,7 +1091,7 @@ def Sodxtrmts(**kwargs):
             count = 0.0
 
             for yr in range(num_yrs):
-                if el_type in ['snow', 'pcpn', 'snwd']:
+                if el_type in ['snow', 'pcpn', 'snwd', 'evap']:
                     value = round(table_1[yr][mon],2)
                 else:
                     value = table_1[yr][mon]
@@ -1193,32 +1193,6 @@ def Sodxtrmts(**kwargs):
                     #results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
                     results[i][yr].append('%.2f' % (table_1[yr][mon] - mean_out[monind]))
                     results[i][yr].append('%s' % outchr[monind])
-
-                '''
-                if table_1[yr][mon] < -9998.0:
-                    if mon < 12:
-                        #results[i][yr][-1] = '-----z'
-                        results[i][yr].append('-----')
-                        results[i][yr].append('z')
-                        #results[i][yr].append('z')
-                    else:
-                        #results[i][yr][-1] = 9999.0
-                        results[i][yr].append('-----')
-                        results[i][yr].append(' ')
-                        #results[i][yr].append(' ')
-
-                if table_1[yr][mon] > 9998.5:
-                    if kwargs['monthly_statistic'] == 'msum' and el_type == 'hdd':
-                        continue
-                    else:
-                        if mon < 12:
-                            #results[i][yr][-1] = '-----z'
-                            results[i][yr].append('-----')
-                            results[i][yr].append('z')
-                        else:
-                            results[i][yr].append('-----')
-                            results[i][yr].append(' ')
-                '''
             #End month loop
         #End of year loop
         #Start for frequency analysis

@@ -394,7 +394,6 @@ def get_station_data(form_input, program):
         params['sdate']= s_date
         params['edate'] = e_date
         params['sids'] = form_input['station_id']
-        #print params
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
         #NOTE: ACIS quirk when data request are multiple stations
@@ -454,6 +453,8 @@ def get_station_data(form_input, program):
     resultsdict['stn_data'] = [[] for stn in request['data']]
     idx_empty_list = []
     for stn, data in enumerate(request['data']):
+        if not 'data' in data.keys():
+            data['data'] = []
         if 'error' in data.keys():
             resultsdict['stn_errors'][stn] = str(data['error'])
         try:
@@ -489,7 +490,7 @@ def get_station_data(form_input, program):
             resultsdict['stn_data'][stn] = []
 
         if not resultsdict['stn_data'][stn]:
-            resultsdict['stn_errors'][stn] = 'No data found for this station!'
+            resultsdict['stn_errors'][stn] = 'No data found!'
         #Add dates
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
