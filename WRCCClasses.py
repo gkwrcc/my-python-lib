@@ -23,6 +23,7 @@ import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
 MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
 
+
 class DownloadDataJob:
     '''
     Download data to excel, .dat or .txt

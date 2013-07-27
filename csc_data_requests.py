@@ -85,13 +85,13 @@ def get_user_info(params):
 
 def get_file_extension_and_delimiter(params):
     if 'data_format' in params.keys():
-        if params['data_format'] == 'html':file_extension = 'txt'
-        if params['data_format'] == 'clm':file_extension = 'txt'
-        if params['data_format'] == 'json':file_extension = 'json'
-        if params['data_format'] == 'dlm':file_extension = 'dat'
-        if params['data_format'] == 'xl':file_extension = 'xls'
+        if params['data_format'] == 'html':file_extension = '.txt'
+        if params['data_format'] == 'clm':file_extension = '.txt'
+        if params['data_format'] == 'json':file_extension = '.json'
+        if params['data_format'] == 'dlm':file_extension = '.dat'
+        if params['data_format'] == 'xl':file_extension = '.xls'
     else:
-        file_extension = 'txt'
+        file_extension = '.txt'
 
     if 'delimiter' in params.keys():
         if params['delimiter'] == 'comma':delimiter = ','
@@ -101,14 +101,6 @@ def get_file_extension_and_delimiter(params):
         if params['delimiter'] == 'pipe':delimiter = '|'
     else:
         delimiter = ' '
-    if 'data_format' in params.keys():
-        if params['data_format'] == 'html':file_extension = 'txt'
-        if params['data_format'] == 'clm':file_extension = 'txt'
-        if params['data_format'] == 'json':file_extension = 'json'
-        if params['data_format'] == 'dlm':file_extension = 'dat'
-        if params['data_format'] == 'xl':file_extension = 'xls'
-    else:
-        file_extension = 'txt'
     return file_extension, delimiter
 
 '''
@@ -314,8 +306,7 @@ def proc_runner(params_list):
         data_q.task_done()
         #find delimiter and file_extension from params
         file_extension, delimiter = get_file_extension_and_delimiter(params)
-
-        results_file = params_file.rstrip('_params.json') + '.' + file_extension
+        results_file = params_file.rstrip('_params.json') + file_extension
         if 'elements' in params.keys():
             elements = params['elements']
         else:
@@ -398,16 +389,8 @@ for params_file in files:
 
     user_name, user_email = get_user_info(params)
     #check if results are in
-    if 'data_format' in params.keys():
-        if params['data_format'] == 'html':file_extension = 'txt'
-        if params['data_format'] == 'clm':file_extension = 'txt'
-        if params['data_format'] == 'json':file_extension = 'json'
-        if params['data_format'] == 'dlm':file_extension = 'dat'
-        if params['data_format'] == 'xl':file_extension = 'xls'
-    else:
-        file_extension = 'txt'
-
-    results_file = params_file.rstrip('_params.json') + '.' + file_extension
+    file_extension, delimiter =  get_file_extension_and_delimiter(params)
+    results_file = params_file.rstrip('_params.json') + file_extension
     #sort files into categories: data request needed, results are in, error occurred
     if os.path.isfile(results_file):
         #results are in

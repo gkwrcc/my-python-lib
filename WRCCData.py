@@ -191,7 +191,7 @@ SXTR_ELEMENT_CHOICES = (
     ('cdd', 'Daily Cooling Degree Days'),
     ('gdd', 'DailyGrowing degree days'),
     ('evap', 'Daily Evaporation'),
-    ('wind', 'Daily Wind Movement'),
+    ('wdmv', 'Daily Wind Movement'),
 )
 
 SXTR_ANALYSIS_CHOICES = (
