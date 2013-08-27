@@ -12,6 +12,7 @@ from collections import defaultdict, Mapping, Iterable
 import smtplib
 from email.mime.text import MIMEText
 from ftplib import FTP
+from math import sqrt
 
 from django.http import HttpResponse, HttpResponseRedirect
 
@@ -19,6 +20,35 @@ import WRCCClasses, AcisWS, WRCCData
 ####################################
 #FUNCTIONS
 #####################################
+def point_in_circle(x,y,circle):
+    dist = sqrt((x - circle[0]) ** 2 + (y - circle[1]) ** 2)
+    if dist <= circle[3]:
+        return True
+    else:
+        return False
+
+def point_in_poly(x,y,poly):
+    # Determine if a point is inside a given polygon or not
+    # Polygon is a list of (x,y) pairs. This function
+    # returns True or False.  The algorithm is called
+    # the "Ray Casting Method".
+    n = len(poly)
+    inside = False
+
+    p1x,p1y = poly[0]
+    for i in range(n+1):
+        p2x,p2y = poly[i % n]
+        if y > min(p1y,p2y):
+            if y <= max(p1y,p2y):
+                if x <= max(p1x,p2x):
+                    if p1y != p2y:
+                        xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                    if p1x == p2x or x <= xints:
+                        inside = not inside
+        p1x,p1y = p2x,p2y
+
+    return inside
+
 def check_for_int(string):
     try:
         int(string)

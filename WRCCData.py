@@ -154,6 +154,16 @@ image_sizes = {
     'widest':[3450, 610],
 }
 
+#######################
+#GRIDDED APPS
+#######################
+CLIM_RISK_SUMMARY_CHOICES = (
+    ('max', 'Maximum over polygon'),
+    ('min', 'Minimium over polygon'),
+    ('sum', 'Sum over polygon'),
+    ('mean', 'Avererage over polygon'),
+)
+
 
 ###################################
 #SODS
