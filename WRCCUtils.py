@@ -6,7 +6,7 @@ Module WRCCUtils
 
 import datetime, time, sys, os
 import json
-import numpy
+import numpy,math
 import re
 from collections import defaultdict, Mapping, Iterable
 import smtplib
@@ -20,6 +20,34 @@ import WRCCClasses, AcisWS, WRCCData
 ####################################
 #FUNCTIONS
 #####################################
+def find_bbox_of_circle(lon, lat, r):
+    '''
+    Given center coordinates lon, lat of a circle
+    and radius r in meters, this function returns the W,S,E,N
+    coordinates of the enclosing bounding box
+    '''
+    R = 6378.1 #Radius of the Earth in km
+    brngs = [3*math.pi/2,math.pi,math.pi/2,2*math.pi]  #Bearing radians W,S,E,N.
+    d = r / 1000.0  #Distance in km
+
+    lat1 = math.radians(lat) #Current lat point converted to radians
+    lon1 = math.radians(lon) #Current long point converted to radians
+
+    bbox = ''
+    for idx,brng in enumerate(brngs):
+        if idx %2 == 0: #90, 180%, want to pick up lon
+            lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +math.cos(lat1)*math.sin(d/R)*math.cos(brng))
+            coord = lon1 + math.atan2(math.sin(brng)*math.sin(d/R)*math.cos(lat1),math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
+        else:
+            coord = math.asin( math.sin(lat1)*math.cos(d/R) + math.cos(lat1)*math.sin(d/R)*math.cos(brng))
+        #Convert back to degrees
+        coord = math.degrees(coord)
+        if idx == 0:
+            bbox+=str(coord)
+        else:
+            bbox+=',' + str(coord)
+    return bbox
+
 def point_in_circle(x,y,circle):
     dist = sqrt((x - circle[0]) ** 2 + (y - circle[1]) ** 2)
     if dist <= circle[3]:
