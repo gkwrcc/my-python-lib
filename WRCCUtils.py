@@ -20,14 +20,70 @@ import WRCCClasses, AcisWS, WRCCData
 ####################################
 #FUNCTIONS
 #####################################
+def get_search_area_values(form_input_dict, app_type):
+    '''
+    Given form input of a web app,
+    we find the search parameter and
+    we return a list
+    [key, value, acis_parameter_name, name_long,search_type]
+    search type is either:
+    default --> direct ACIS query possible
+    or
+    custom --> direct ACIS query is not possible
+               we need to find enclosing bbox and query AC IS for that
+    if app_type == gridded
+       county/cwa/shape/basin/shape queries are custom
+    if app_type == station
+       shape query is custom
+    '''
+    search_type = 'default'
+    key = None
+    if 'bounding_box' in form_input_dict.keys():key='bounding_box'
+    if 'state' in form_input_dict.keys():key='state'
+    if 'shape' in form_input_dict.keys():key='shape';search_type='custom'
+    if 'county' in form_input_dict.keys():
+        key='county'
+        if app_type == 'gridded':search_type='custom'
+    if 'climate_division' in form_input_dict.keys():
+        key='climate_division'
+        if app_type == 'gridded':search_type='custom'
+    if 'county_warning_area' in form_input_dict.keys():
+        key='county_warning_area'
+        if app_type == 'gridded':search_type='custom'
+    if 'basin' in form_input_dict.keys():
+        key='basin'
+        if app_type == 'gridded':search_type='custom'
+
+
+    if not key:
+        return None, None, None, None, None
+    else:
+        return key, form_input_dict[key],WRCCData.search_area_form_to_acis[key], WRCCData.shape_names[key], search_type
+
+
+def find_bbox_of_shape(shape):
+    '''
+    Give shape, a list of lon, lat coordinates
+    defining the shape, this function find the enclosing bounding box
+    '''
+    lons_shape = [s for idx,s in enumerate(shape) if idx%2 == 0]
+    lats_shape = [s for idx,s in enumerate(shape) if idx%2 == 1]
+    try:
+        bbox = str(min(lons_shape)) + ',' + str(min(lats_shape)) + ',' + str(max(lons_shape)) + ',' + str(max(lats_shape))
+    except:
+        bbox= None
+    return bbox
+
 def find_bbox_of_circle(lon, lat, r):
     '''
     Given center coordinates lon, lat of a circle
     and radius r in meters, this function returns the W,S,E,N
     coordinates of the enclosing bounding box
+    lon, lat are given in degrees
+    r is given in meters
     '''
     R = 6378.1 #Radius of the Earth in km
-    brngs = [3*math.pi/2,math.pi,math.pi/2,2*math.pi]  #Bearing radians W,S,E,N.
+    brngs = [3*math.pi/2,math.pi,math.pi/2,0]  #Bearing radians W,S,E,N.
     d = r / 1000.0  #Distance in km
 
     lat1 = math.radians(lat) #Current lat point converted to radians
@@ -35,11 +91,11 @@ def find_bbox_of_circle(lon, lat, r):
 
     bbox = ''
     for idx,brng in enumerate(brngs):
+        lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +math.cos(lat1)*math.sin(d/R)*math.cos(brng))
         if idx %2 == 0: #90, 180%, want to pick up lon
-            lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +math.cos(lat1)*math.sin(d/R)*math.cos(brng))
             coord = lon1 + math.atan2(math.sin(brng)*math.sin(d/R)*math.cos(lat1),math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
-        else:
-            coord = math.asin( math.sin(lat1)*math.cos(d/R) + math.cos(lat1)*math.sin(d/R)*math.cos(brng))
+        else:#pick lat
+            coord = lat2
         #Convert back to degrees
         coord = math.degrees(coord)
         if idx == 0:
@@ -49,17 +105,35 @@ def find_bbox_of_circle(lon, lat, r):
     return bbox
 
 def point_in_circle(x,y,circle):
-    dist = sqrt((x - circle[0]) ** 2 + (y - circle[1]) ** 2)
-    if dist <= circle[3]:
+    '''
+    Determine if a point is inside a given cicle
+    [lon, lat, radius]
+    lon, lat are given in degrees, r is given in meters
+    the distance between the point and the center of the circle is
+    computed via the Haversine formula
+    '''
+    R = 6378.1 #Radius of the Earth in km
+    #Find distance between point and center of circle
+    dlat = math.radians((y - circle[1]))
+    dlon = math.radians((x - circle[0]))
+    lat1 = math.radians(y)
+    lat2 = math.radians(circle[1])
+    #Haversine Formula
+    a = math.sin(dlat/2)**2 + math.sin(dlon/2)**2 * math.cos(lat1)*math.cos(lat2)
+    c = 2*math.atan2(math.sqrt(a),math.sqrt(1-a))
+    dist = R*c
+    if dist <= circle[2] / 1000.0:
         return True
     else:
         return False
 
 def point_in_poly(x,y,poly):
-    # Determine if a point is inside a given polygon or not
-    # Polygon is a list of (x,y) pairs. This function
-    # returns True or False.  The algorithm is called
-    # the "Ray Casting Method".
+    '''
+    Determine if a point is inside a given polygon or not
+    Polygon is a list of (x,y) pairs. This function
+    returns True or False.  The algorithm is called
+    the "Ray Casting Method".
+    '''
     n = len(poly)
     inside = False
 
@@ -570,6 +644,19 @@ def format_grid_data(req, params):
             #Multiple gridpoints
             idx = -1
             for grid_idx, lat_grid in enumerate(lats):
+                lat = lat_grid[0]
+                for lon_idx, lon in enumerate(lons[grid_idx]):
+                    idx+=1
+                    data_out[idx].append(date_range)
+                    data_out[idx].append(round(lon,2))
+                    data_out[idx].append(round(lat,2))
+                    data_out[idx].append(elevs[grid_idx][lon_idx])
+
+                    for el_idx in range(len(data['data'])):
+                        data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
+
+            '''
+            for grid_idx, lat_grid in enumerate(lats):
                 for lat_idx, lat in enumerate(lat_grid):
                     idx+=1
                     data_out[idx].append(date_range)
@@ -579,6 +666,7 @@ def format_grid_data(req, params):
 
                     for el_idx in range(len(data['data'])):
                         data_out[idx].append(data['data'][el_idx][grid_idx][lat_idx])
+            '''
         return data_out
     else:
         #Raw data request

@@ -9,9 +9,11 @@ CAPS names imply use in django forms
 from collections import defaultdict
 from collections import OrderedDict
 
-#################################
+###################################
+###################################
 #General
-#################################
+###################################
+###################################
 fips_state_keys = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
              'nm':'29','pi':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
              'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
@@ -109,7 +111,21 @@ delimiters = {
     'pipe':'|'
 }
 
-#FORM CHOICES
+###################################
+###################################
+#FORM CHOICES/FORM related stuff
+###################################
+###################################
+search_area_form_to_acis = {
+    'climate_division':'climdiv',
+    'county_warning_area':'cwa',
+    'bounding_box':'bbox',
+    'state':'state',
+    'county':'county',
+    'basin':'basin',
+    'shape':None
+}
+
 MONTH_CHOICES = (
     ('01', 'January'),
     ('02', 'February'),
@@ -154,9 +170,11 @@ image_sizes = {
     'widest':[3450, 610],
 }
 
-#######################
+###################################
+###################################
 #GRIDDED APPS
-#######################
+###################################
+###################################
 CLIM_RISK_SUMMARY_CHOICES = (
     ('max', 'Maximum over polygon'),
     ('min', 'Minimium over polygon'),
@@ -164,9 +182,22 @@ CLIM_RISK_SUMMARY_CHOICES = (
     ('mean', 'Avererage over polygon'),
 )
 
+shape_names = {
+    'bounding_box': 'Bounding Box ',
+    'state': 'State ',
+    'shape': 'Custom Shape ',
+    'circle': 'Circle (lat, lon, radius (meter)) ',
+    'county': 'County ',
+    'climate_division':'Climate Division ',
+    'county_warning_area':'County Warning Area ',
+    'basin':'Drainage Basin ',
+    'location':'Point Location '
+}
 
 ###################################
+###################################
 #SODS
+###################################
 ###################################
 IMAGE_SIZES = (
     ('small', 'Small (510x290)'),
@@ -186,9 +217,9 @@ HEADERS = {
     'Sodsumm':None
 }
 
-###########
+##########
 #SODXTRMTS
-###########
+##########
 SXTR_ELEMENT_CHOICES = (
     ('pcpn', 'Daily Precipitation'),
     ('snow', 'Daily Snowfall'),
@@ -284,7 +315,9 @@ sodxtrmts_visualize_params = {
     'individual':'Plot months separately'
 }
 
+########
 #SODSUMM
+########
 tab_names_with_graphics = {
 'all': ['Temp', 'Precip', 'Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
 'both':['Temperature', 'Precip', 'Snow'],

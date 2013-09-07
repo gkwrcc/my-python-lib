@@ -58,8 +58,11 @@ def PrismData(params):
 def GridCalc(params):
     return make_request(base_url+'GridCalc',params)
 
-def General(params):
-    return make_request(base_url+'General',params)
+def General(request_type, params):
+    '''
+    request_type in [basin, climdiv,cwa,state]
+    '''
+    return make_request(base_url+'General' + '/' + request_type ,params)
 
 
 ###################################
