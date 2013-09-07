@@ -52,7 +52,8 @@ class DownloadDataJob:
         self.flags = flags
         self.app_data_dict = {
             'Sodxtrmts':'data',
-            'Sodsumm':'table_data'
+            'Sodsumm':'table_data',
+            'area_time_series':'data'
         }
         self.file_extension = {
             'dlm': '.dat',
@@ -68,7 +69,8 @@ class DownloadDataJob:
         }
         self.headers = {
             'Sodxtrmts':WRCCData.HEADERS['Sodxtrmts'],
-            'Sodsumm':None
+            'Sodsumm':None,
+            'area_time_series':['Date', 'Data']
         }
     def get_time_stamp(self):
         return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
@@ -115,12 +117,14 @@ class DownloadDataJob:
                 writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[self.delimiter])
                 response = 'Error! Cant open file' + str(e)
         #row = header
-        row = ['%8s' %str(h) for h in header]
+        #row = ['%8s' %str(h) for h in header] #Kelly's format
+        row = ['%s' %str(h) for h in header]
         writer.writerow(row)
         for row_idx, row in enumerate(data):
             row_formatted = []
             for idx, r in enumerate(row):
-                row_formatted.append('%8s' %str(r))
+                row_formatted.append('%s' %str(r))
+                #row_formatted.append('%8s' %str(r)) #Kelly's format
             writer.writerow(row_formatted)
             #writer.writerow(row)
         try:
