@@ -103,7 +103,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     for the given time range are listed.
     '''
     stn_list = []
-    stn_json={'network_codes': WRCCData.kelly_network_codes, 'network_icons': WRCCData.kelly_network_icons}
+    stn_json={'network_codes': WRCCData.KELLY_NETWORK_CODES, 'network_icons': WRCCData.KELLY_NETWORK_ICONS}
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
     '''
@@ -229,17 +229,17 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 if str(sid_split[1]) == '2':
                     stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.insert(0, str(sid_split[1]))
-                    marker_icons.insert(0, WRCCData.network_icons[str(sid_split[1])])
-                    stn_networks.insert(0,WRCCData.network_codes[str(sid_split[1])])
+                    marker_icons.insert(0, WRCCData.NETWORK_ICONS[str(sid_split[1])])
+                    stn_networks.insert(0,WRCCData.NETWORK_CODES[str(sid_split[1])])
                 else:
                     stn_sids.append(str(sid_split[0]).replace("\'"," "))
                     stn_network_codes.append(str(sid_split[1]))
                     if int(sid_split[1]) <= 10:
-                        stn_networks.append(WRCCData.network_codes[str(sid_split[1])])
-                        marker_icons.append(WRCCData.network_icons[str(sid_split[1])])
+                        stn_networks.append(WRCCData.NETWORK_CODES[str(sid_split[1])])
+                        marker_icons.append(WRCCData.NETWORK_ICONS[str(sid_split[1])])
                     else:
                         stn_networks.append('Misc')
-                        marker_icons.append(WRCCData.network_icons['11'])
+                        marker_icons.append(WRCCData.NETWORK_ICONS['11'])
             #Sanity check : Some Acis records are incomplete, leading to key error
             if 'll' in stn.keys():
                 lat = str(stn['ll'][1])
@@ -260,7 +260,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 available_elements = []
                 for j,rnge in enumerate(valid_date_range_list):
                     if rnge:
-                        available_elements.append([WRCCData.acis_elements[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
+                        available_elements.append([WRCCData.ACIS_ELEMENTS[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
 
                 if available_elements:
                     stn_dict['available_elements'] = available_elements
@@ -330,9 +330,9 @@ def get_station_data(form_input, program):
         except:
             base_temp = None
         if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
-            elems_list.append(dict(vX=WRCCData.acis_elements_dict[el_strip]['vX'], base=base_temp, add='f,t'))
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
         else:
-            elems_list.append(dict(vX=WRCCData.acis_elements_dict[el]['vX'],add='f,t'))
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],add='f,t'))
     params = dict(sdate=s_date, edate=e_date, \
     meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
     elems=elems_list)
@@ -353,9 +353,9 @@ def get_station_data(form_input, program):
                 except:
                     base_temp = None
                 if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
-                    elems_list.append(dict(vX=WRCCData.acis_elements_dict[el_strip]['vX'], base=base_temp))
+                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp))
                 else:
-                    elems_list.append(dict(vX=WRCCData.acis_elements_dict[el]['vX']))
+                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']))
 
             meta_params = dict(sids=form_input['station_id'],elems=elems_list, meta='valid_daterange')
             try:
@@ -474,7 +474,7 @@ def get_station_data(form_input, program):
                         #Omit duplicates
                         if not idx in idx_empty_list:
                             idx_empty_list.append(idx)
-                network_id_name = WRCCData.network_codes[str(sid.split(' ')[1])]
+                network_id_name = WRCCData.NETWORK_CODES[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
                 if network_id_name == "COOP":

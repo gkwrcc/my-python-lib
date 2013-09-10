@@ -14,33 +14,34 @@ from collections import OrderedDict
 #General
 ###################################
 ###################################
-fips_state_keys = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
+
+FIPS_STATE_KEYS = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
              'nm':'29','pi':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
              'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
              'la':'16','me':'17','md':'18','ma':'19', 'mi':'20', 'mn':'21','ms':'22', 'mo':'23', \
              'ne':'25','nh':'27','nj':'28','ny':'30', 'nc':'31', 'nd':'32','oh':'33', 'ok':'34', \
              'pa':'36','ri':'37','sc':'38','sd':'39', 'tn':'40', 'ct':'43','va':'44', 'wv':'46', \
              'wi':'47','vi':'67','pr':'66','wr':'96', 'ml':'97', 'ws':'98','ak':'50'}
-fips_key_state = {}
-state_choices = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', \
+
+STATE_CHOICES = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', \
                 'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', \
                 'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM', 'NV', \
                 'NY', 'OH', 'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', \
                 'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
 
-network_codes = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
+NETWORK_CODES = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
 '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
-network_icons = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
+NETWORK_ICONS = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
 '6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
 #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
-kelly_network_codes = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
+KELLY_NETWORK_CODES = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
 '8':'CoCoRaHS', '9':'RCC', '10':'Threadex', '11':'Misc'}
-kelly_network_icons = {'1': 'blue-dot', '2': 'orange-dot', '3': 'ltblue-dot','4':'pink-dot', '5': 'green-dot', \
+KELLY_NETWORK_ICONS = {'1': 'blue-dot', '2': 'orange-dot', '3': 'ltblue-dot','4':'pink-dot', '5': 'green-dot', \
 '6': 'purple-dot', '7': 'yellow-dot', '8': 'purple', '9':'yellow', '10':'green', '11': 'red'}
 
 
-acis_elements = defaultdict(dict)
-acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':1},
+ACIS_ELEMENTS = defaultdict(dict)
+ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':1},
               '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':2},
               '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F)', 'vX':43},
               '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':3},
@@ -55,7 +56,7 @@ acis_elements ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '-44': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':44}}
               #bug fix needed for cdd = 44
 
-acis_elements_dict = {
+ACIS_ELEMENTS_DICT = {
               'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':1},
               'mint':{'name':'mint', 'name_long': 'Mininimum Daily Temperature (F)', 'vX':2},
               'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F)', 'vX':43},
@@ -72,21 +73,19 @@ acis_elements_dict = {
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
 }
 
-units = {
-}
-
-acis_elements_list = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
+ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
                       ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
                       ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days (F)'], \
                       ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)'], \
                       ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
 
-month_names_long = ['January', 'February', 'March', 'April', 'May', 'June',\
+MONTH_NAMES_LONG = ['January', 'February', 'March', 'April', 'May', 'June',\
                'July', 'August', 'September', 'October', 'November', 'December']
-month_names_short_cap = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-month_name_to_number = {
+MONTH_NAMES_SHORT_CAP = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+MONTH_NAME_TO_NUMBER= {
     'Jan':'01',
     'Feb':'02',
     'Mar':'03',
@@ -101,9 +100,9 @@ month_name_to_number = {
     'Dec':'12',
 }
 
-month_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+MONTH_LENGTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-delimiters = {
+DELIMITERS = {
     'comma':',',
     'tab':chr(9),
     'colon': ':',
@@ -116,7 +115,7 @@ delimiters = {
 #FORM CHOICES/FORM related stuff
 ###################################
 ###################################
-search_area_form_to_acis = {
+SEARCH_AREA_FORM_TO_ACIS = {
     'climate_division':'climdiv',
     'county_warning_area':'cwa',
     'bounding_box':'bbox',
@@ -126,11 +125,12 @@ search_area_form_to_acis = {
     'shape':None
 }
 
-display_params = {
+DISPLAY_PARAMS = {
     'select_grid_by':'Grid Selection By',
     'select_stations_by': 'Station Selection By',
     #search areas
     'station_id': 'Station ID',
+    'station_ID': 'Station ID',
     'station_ids': 'Station IDs',
     'location': 'Location (lon, lat)',
     'lat': 'Latitude',
@@ -159,6 +159,7 @@ display_params = {
     'element':'Element',
     'elements':'Elements',
     'element_selection': 'Element Selection',
+    'el_type':'Climate Element Type',
     'base_temperature': 'Base Temperature',
     'maxt': 'Maximum Daily Temperature (F)',
     'mint': 'Minimum Daily Temperature (F)',
@@ -199,13 +200,33 @@ display_params = {
     'temporal_resolution': 'Temporal Resolution',
     'data_summary': 'Data Summary',
     'monthly_statistic': 'Monthly Statistic',
+    'mmax':'Monthly Maximum',
+    'mmin':'Monthly Minimum',
+    'msum':'Monthly Sum',
+    'mave':'Monthly Avererage',
+    'sd':'Standard Deviation',
+    'ndays':'Number of Days',
+    'rmon':'Range during Month',
     'max_missing_days': 'Maximum Number of Missing Days allowed',
     'departures_from_averages': 'Show results as departures from averages',
     'frequency_analysis': 'Frequency Analysis',
+    'frequency_analysis_type': 'Frequency Analysis Type',
+    'pearson': 'Pearson III',
+    'gev': 'Generalized Extreme Value',
     'less_greater_or_between': '',
     'threshold': 'Threshold',
+    'l':'Below',
+    'g':'Above',
+    'b':'Between',
+    'threshold_low_for_between':'Lower Threshold',
+    'threshold_high_for_between':'Upper Threshold',
+    'threshold_for_less_or_greater':'Threshold',
+    'less':'Threshold',
+    'greater':'Threshold',
     'above': 'Above',
     'below': 'Below',
+    'T': 'Yes',
+    'F': 'No',
     #Plot Options
     'graph_title': 'Graph Title',
     'image_size': 'Image Size',
@@ -253,7 +274,7 @@ MONTH_CHOICES = (
 )
 
 #Data Formats
-file_extensions= {
+FILE_EXTENSIONS = {
     'json':'.json',
     'clm':'.txt',
     'dlm':'.dat',
@@ -270,7 +291,7 @@ DATA_FORMAT_CHOICES_LTD = (
 )
 
 #width, height in pixels
-image_sizes = {
+IMAGE_SIZES = {
     'small':[510, 290],
     'medium':[650, 370],
     'large':[850, 480],
@@ -293,7 +314,7 @@ CLIM_RISK_SUMMARY_CHOICES = (
     ('mean', 'Avererage over polygon'),
 )
 
-shape_names = {
+SHAPE_NAMES = {
     'bounding_box': 'Bounding Box ',
     'state': 'State ',
     'shape': 'Custom Shape ',
@@ -380,56 +401,11 @@ MARKER_CHOICES = (
     ('triangle-down', 'Downward Triangle'),
 )
 
-sodxtrmts_params = {
-    'station_ID':'Station Identifier',
-    'start_year':'Start Year',
-    'end_year':'End Year',
-    'el_type':'Climate Element Type',
-    'element':'Climate Element',
-    'base_temperature':'Base Temperature',
-    'monthly_statistic':'Monthly Statistic',
-    'mmax':'Monthly Maximum',
-    'mmin':'Monthly Minimum',
-    'msum':'Monthly Sum',
-    'mave':'Monthly Avererage',
-    'sd':'Standard Deviation',
-    'ndays':'Number of Days',
-    'rmon':'Range during Month',
-    'individual':'Plot months separately',
-    'max_missing_days':'Maximum number of missing days allowed',
-    'start_month':'Start Month',
-    'departures_from_averages':'Departures from Averages',
-    'frequency_analysis': 'Frequency Analysis',
-    'T':True,
-    'F':False,
-    'pearson':'Pearson III',
-    'gev':'Generalized Extreme Value',
-    'less_greater_or_between': 'Number of days',
-    'l':'Below',
-    'g':'Above',
-    'b':'Between',
-    'threshold_low_for_between':'Lower Threshold',
-    'threshold_high_for_between':'Upper Threshold',
-    'threshold_for_less_or_greater':'Threshold',
-    'less':'Threshold',
-    'greater':'Threshold',
-}
-
-
-sodxtrmts_visualize_params = {
-    'months': 'Months analized',
-    'summary': 'Analysis Type',
-    'max':'Maximum over months',
-    'min':'Minimium over months',
-    'sum':'Sum over months',
-    'mean':'Avererage over months',
-    'individual':'Plot months separately'
-}
 
 ########
 #SODSUMM
 ########
-tab_names_with_graphics = {
+TAB_NAMES_WITH_GRAPHICS = {
 'all': ['Temp', 'Precip', 'Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
 'both':['Temperature', 'Precip', 'Snow'],
 'temp':['Temperature'],
@@ -438,7 +414,7 @@ tab_names_with_graphics = {
 'g':['Gdd', 'Corn']
 }
 
-tab_names_no_graphics = {
+TAB_NAMES_NO_GRAPHICS= {
 'all':['Temp', 'Precip/Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
 'both':['Temp', 'Precip/Snow'],
 'temp':['Temperature'],
@@ -448,7 +424,7 @@ tab_names_no_graphics = {
 }
 
 
-tab_list_with_graphics = {
+TAB_LIST_WITH_GRAPHICS = {
 'all': ['temp', 'pcpn', 'snow', 'hdd', 'cdd', 'gdd', 'corn'],
 'both':['temp', 'pcpn', 'snow'],
 'temp':['temp'],
@@ -457,7 +433,7 @@ tab_list_with_graphics = {
 'g':['gdd', 'corn']
 }
 
-tab_list_no_graphics = {
+TAB_LIST_NO_GRAPHICS = {
 'all':['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn'],
 'both':['temp', 'prsn'],
 'temp':['temp'],
@@ -466,7 +442,7 @@ tab_list_no_graphics = {
 'g':['gdd', 'corn']
 }
 
-table_list_with_graphics = {
+TABLE_LIST_WITH_GRAPHICS = {
 'all':['temp', 'prsn', 'prsn', 'hdd', 'cdd', 'gdd', 'corn'],
 'both':['temp', 'prsn', 'prsn'],
 'temp':['temp'],
@@ -475,7 +451,7 @@ table_list_with_graphics = {
 'g':['gdd', 'corn']
 }
 
-table_list_no_graphics = {
+TABLE_LIST_NO_GRAPHICS = {
 'all':['temp','prsn', 'hdd', 'cdd', 'gdd', 'corn'],
 'both':['temp''prsn'],
 'temp':['temp'],

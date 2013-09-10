@@ -444,7 +444,7 @@ class SODDataJob:
             el_dict_new = {}
             for key, val in el_dict.iteritems():
                 if key == 'vX':
-                    el_dict_new[key] = WRCCData.acis_elements_dict[el]['vX']
+                    el_dict_new[key] = WRCCData.ACIS_ELEMENTS_DICT[el]['vX']
                 else:
                     el_dict_new[key] = val
             #We have to add three types of summaries for each element of Soddyrec

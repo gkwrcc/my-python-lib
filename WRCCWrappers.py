@@ -115,7 +115,7 @@ def sodxtrmts_wrapper(argv):
     #format resulst if needed
     if output_format =='txt_list':
         #Header
-        print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(stn_id, WRCCData.acis_elements_dict[element]['name_long'],statistics_dict[monthly_statistic])
+        print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(stn_id, WRCCData.ACIS_ELEMENTS_DICT[element]['name_long'],statistics_dict[monthly_statistic])
         print ' STATION : %s' %SX_wrapper.station_names[0]
         print ' a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
         print ' z = 26 or more days missing, A = Accumulations present '
@@ -319,7 +319,7 @@ def soddyrec_wrapper(argv):
         table_header = '      '
         table_header_2 = ' MO DY'
         for el_idx, el in enumerate(el_list):
-            el_name = WRCCData.acis_elements_dict[el]['name_long']
+            el_name = WRCCData.ACIS_ELEMENTS_DICT[el]['name_long']
             start ='|';end=''
             if len(el_name)<=27:
                 left = 27 - len(el_name)

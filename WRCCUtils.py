@@ -58,7 +58,7 @@ def get_search_area_values(form_input_dict, app_type):
     if not key:
         return None, None, None, None, None
     else:
-        return key, form_input_dict[key],WRCCData.search_area_form_to_acis[key], WRCCData.shape_names[key], search_type
+        return key, form_input_dict[key],WRCCData.SEARCH_AREA_FORM_TO_ACIS[key], WRCCData.SHAPE_NAMES[key], search_type
 
 
 def find_bbox_of_shape(shape):
@@ -185,7 +185,7 @@ def convert_db_dates(messy_date):
         return '0000-00-00'
 
     try:
-        mon = WRCCData.month_name_to_number[date_list[0][0:3]]
+        mon = WRCCData.MONTH_NAME_TO_NUMBER[date_list[0][0:3]]
     except:
         mon = '00'
     try:
@@ -935,7 +935,7 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
     else:
         el_tuple =''
         for idx, el in enumerate(el_list):
-            el_tuple+=str(WRCCData.acis_elements_dict[el]['vX'])
+            el_tuple+=str(WRCCData.ACIS_ELEMENTS_DICT[el]['vX'])
             if idx < len(el_list) - 1:
                 el_tuple+=','
 
