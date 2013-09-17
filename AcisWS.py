@@ -60,9 +60,9 @@ def GridCalc(params):
 
 def General(request_type, params):
     '''
-    request_type in [basin, climdiv,cwa,state]
+    request_type in [basin, climdiv,cwa,state, county]
     '''
-    return make_request(base_url+'General' + '/' + request_type ,params)
+    return make_request(base_url+'General' + '/' + request_type, params)
 
 
 ###################################

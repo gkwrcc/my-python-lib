@@ -423,8 +423,10 @@ def Sodpiii(**kwargs):
                     elif ndur == 99:
                         continue
                 elif kwargs['days'] == '5':
-                    if ndur < 2:continue
-                    if ndur >= 7:break
+                    if numdur < 3:continue
+                    if numdur >=8:break
+                    #if ndur < 2:continue
+                    #if ndur >= 7:break
             maxmis = mxmis[numdur -1]
             #Year loop
             n732 = [kwargs['value_missing'] for k in range(733)]
@@ -559,6 +561,8 @@ def Sodpiii(**kwargs):
                 annser[iyear][2][numdur - 1] = nummis # In Kellys this is set to mysterios "xmisno"
                 if kwargs['days'] == 'i':
                     tbl_idx = 0
+                elif kwargs['days'] == '5':
+                    tbl_idx = numdur - 3
                 else:
                     tbl_idx = numdur - 1
                 results_0[i][tbl_idx][iyear].append('%i' %(start_year + iyear))
@@ -624,6 +628,8 @@ def Sodpiii(**kwargs):
             stats[6][numdur-1] = count
             if kwargs['days'] == 'i':
                 tbl_idx = 0
+            elif kwargs['days'] == '5':
+                tbl_idx = numdur - 3
             else:
                 tbl_idx = numdur - 1
 
@@ -656,7 +662,7 @@ def Sodpiii(**kwargs):
             if kwargs['days'] == 'i':
                 if idur != numdu1 - 1:continue
             elif kwargs['days'] == '5':
-                if idur <2: #idue 0,1 are 6hr, 12 hr
+                if idur <2: #idur 0,1 are 6hr, 12 hr
                     continue
                 if idur >= 7:break
             ave = stats[0][idur]
@@ -673,8 +679,11 @@ def Sodpiii(**kwargs):
                 if idur != numdu1 - 1:continue
                 tbl_idx = 0
             elif kwargs['days'] == '5':
-                if idur >= 5:break
-                tbl_idx = idur
+                if idur < 2:continue
+                if idur >=7:break
+                #if idur >= 5:break
+                #tbl_idx = idur
+                tbl_idx = idur - 2
             else:
                 tbl_idx = idur
             for iretrn in range(len(rtnlis)):

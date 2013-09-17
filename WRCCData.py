@@ -331,7 +331,7 @@ SHAPE_NAMES = {
 #SODS
 ###################################
 ###################################
-IMAGE_SIZES = (
+FORM_IMAGE_SIZES = (
     ('small', 'Small (510x290)'),
     ('medium', 'Medium (650x370)'),
     ('large', 'Large (850x480)'),
