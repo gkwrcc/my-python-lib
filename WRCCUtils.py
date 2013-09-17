@@ -1058,6 +1058,7 @@ def find_start_end_dates(form_input):
     Converts form_input['start_date'] and form_input['end_date']
     to 8 digit start, end dates of format yyyymmdd.
     '''
+    mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
     if 'start_date' not in form_input.keys():
         s_date = 'por'
     elif form_input['start_date'].lower() == 'por':
@@ -1086,7 +1087,11 @@ def find_start_end_dates(form_input):
             if len(str(form_input['end_date'])) == 4:
                 e_date = str(form_input['end_date']) + '1231'
             elif len(str(form_input['end_date'])) == 6:
-                e_date = str(form_input['end_date']) + '31'
+                if str(form_input['end_date'])[4:6] == '02' and WRCCUtils.is_leap_year(str(form_input['end_date'])[0:4]):
+                    mon_len = '29'
+                else:
+                    mon_len = mon_lens[int(str(form_input['end_date'])[4:6]) - 1]
+                e_date = str(form_input['end_date']) + mon_len
             elif len(str(form_input['end_date'])) == 8:
                 e_date = str(form_input['end_date'])
             else:
