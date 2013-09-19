@@ -755,7 +755,7 @@ def format_grid_data(req, params):
                         data_out[idx].append(elevs[grid_idx][lon_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
-                            data_out[idx].append(date_vals[el_idx][grid_idx][lat_idx])
+                            data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
         return data_out
 
 def get_station_meta(station_id):
