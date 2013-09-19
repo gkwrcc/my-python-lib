@@ -998,8 +998,6 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
         request = AcisWS.StnMeta(meta_params)
     except:
         return []
-    print el_tuple
-    print request
     if 'error' in request.keys() or not 'meta' in request.keys():
         return []
 
@@ -1008,6 +1006,8 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
     el_idx = 0
     vd_start = None;vd_end = None
     idx_start = 0
+    if not request['meta']:
+        return []
     for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange']):
         if s_date.lower() != 'por':
             vd_start = date_to_datetime(s_date)

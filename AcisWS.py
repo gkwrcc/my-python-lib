@@ -473,14 +473,17 @@ def get_station_data(form_input, program):
     idx_empty_list = []
     for stn, data in enumerate(request['data']):
         #if custom shape, check if  stn lies within shape
+        stn_in = True
+        if shape_type is not None:
+            shape = form_input['shape'].split(',')
+            shape = [float(s) for s in shape]
         if shape_type == 'circle':
+            poly = shape
             try:
-                stn_in = WRCCUtils.point_in_circle(data['meta']['ll'][0], data['meta']['ll'][1], str(form_input['shape']))
+                stn_in = WRCCUtils.point_in_circle(data['meta']['ll'][0], data['meta']['ll'][1], poly)
             except:
                 stn_in = False
         elif shape_type == 'polygon':
-            shape = form_input['shape'].split(',')
-            shape = [float(s) for s in shape]
             poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
             try:
                 stn_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
