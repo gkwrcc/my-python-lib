@@ -94,7 +94,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     Keyword arguments:
     by_type    -- station selection argument.
                   station selection is one of: county, climate_division,
-                  county_warning_area, basin, bounding_box, state or states
+                  county_warning_area, basin, bounding_box, state, states or shape for custom polygon
     val        -- Value of station selection argument, e.g, AL if by_type = state
     el_list    -- List of var_majors of climate elements (default None)
     time_range -- [start_date, end_date](default None)
@@ -106,14 +106,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     stn_json={'network_codes': WRCCData.KELLY_NETWORK_CODES, 'network_icons': WRCCData.KELLY_NETWORK_ICONS}
     vX_list= ['1','2','43','3','4','10','11','7','45']
     vX_tuple = '1,2,43,3,4,10,11,7,45'
-    '''
-    if el_list is None:
-        vX_list= ['1','2','43','3','4','10','11','7','45']
-        vX_tuple = '1,2,43,3,4,10,11,7,45'
-    else:
-        vX_list = el_list
-        vX_tuple = ','.join(el_list)
-    '''
+    shape_type = None
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     if by_type == 'county':
         params['county'] = val
@@ -135,12 +128,20 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         params['state'] = 'az,ca,co,nm,nv,ut'
     elif by_type == 'station':
         params['sids'] = val
+    elif by_type == 'shape':
+        #Need to find enclosing bbox
+        shape_type,bbox = WRCCUtils.get_bbox(val)
+        if bbox is None:
+            params['bbox'] = ''
+        else:
+            params['bbox'] = bbox
     else:
         pass
 
     #Acis WS call
-    request = StnMeta(params)
-    if not request:
+    try:
+        request = StnMeta(params)
+    except:
         request = {'error':'bad request, check params: %s'  % str(params)}
 
     stn_meta_list = []
@@ -148,6 +149,17 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         #For alphabetic ordering of station names
         sorted_list =[]
         for i, stn in enumerate(request['meta']):
+            #if custom shape, check if  stn lies within shape
+            if shape_type == 'circle':
+                stn_in = WRCCUtils.point_in_circle(stn['ll'][0], stn['ll'][1], val)
+            elif shape_type == 'polygon':
+                shape = val.split(',')
+                shape = [float(s) for s in shape]
+                poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+                stn_in = WRCCUtils.point_in_poly(stn['ll'][0], stn['ll'][1], poly)
+            if not stn_in:
+                continue
+
             if not stn['valid_daterange']:
                 continue
             #check if we are looking for stations with particular elements
@@ -336,11 +348,7 @@ def get_station_data(form_input, program):
     params = dict(sdate=s_date, edate=e_date, \
     meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
     elems=elems_list)
-    '''
-    params = dict(sdate=s_date, edate=e_date, \
-        meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
-        elems=[dict(name=el, add='f,t')for el in elements])
-    '''
+    shape_type = None
     #Check for por start end dates
     if 'station_id' in form_input.keys():
         if s_date.lower() =='por' or e_date.lower() == 'por':
@@ -420,6 +428,13 @@ def get_station_data(form_input, program):
         params['state'] = form_input['state']
     elif 'bounding_box' in form_input.keys():
         params['bbox'] = form_input['bounding_box']
+    elif 'shape' in form_input.keys():
+        #Need to find enclosing bbox
+        shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
+        if bbox is None:
+            params['bbox'] = ''
+        else:
+            params['bbox'] = bbox
     else:
         params['sids'] =''
 
@@ -456,6 +471,24 @@ def get_station_data(form_input, program):
     resultsdict['stn_data'] = [[] for stn in request['data']]
     idx_empty_list = []
     for stn, data in enumerate(request['data']):
+        #if custom shape, check if  stn lies within shape
+        if shape_type == 'circle':
+            try:
+                stn_in = WRCCUtils.point_in_circle(data['meta']['ll'][0], data['meta']['ll'][1], str(form_input['shape']))
+            except:
+                stn_in = False
+        elif shape_type == 'polygon':
+            shape = form_input['shape'].split(',')
+            shape = [float(s) for s in shape]
+            poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+            try:
+                stn_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
+            except:
+                stn_in = False
+        if not stn_in:
+            continue
+
+        #Order the data
         if not 'data' in data.keys():
             data['data'] = []
         if 'error' in data.keys():
@@ -533,6 +566,13 @@ def get_grid_data(form_input, program):
     if 'location' in form_input.keys():params['loc'] = form_input['location']
     if 'state' in form_input.keys():params['state'] = form_input['state']
     if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
+    if 'shape' in form_input.keys():
+        #Need to find enclosing bbox
+        shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
+        if bbox is None:
+            params['bbox'] = ''
+        else:
+            params['bbox'] = bbox
     request = {}
     try:
         request = GridData(params)

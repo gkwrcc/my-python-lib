@@ -51,9 +51,9 @@ ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '7': {'name': 'evap', 'name_long':'Pan Evaporation (in)', 'vX':7},
               '12': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12},
               '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':45},
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':44},
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':45},
               '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':45},
-              '-44': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':44}}
+              '-44': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':45}}
               #bug fix needed for cdd = 44
 
 ACIS_ELEMENTS_DICT = {
@@ -65,9 +65,9 @@ ACIS_ELEMENTS_DICT = {
               'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (in)', 'vX':4},
               'snow': {'name': 'snow', 'name_long':'Snowfall (in)', 'vX':10},
               'snwd': {'name': 'snwd', 'name_long':'Snow Depth (in)', 'vX':11},
-              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':44},
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':45},
               'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (F)', 'vX':45},
-              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':44},
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':45},
               'evap': {'name': 'evap', 'name_long':'Evaporation (in)', 'vX':7},
               'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12}
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
@@ -122,7 +122,41 @@ SEARCH_AREA_FORM_TO_ACIS = {
     'state':'state',
     'county':'county',
     'basin':'basin',
-    'shape':None
+    'shape':None,
+    'location':'loc'
+}
+
+ACIS_TO_SEARCH_AREA = {
+    'climdiv':'climate_division',
+    'cwa':'county_warning_area',
+    'bbox':'bounding_box',
+    'stnid':'station_id',
+    'stn_id': 'station_id',
+    'stnids':'station_ids',
+    'basin':'basin',
+    'county':'county',
+    'shape':'shape',
+    'point':'location',
+    'state':'state',
+    'states':'states',
+    'sw_states':'states'
+}
+
+AREA_DEFAULTS = {
+    'stnid': '266779',
+    'stn_id':'266779',
+    'stnids':'266779,050848',
+    'climdiv':'NV01',
+    'cwa':'PUB',
+    'bbox':'-115,34,-114,35',
+    'bounding_box':'-115,34,-114,35',
+    'state':'NV',
+    'states':'states',
+    'sw_states':'states',
+    'county':'08051',
+    'basin':'10180002',
+    'shape':'-115,34, -115, 35,-114,35, -114, 34',
+    'point': '-119,39'
 }
 
 DISPLAY_PARAMS = {
@@ -132,6 +166,7 @@ DISPLAY_PARAMS = {
     'station_id': 'Station ID',
     'station_ID': 'Station ID',
     'station_ids': 'Station IDs',
+    'station_IDs':'Station IDs',
     'location': 'Location (lon, lat)',
     'lat': 'Latitude',
     'lon': 'Longitude',
@@ -144,6 +179,7 @@ DISPLAY_PARAMS = {
     'county': 'County',
     'basin': 'Drainage Basin',
     'state': 'State',
+    'states':'States',
     'bounding_box': 'Bounding Box',
     'bbox': 'Bounding Box',
     'custom_shape': 'Custom Shape',
@@ -177,8 +213,13 @@ DISPLAY_PARAMS = {
     'wdmv': 'Wind Movement (Mi)',
     'evap': 'Pan Evaporation (in)',
     #Other
+    'temporal_resolution': 'Temporal Resolution',
+    'dly':'Daily',
+    'mly':'Monthly',
+    'yly':'Yearly',
     'summary': 'Summary',
     'summary_type': 'Summary Type',
+    'data_summary':'Temporal Summary',
     'mean': 'Mean',
     'sum': 'Sum',
     'max': 'Maximum',

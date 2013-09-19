@@ -104,6 +104,24 @@ def find_bbox_of_circle(lon, lat, r):
             bbox+=',' + str(coord)
     return bbox
 
+def get_bbox(shape):
+    '''
+    shape is a str of lon, lat coordinates of
+    a polygon or lon, lat, r of a circle
+    output is the type of the shape (circle or polygon)
+    and the enclosing bounding_box of the polygon or circle
+    '''
+    s = shape.split(',')
+    s = [float(k) for k in s]
+    if len(s)==3:
+        t = 'circle'
+        bbox = find_bbox_of_circle(s[0], s[1], s[2])
+    else:
+        t = 'polygon'
+        bbox = find_bbox_of_shape(s)
+    return t, bbox
+
+
 def point_in_circle(x,y,circle):
     '''
     Determine if a point is inside a given cicle
@@ -647,6 +665,23 @@ def format_grid_data(req, params):
                 lat = lat_grid[0]
                 for lon_idx, lon in enumerate(lons[grid_idx]):
                     idx+=1
+                    #if custom shape, check if  stn lies within shape
+                    if 'shape' == params.keys():
+                        if len(params['shape']) == 3:
+                            try:
+                                point_in = WRCCUtils.point_in_circle(lon,lat, str(params['shape']))
+                            except:
+                                point_in = False
+                        else:
+                            shape = params['shape'].split(',')
+                            shape = [float(s) for s in shape]
+                            poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+                            try:
+                                point_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
+                            except:
+                                point_in = False
+                        if not point_in:
+                            continue
                     data_out[idx].append(date_range)
                     data_out[idx].append(round(lon,2))
                     data_out[idx].append(round(lat,2))
@@ -692,14 +727,32 @@ def format_grid_data(req, params):
                 for el_idx in range(1,len(el_list) + 1):
                     data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
             else:
-                #idx+=1
                 for grid_idx, lat_grid in enumerate(lats):
-                    for lat_idx, lat in enumerate(lat_grid):
+                    lat = lat_grid[0]
+                    for lon_idx, lon in enumerate(lons[grid_idx]):
                         idx+=1
+                        #if custom shape, check if  stn lies within shape
+                        if 'shape' == params.keys():
+                            if len(params['shape']) == 3:
+                                try:
+                                    point_in = WRCCUtils.point_in_circle(lon,lat, str(params['shape']))
+                                except:
+                                    point_in = False
+                            else:
+                                shape = params['shape'].split(',')
+                                shape = [float(s) for s in shape]
+                                poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+                                try:
+                                    point_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
+                                except:
+                                    point_in = False
+                            if not point_in:
+                                continue
+
                         data_out[idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
-                        data_out[idx].append(round(lons[grid_idx][lat_idx],2))
+                        data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                         data_out[idx].append(round(lat,2))
-                        data_out[idx].append(elevs[grid_idx][lat_idx])
+                        data_out[idx].append(elevs[grid_idx][lon_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
                             data_out[idx].append(date_vals[el_idx][grid_idx][lat_idx])
