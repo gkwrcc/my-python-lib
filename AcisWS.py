@@ -150,16 +150,17 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         sorted_list =[]
         for i, stn in enumerate(request['meta']):
             #if custom shape, check if  stn lies within shape
-            shape = val.split(',')
-            shape = [float(s) for s in shape]
-            if shape_type == 'circle':
-                poly = shape
-                stn_in = WRCCUtils.point_in_circle(stn['ll'][0], stn['ll'][1], poly)
-            elif shape_type == 'polygon':
-                poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
-                stn_in = WRCCUtils.point_in_poly(stn['ll'][0], stn['ll'][1], poly)
-            if not stn_in:
-                continue
+            if by_type == 'shape':
+                shape = val.split(',')
+                shape = [float(s) for s in shape]
+                if shape_type == 'circle':
+                    poly = shape
+                    stn_in = WRCCUtils.point_in_circle(stn['ll'][0], stn['ll'][1], poly)
+                elif shape_type == 'polygon':
+                    poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+                    stn_in = WRCCUtils.point_in_poly(stn['ll'][0], stn['ll'][1], poly)
+                if not stn_in:
+                    continue
 
             if not stn['valid_daterange']:
                 continue

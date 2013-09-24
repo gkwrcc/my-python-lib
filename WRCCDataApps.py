@@ -900,20 +900,15 @@ def Sodxtrmts(**kwargs):
                     if kwargs['monthly_statistic'] in ['mmax', 'mmin']:
                         if value > -9998.0:
                             sumda+=1
-                            if kwargs['monthly_statistic'] == 'mmax' and value > xmax:xmax = value
-                            if kwargs['monthly_statistic'] == 'mmin' and value < xmin:xmin = value
-                        else:
                             if el_type in ['snow', 'pcpn', 'evap'] and abs(value - 245.0) < 0.01: #S flag
                                 value = 0.0
                             elif el_type in ['snow', 'pcpn', 'evap'] and value > 99.99 and value < 240.0: #A flag
                                 value -=100.0
-
-                                if kwargs['monthly_statistic'] == 'mmax' and value > xmax:
-                                    xmax = value
-                                    annflg[mon] = 'A'
-                                if kwargs['monthly_statistic'] == 'mmin' and value < xmin:
-                                    xmin = value
-
+                            if kwargs['monthly_statistic'] == 'mmax' and value > xmax:
+                                xmax = value
+                                #annflg[mon] = 'A'
+                            if kwargs['monthly_statistic'] == 'mmin' and value < xmin:
+                                xmin = value
                         #if kwargs['monthly_statistic'] == 'mmax' and value > xmax:xmax = value
                         #if kwargs['monthly_statistic'] == 'mmin' and value < xmin:xmin = value
 
@@ -1032,7 +1027,7 @@ def Sodxtrmts(**kwargs):
             annminh = 9999.001
             sumann = 0.0
             for mon in range(12):
-                if el_type in ['snow', 'pcpn', 'snwd']:
+                if el_type in ['snow', 'pcpn', 'snwd', 'evap']:
                     valmon = round(table_1[yr][mon],2)
                 else:
                     valmon = table_1[yr][mon]
