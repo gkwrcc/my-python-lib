@@ -2883,7 +2883,7 @@ def Soddd(**kwargs):
     #Loop over stations
     for i, stn in enumerate(kwargs['coop_station_ids']):
         yrs = max(len(kwargs['data'][i][j]) for j in range(len(kwargs['elements'])))
-        dd = [[-9999 for day in range(366)] for yr in range(yrs)]
+        dd = [[-9999.0 for day in range(366)] for yr in range(yrs)]
         for yr in range(yrs):
             for doy in range(366):
                 maxt = str(kwargs['data'][i][0][yr][doy])
@@ -2923,36 +2923,43 @@ def Soddd(**kwargs):
                     dd[yr][doy] = numpy.ceil(dd[yr][doy])
 
         #Summarize:
-        mon_lens = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         days_miss = map(chr, range(97, 123))
         year = int(kwargs['dates'][0][0:4]) -1
         if kwargs['output_type'] == 'm':
             #monthly time series
             results[i] =  [[]for ys in range(yrs)]
             for yr in range(yrs):
+                ann_sum = 0
+                ann_miss = 0
                 last_day = 0
                 year+=1
                 results[i][yr].append(year)
                 for mon in range(12):
                     sm = 0
                     sm_miss = 0
-                    if mon == 1 and WRCCUtils.is_leap_year(year):
-                        mon_len = 29
+                    #Take care of leap years
+                    if mon == 1 and not WRCCUtils.is_leap_year(year):
+                        mon_len = 28
                     else:
                         mon_len = mon_lens[mon]
                     if mon > 0:
                         last_day+= mon_lens[mon-1]
                     for day in range(mon_len):
                         dd_val = dd[yr][last_day+day]
-                        if dd_val != -9999:
+                        if abs(dd_val + 9999.0) > 0.001:
                             sm+=dd_val
                         else:
                             sm_miss+=1
                     #take care of missing days max if desired
                     if 'max_miss' in kwargs.keys() and sm_miss > kwargs['max_miss']:
                         sm = -999
-                    elif sm_miss > 0.5:
-                        sm = (sm/(float(mon_len)- sm_miss))*float(last_day)
+                        ann_miss+=1
+                    elif sm_miss > 0.5 and sm_miss <= kwargs['max_miss']:
+                        sm = round((sm/(float(last_day)- sm_miss))*float(last_day),1)
+                        ann_sum+=sm
+                    elif sm_miss == 0:
+                        ann_sum+=sm
 
                     if sm_miss == 0:
                         results[i][yr].append(str(sm)+ ' ')
@@ -2960,25 +2967,29 @@ def Soddd(**kwargs):
                         results[i][yr].append(str(sm) + '%s' % days_miss[sm_miss-1])
                     else:
                         results[i][yr].append(str(sm) + '%s' % days_miss[-1])
+                if ann_miss ==0:
+                    results[i][yr].append('%s%s' %(round(ann_sum, 1),' '))
+                else:
+                    results[i][yr].append('%s%s' %(round(ann_sum, 1),days_miss[ann_miss-1]))
         else:
             #long-term daily average
             results[i] = [[] for day in range(31)]
             for day in range(31):
                 year = int(kwargs['dates'][0][0:4]) -1
-                results[i][day].append(day)
+                results[i][day].append(day+1)
                 for mon in range(12):
                     sm = 0
                     sm_yrs = 0
                     doy = WRCCUtils.compute_doy(str(mon+1), str(day+1))
                     for yr in range(yrs):
                         year+=1
-                        if mon == 1 and WRCCUtils.is_leap_year(year):
-                            mon_len = 29
+                        if mon == 1 and not WRCCUtils.is_leap_year(year):
+                            mon_len = 28
                         else:
                             mon_len = mon_lens[mon]
                         if day+1 > mon_len:
                             continue
-                        if dd[yr][doy] != -9999:
+                        if abs(dd[yr][doy] + 9999.0)>0.001:
                             sm+=dd[yr][doy]
                             sm_yrs+=1
                     if sm_yrs > 0.5:

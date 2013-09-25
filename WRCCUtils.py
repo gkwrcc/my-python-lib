@@ -886,8 +886,8 @@ def compute_doy(mon,day):
     Routine to compute day of year ignoring leap years
     '''
     mon_len = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    nmon = int(mon.lstrip('0'))
-    nday = int(day.lstrip('0'))
+    nmon = int(str(mon).lstrip('0'))
+    nday = int(str(day).lstrip('0'))
     if nmon == 1:
         ndoy = nday
     else:
@@ -899,8 +899,8 @@ def compute_doy_leap(mon, day):
     Routine to compute day of leap years
     '''
     mon_len = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    nmon = int(mon.lstrip('0'))
-    nday = int(day.lstrip('0'))
+    nmon = int(str(mon).lstrip('0'))
+    nday = int(str(day).lstrip('0'))
     if nmon == 1:
         ndoy = nday
     else:
