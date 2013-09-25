@@ -73,6 +73,26 @@ def General(request_type, params):
 ####################################
 #Functions
 #####################################
+def make_gen_call_by_state(search_area, state):
+    '''
+    Makes a General call to ACIS
+    Server=/General/<area_type>   params={"state":<state>,"meta":"id,name,bbox,geojson"}
+    '''
+    sa = str(search_area)
+    st = str(state).lower()
+    #Sanity check
+    if sa not in ['cwa', 'basin', 'county', 'climdiv']:
+        return {'error': 'Search area must be one of: cwa, basin, county, climdiv. You entered: %s' %str(search_area)}
+    if st.upper() not in WRCCData.STATE_CHOICES:
+        return {'error': 'Not avalid US state: %s' %str(state)}
+    #Make general request
+    params={"state":st,"meta":"geojson,bbox,name,id"}
+    try:
+        req = General(search_area,params)
+    except:
+        req = {'error': 'General call did not execute. Parameters: %s' %str(params)}
+    return req
+
 def get_meta_data(search_area, val):
         '''
         Find meta data for  search_area = val

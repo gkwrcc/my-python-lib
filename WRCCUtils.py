@@ -13,6 +13,7 @@ import smtplib
 from email.mime.text import MIMEText
 from ftplib import FTP
 from math import sqrt
+import colorsys
 
 from django.http import HttpResponse, HttpResponseRedirect
 
@@ -20,6 +21,124 @@ import WRCCClasses, AcisWS, WRCCData
 ####################################
 #FUNCTIONS
 #####################################
+def get_N_HexCol(N=5):
+    '''
+    Generates HEX color list of size N
+    '''
+    HSV_tuples = [(x*1.0/N, 0.5, 0.5) for x in range(N)]
+    RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+    RGB_tuples = map(lambda x: tuple(map(lambda y: int(y * 255),x)),RGB_tuples)
+    HEX_tuples = map(lambda x: tuple(map(lambda y: chr(y).encode('hex'),x)), RGB_tuples)
+    HEX_list = map(lambda x: "".join(x), HEX_tuples)
+
+    return HEX_list
+
+
+def generate_kml_file(area_type, state, kml_file_name, dir_location):
+    '''
+    This functions makes a call to ACIS General
+    Server=/General/<area_type>   params={"state":<state>,"meta":"id,name,bbox,geojson"}
+    Then uses the information to generate a kml
+    file with name kml_file, that is used to generate an overlay map
+    of the area_type in the state.
+    Returned is a status update. If file already existed or was successfully
+    created, a 'Success' string is returned. Else and error message string is returned
+    The kml file is put into dir_location. dir_location is an
+    absolute path on local host
+    '''
+    #Check if kml file already exists in dir_loc
+    if str(dir_location)[-1]!='/':
+        dr = str(dir_location) + '/'
+    elif str(dir_location)[0]!='/':
+        return 'Need absolute path of directory. You eneterd: %s' %str(dir_location)
+    else:
+        dr = str(dir_location)
+    try:
+        with open(dr + kml_file_name):
+            if os.stat(dr + kml_file_name).st_size==0:
+                os.remove(dr + kml_file_name)
+            else:
+                return 'Success'
+    except IOError:
+        pass
+
+
+    #Make General call to get the geojson for the input params
+    req = AcisWS.make_gen_call_by_state(str(area_type), str(state))
+    #Sanity Check:
+    if 'error' in req.keys():
+        return str(req['error'])
+    else:
+        if not 'meta' in req.keys():
+            return 'No meta data found for search area %s and state %s' %(str(area_type), str(state))
+    json_data = req['meta']
+    if not isinstance(json_data, list):
+        return 'Not a valid json_data list: %s' % str(json_data)
+    #Write kml file
+    try:
+         kml_file = open(dr + kml_file_name, 'w+')
+    except:
+        return 'Could not open kml file: %s' %(dr + kml_file_name)
+    num = len(json_data)
+    colors = get_N_HexCol(N=num)
+
+    #Header
+    kml_file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    kml_file.write('<kml xmlns="http://www.opengis.net/kml/2.2">\n')
+    kml_file.write('  <Document>\n')
+    #Styles
+    for poly_idx, poly in enumerate(json_data):
+        kml_file.write('    <Style id="poly%s">\n' %poly_idx)
+        kml_file.write('      <LineStyle>\n')
+        #kml_file.write('        <color>%s</color>\n' %str(colors[poly_idx]))
+        kml_file.write('        <width>1.5</width>\n')
+        kml_file.write('      </LineStyle>\n')
+        kml_file.write('      <PolyStyle>\n')
+        #kml_file.write('        <color>%s</color>\n' %str(colors[poly_idx]))
+        kml_file.write('        <color>0000FF</color>\n')
+        #kml_file.write('        <colorMode>normal</colorMode>\n')
+        kml_file.write('        <fill>1</fill>\n')
+        #kml_file.write('        <outline>1</outline>\n')
+        kml_file.write('      </PolyStyle>\n')
+        kml_file.write('    </Style>\n')
+    #Polygons
+    for poly_idx, poly in enumerate(json_data):
+        poly_bbox = poly['bbox']
+        if 'state' in poly.keys():
+            poly_state = poly['state']
+        else:
+            poly_state = ''
+        coords = poly['geojson']['coordinates'][0][0]
+
+        kml_file.write('    <Placemark>\n')
+        kml_file.write('      <name>%s</name>\n' %poly['id'])
+        kml_file.write('      <description>%s (%s)</description>\n' %(poly['name'], poly['id']))
+        kml_file.write('      <styleUrl>#poly%s</styleUrl>\n' %poly_idx)
+        kml_file.write('      <Polygon>\n')
+        kml_file.write('      <tessellate>1</tessellate>\n')
+        kml_file.write('        <extrude>1</extrude>\n')
+        kml_file.write('        <altitudeMode>relativeToGround</altitudeMode>\n')
+        kml_file.write('        <outerBoundaryIs>\n')
+        kml_file.write('          <LinearRing>\n')
+        kml_file.write('            <coordinates>\n')
+
+        for idx, lon_lat in enumerate(coords):
+            kml_file.write('              %s,%s,%s\n' %(lon_lat[0], lon_lat[1],0))
+        #Add first coordinate to close polygon
+        #kml_file.write('              %s,%s,%s\n' %(coords[0][0], coords[0][1],0))
+        kml_file.write('            </coordinates>\n')
+        kml_file.write('          </LinearRing>\n')
+        kml_file.write('        </outerBoundaryIs>\n')
+        kml_file.write('      </Polygon>\n')
+        kml_file.write('    </Placemark>\n')
+
+    #Footer
+    kml_file.write('  </Document>\n')
+    kml_file.write('</kml>\n')
+    kml_file.close
+
+    return 'Success'
+
 def get_search_area_values(form_input_dict, app_type):
     '''
     Given form input of a web app,
