@@ -88,10 +88,58 @@ def make_gen_call_by_state(search_area, state):
     #Make general request
     params={"state":st,"meta":"geojson,bbox,name,id"}
     try:
-        req = General(search_area,params)
+        req = General(sa,params)
     except:
         req = {'error': 'General call did not execute. Parameters: %s' %str(params)}
     return req
+
+def find_geojson_of_area(search_area, val):
+    '''
+    Makes an ACIS general call
+    Returns the enclosing boundng box 'W lon,S lat,E lon,N lat'
+    area_type is one of basin, cwa, climdiv, county
+    '''
+    sa = str(search_area)
+    v = str(val)
+    #Sanity check
+    if sa not in ['cwa', 'basin', 'county', 'climdiv']:
+        return ''
+    #Make general request
+    params={'id':v,"meta":"geojson,bbox,name,id"}
+    try:
+        req = General(sa,params)
+    except:
+        return ''
+    if 'meta' not in req.keys() or not req['meta']:
+        return ''
+    if 'geojson' not in  req['meta'][0].keys() or not req['meta'][0]['geojson']:
+        return ''
+    else:
+        return req['meta'][0]['geojson']['coordinates'][0][0]
+
+def find_bbox_of_area(search_area, val):
+    '''
+    Makes an ACIS general call
+    Returns the enclosing boundng box 'W lon,S lat,E lon,N lat'
+    area_type is one of basin, cwa, climdiv, county
+    '''
+    sa = str(search_area)
+    v = str(val)
+    #Sanity check
+    if sa not in ['cwa', 'basin', 'county', 'climdiv']:
+        return ''
+    #Make general request
+    params={'id':v,"meta":"geojson,bbox,name,id"}
+    try:
+        req = General(sa,params)
+    except:
+        return ''
+    if 'meta' not in req.keys() or not req['meta']:
+        return ''
+    if 'bbox' not in  req['meta'][0].keys() or not req['meta'][0]['bbox']:
+        return ''
+    else:
+        return req['meta'][0]['bbox']
 
 def get_meta_data(search_area, val):
         '''
@@ -598,6 +646,15 @@ def get_grid_data(form_input, program):
             params['bbox'] = ''
         else:
             params['bbox'] = bbox
+    #Find enclosing bbox via General ACIS call (find_bbox_of_area)
+    if 'cwa' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('cwa', form_input['cwa'])
+    if 'county' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('county', form_input['county'])
+    if 'basin' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('basin', form_input['basin'])
+    if 'climdiv' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('climdiv', form_input['climdiv'])
     request = {}
     try:
         request = GridData(params)
