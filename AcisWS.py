@@ -647,6 +647,8 @@ def get_grid_data(form_input, program):
         else:
             params['bbox'] = bbox
     #Find enclosing bbox via General ACIS call (find_bbox_of_area)
+    if 'county_warning_area' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('cwa', form_input['county_warning_area'])
     if 'cwa' in form_input.keys():
         params['bbox'] = find_bbox_of_area('cwa', form_input['cwa'])
     if 'county' in form_input.keys():
@@ -655,6 +657,8 @@ def get_grid_data(form_input, program):
         params['bbox'] = find_bbox_of_area('basin', form_input['basin'])
     if 'climdiv' in form_input.keys():
         params['bbox'] = find_bbox_of_area('climdiv', form_input['climdiv'])
+    if 'climate_division' in form_input.keys():
+        params['bbox'] = find_bbox_of_area('climdiv', form_input['climate_division'])
     request = {}
     try:
         request = GridData(params)

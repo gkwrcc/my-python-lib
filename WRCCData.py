@@ -296,7 +296,8 @@ GRID_CHOICES = {
     '13': 'RCM3 + GFDL',
     '14': 'WRFG + NCEP (Historical only)',
     '15': 'WRFG + CCSM',
-    '16': 'WRFG + CGCM3'
+    '16': 'WRFG + CGCM3',
+    '21': 'PRISM'
 }
 
 MONTH_CHOICES = (

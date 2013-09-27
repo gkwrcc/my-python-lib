@@ -295,6 +295,31 @@ def point_in_poly(x,y,poly):
 
     return inside
 
+def set_poly_and_PointIn(prms):
+    poly = None;PointIn=None
+    if 'shape' in prms.keys():
+        if len(prms['shape']) == 3:#circle
+            poly = str(prms['shape'])
+            pointIn = getattr(WRCCUtils,'point_in_circle')
+        else:
+            sh = prms['shape'].split(',')
+            sh = [float(s) for s in sh]
+            poly = [(sh[2*idx],sh[2*idx+1]) for idx in range(len(sh)/2)]
+            PointIn = getattr(WRCCUtils,'point_in_poly')
+    else:
+        if 'basin' in prms.keys():
+            sh = AcisWS.find_geojson_of_area('basin', prms['basin'])
+        if 'county_warning_area' in prms.keys():
+            sh = AcisWS.find_geojson_of_area('cwa', prms['county_warning_area'])
+        if 'climate_division' in prms.keys():
+            sh = AcisWS.find_geojson_of_area('climdiv', prms['climate_division'])
+        if 'county' in prms.keys():
+            sh = AcisWS.find_geojson_of_area('county', prms['county'])
+        if 'bounding_box' not in prms.keys() and not 'state' in prms.keys():
+            poly = [(s[0],s[1]) for s in sh]
+            PointIn = getattr(WRCCUtils,'point_in_poly')
+    return poly, PointIn
+
 def check_for_int(string):
     try:
         int(string)
@@ -756,7 +781,7 @@ def format_grid_data(req, params):
         else:
             data['data'] = []
 
-    #Format data
+    #Format data depending out data_format choice: json, summarized data or raw data request
     if prms['data_format'] == 'json':
         return req
     elif data_summary != 'none':
@@ -778,31 +803,11 @@ def format_grid_data(req, params):
             data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]
             for val in data['data']:
                 data_out[0].append(val)
+            return data_out
         else:
             poly = None
             #check for irregular shapes and define poly if so
-            if 'shape' in prms.keys():
-                if len(prms['shape']) == 3:#circle
-                    poly = str(prms['shape'])
-                    pointIn = getattr(WRCCUtils,'point_in_circle')
-                else:
-                    sh = prms['shape'].split(',')
-                    sh = [float(s) for s in shape]
-                    poly = [(sh[2*idx],sh[2*idx+1]) for idx in range(len(sh)/2)]
-                    PointIn = getattr(WRCCUtils,'point_in_poly')
-            else:
-                if 'basin' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('basin', prms['basin'])
-                if 'county_warning_area' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('cwa', prms['county_warning_area'])
-                if 'climate_division' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('climdiv', prms['climate_division'])
-                if 'county' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('county', prms['county'])
-                if not 'bounding_box' in prms.keys() and not 'state' in prms.keys():
-                    poly = [(s[0],s[1]) for s in sh]
-                    PointIn = getattr(WRCCUtils,'point_in_poly')
-
+            poly, PointIn = set_poly_and_PointIn(prms)
             lat_num = 0
             for lat_idx, lat_grid in enumerate(data['meta']['lat']):
                 lat_num+=len(lat_grid)
@@ -822,26 +827,9 @@ def format_grid_data(req, params):
                         except:
                             point_in = False
                         if not point_in:
+                            del data_out[idx]
+                            idx-=1
                             continue
-
-                    '''
-                    if 'shape' == prms.keys():
-                        if len(prms['shape']) == 3:
-                            try:
-                                point_in = WRCCUtils.point_in_circle(lon,lat, str(prms['shape']))
-                            except:
-                                point_in = False
-                        else:
-                            shape = prms['shape'].split(',')
-                            shape = [float(s) for s in shape]
-                            poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
-                            try:
-                                point_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
-                            except:
-                                point_in = False
-                        if not point_in:
-                            continue
-                    '''
                     data_out[idx].append(date_range)
                     data_out[idx].append(round(lon,2))
                     data_out[idx].append(round(lat,2))
@@ -849,19 +837,6 @@ def format_grid_data(req, params):
 
                     for el_idx in range(len(data['data'])):
                         data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
-
-            '''
-            for grid_idx, lat_grid in enumerate(lats):
-                for lat_idx, lat in enumerate(lat_grid):
-                    idx+=1
-                    data_out[idx].append(date_range)
-                    data_out[idx].append(round(lons[grid_idx][lat_idx],2))
-                    data_out[idx].append(round(lat,2))
-                    data_out[idx].append(elevs[grid_idx][lat_idx])
-
-                    for el_idx in range(len(data['data'])):
-                        data_out[idx].append(data['data'][el_idx][grid_idx][lat_idx])
-            '''
         return data_out
     else:
         #Raw data request
@@ -873,33 +848,14 @@ def format_grid_data(req, params):
         else:
             poly = None
             #check for irregular shapes and define poly if so
-            if 'shape' in prms.keys():
-                if len(prms['shape']) == 3:#circle
-                    poly = str(prms['shape'])
-                    pointIn = getattr(WRCCUtils,'point_in_circle')
-                else:
-                    sh = prms['shape'].split(',')
-                    sh = [float(s) for s in shape]
-                    poly = [(sh[2*idx],sh[2*idx+1]) for idx in range(len(sh)/2)]
-                    PointIn = getattr(WRCCUtils,'point_in_poly')
-            else:
-                if 'basin' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('basin', prms['basin'])
-                if 'county_warning_area' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('cwa', prms['county_warning_area'])
-                if 'climate_division' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('climdiv', prms['climate_division'])
-                if 'county' in prms.keys():
-                    sh = AcisWS.find_geojson_of_area('county', prms['county'])
-                if 'bounding_box' not in prm.keys() and not 'state' in prms.keys():
-                    poly = [(s[0],s[1]) for s in sh]
-                    PointIn = getattr(WRCCUtils,'point_in_poly')
-
+            poly, PointIn = set_poly_and_PointIn(prms)
+            #set output data_out
             lat_num = 0
             for lat_idx, lat_grid in enumerate(data['meta']['lat']):
                 lat_num+=len(lat_grid)
             length = len(data['data']) * lat_num
             data_out = [[] for i in range(length)]
+        #Loop over data
         idx = -1
         for date_idx, date_vals in enumerate(data['data']):
             if 'location' in prms.keys():
@@ -923,25 +879,9 @@ def format_grid_data(req, params):
                             except:
                                 point_in = False
                             if not point_in:
+                                del data_out[idx]
+                                idx-=1
                                 continue
-                        '''
-                        if 'shape' == prms.keys():
-                            if len(prms['shape']) == 3:
-                                try:
-                                    point_in = WRCCUtils.point_in_circle(lon,lat, str(prms['shape']))
-                                except:
-                                    point_in = False
-                            else:
-                                shape = prms['shape'].split(',')
-                                shape = [float(s) for s in shape]
-                                poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
-                                try:
-                                    point_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
-                                except:
-                                    point_in = False
-                            if not point_in:
-                                continue
-                        '''
                         data_out[idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
                         data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                         data_out[idx].append(round(lat,2))
