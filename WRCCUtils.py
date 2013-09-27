@@ -242,9 +242,16 @@ def get_bbox(shape):
     if len(s)==3:
         t = 'circle'
         bbox = find_bbox_of_circle(s[0], s[1], s[2])
+    elif len(s) ==4: #bbox
+        t = 'bbox'
+        bbox = find_bbox_of_shape(s)
+    elif len(s) == 2:
+        t = 'point'
+        bbox = str(s[0] - 0.001) + ',' + str(s[1] - 0.001) + ',' + str(s[0] + 0.001) + ',' + str(s[1] + 0.001)
     else:
         t = 'polygon'
         bbox = find_bbox_of_shape(s)
+
     return t, bbox
 
 
@@ -477,7 +484,7 @@ def write_griddata_to_file(data, elements,delim, file_extension, f=None, request
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #set file name
-    if not output_file_name or output_file_name == 'DataRequest':
+    if not output_file_name or output_file_name == 'DataRequest' or output_file_name =='':
         file_name = 'DataRequest_'+ time_stamp
     else:
         file_name = output_file_name
@@ -601,7 +608,7 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #set file name
-    if not output_file_name or output_file_name == 'DataRequest':
+    if not output_file_name or output_file_name == 'DataRequest' or output_file_name == '':
         file_name = 'DataRequest_'+ time_stamp
     else:
         file_name = output_file_name

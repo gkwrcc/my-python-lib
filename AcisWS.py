@@ -540,7 +540,9 @@ def get_station_data(form_input, program):
     resultsdict['stn_ids'] = [[] for stn in request['data']]
     resultsdict['stn_data'] = [[] for stn in request['data']]
     idx_empty_list = []
+    stn_idx = -1
     for stn, data in enumerate(request['data']):
+        stn_idx+=1
         #if custom shape, check if  stn lies within shape
         stn_in = True
         if shape_type is not None:
@@ -552,22 +554,30 @@ def get_station_data(form_input, program):
                 stn_in = WRCCUtils.point_in_circle(data['meta']['ll'][0], data['meta']['ll'][1], poly)
             except:
                 stn_in = False
-        elif shape_type == 'polygon':
+        elif shape_type in ['polygon','bbox', 'point']:
+            if shape_type == 'bbox':
+                shape = [shape[0], shape[1], shape[2], shape[1], shape[0],shape[3], shape[2],shape[3]]
             poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
             try:
                 stn_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
             except:
                 stn_in = False
+
         if not stn_in:
+            del resultsdict['stn_errors'][stn_idx]
+            del resultsdict['stn_names'][stn_idx]
+            del resultsdict['stn_ids'][stn_idx]
+            del resultsdict['stn_data'][stn_idx]
+            stn_idx-=1
             continue
 
         #Order the data
         if not 'data' in data.keys():
             data['data'] = []
         if 'error' in data.keys():
-            resultsdict['stn_errors'][stn] = str(data['error'])
+            resultsdict['stn_errors'][stn_idx] = str(data['error'])
         try:
-            resultsdict['stn_ids'][stn] = []
+            resultsdict['stn_ids'][stn_idx] = []
             stn_id_list = data['meta']['sids']
             for sid in stn_id_list:
                 stn_id = str(sid.split(' ')[0])
@@ -584,26 +594,26 @@ def get_station_data(form_input, program):
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront
                 if network_id_name == "COOP":
-                    resultsdict['stn_ids'][stn].insert(0, ids)
+                    resultsdict['stn_ids'][stn_idx].insert(0, ids)
                 else:
-                    resultsdict['stn_ids'][stn].append(ids)
+                    resultsdict['stn_ids'][stn_idx].append(ids)
         except:
-            resultsdict['stn_ids'][stn] = []
+            resultsdict['stn_ids'][stn_idx] = []
         try:
-            resultsdict['stn_names'][stn] = str(data['meta']['name'])
+            resultsdict['stn_names'][stn_idx] = str(data['meta']['name'])
         except:
-            resultsdict['stn_names'][stn] = ''
+            resultsdict['stn_names'][stn_idx] = ''
         try:
-            resultsdict['stn_data'][stn] = data['data']
+            resultsdict['stn_data'][stn_idx] = data['data']
         except:
-            resultsdict['stn_data'][stn] = []
+            resultsdict['stn_data'][stn_idx] = []
 
-        if not resultsdict['stn_data'][stn]:
-            resultsdict['stn_errors'][stn] = 'No data found!'
+        if not resultsdict['stn_data'][stn_idx]:
+            resultsdict['stn_errors'][stn_idx] = 'No data found!'
         #Add dates
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
-                resultsdict['stn_data'][stn][idx].insert(0, date)
+                resultsdict['stn_data'][stn_idx][idx].insert(0, date)
 
     #final check on station data if comma separated list of stations
     if 'station_ids' in form_input.keys():
