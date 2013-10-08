@@ -1002,7 +1002,7 @@ def Sodxtrmts(**kwargs):
                             value-=100
 
                         if value > -9998.0:
-                            summ+=value
+                            summ+=round(value,2)
                             sumda+=1
                         #Estimate missing sum for degree days, using the mean of the other days
                         nummsg = mon_len - sumda
