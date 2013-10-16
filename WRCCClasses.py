@@ -317,14 +317,16 @@ class SODDataJob:
             return None
         #Pick first id in list
         stn_id = sids[0].split(' ')[0]
+        stn_network = WRCCData.NETWORK_CODES[sids[0].split(' ')[1]]
         if sids[0].split(' ')[1] != '2':
             #Check if station has coop id, if so, use that
             for sid in sids[1:]:
                 if sid.split(' ')[1] == '2':
                     #Found coop id
                     stn_id = sid.split(' ')[0]
+                    stn_network = WRCCData.NETWORK_CODES[sid.split(' ')[1]]
                     break
-        return str(stn_id)
+        return str(stn_id), stn_network
 
     def set_start_end_date(self):
         s_date = None; e_date = None
@@ -376,7 +378,7 @@ class SODDataJob:
                 #remove appostrophes from name, gives trouble in json file
                 stn_names.append(str(stn['name']).replace("\'"," "))
                 sids = stn['sids']
-                stn_id = self.get_unique_sid(sids)
+                stn_id,stn_network = self.get_unique_sid(sids)
                 #Take first station id listed
                 if not stn_id:
                     continue
@@ -384,6 +386,49 @@ class SODDataJob:
         self.station_ids = stn_ids
         return stn_ids, stn_names
 
+    def get_station_meta(self):
+        '''
+        Finds type of search area
+        and makes a call to Acis meta data to
+        find all station IDs lying within the search area
+        '''
+        meta_dict = {
+            'ids':[],
+            'names':[],
+            'states':[],
+            'lls':[],
+            'elevs':[],
+            'uids':[],
+            'networks':[],
+            'climdivs':[],
+            'countys':[]
+        }
+        keys = ['state', 'll', 'elev', 'uid', 'climdiv', 'county']
+        area, val = self.set_area_params()
+        if area and val:
+            request =  AcisWS.get_meta_data(area, val)
+        else:
+            request = {}
+        if request:
+            for i, stn in enumerate(request['meta']):
+                sids = stn['sids']
+                #Find stationID and network
+                stn_id, stn_network = self.get_unique_sid(sids)
+                if not stn_id:
+                    continue
+                meta_dict['ids'].append(stn_id)
+                meta_dict['networks'].append(stn_network)
+                meta_dict['names'].append(str(stn['name']).replace("\'"," "))
+                #find other meta data info
+                #NOTE: ACIS quirk: sometimes other meta data attributes don't show up
+                for key in keys:
+                    meta_dict_key = key + 's'
+                    if key in stn.keys():
+                        meta_dict[meta_dict_key].append(str(stn[key]))
+                    else:
+                        meta_dict[meta_dict_key].append(' ')
+        self.station_ids = meta_dict['ids']
+        return meta_dict['names'], meta_dict['states'], meta_dict['ids'], meta_dict['networks'], meta_dict['lls'], meta_dict['elevs'], meta_dict['uids'], meta_dict['climdivs'], meta_dict['countys']
 
     def get_dates_list(self):
         '''
@@ -502,7 +547,7 @@ class SODDataJob:
 
             #find station_id, Note: MultiStnData call may not return the stations in order
             sids = stn_data['meta']['sids']
-            stn_id = self.get_unique_sid(sids)
+            stn_id,stn_network = self.get_unique_sid(sids)
             try:
                 index = station_ids.index(stn_id)
             except:

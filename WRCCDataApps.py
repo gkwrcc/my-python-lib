@@ -1099,7 +1099,6 @@ def Sodxtrmts(**kwargs):
                     value = round(table_1[yr][mon],2)
                 else:
                     value = table_1[yr][mon]
-
                 #value = table_1[yr][mon]
                 missng = table_2[yr][mon]
 
@@ -1128,7 +1127,7 @@ def Sodxtrmts(**kwargs):
                         if value < xmin:xmin=value
             #End year loop
             if count > 0.5:
-                mean_out[monind] = summ/count
+                mean_out[monind] = round(summ/count,2)
                 results[i][num_yrs].append('%.2f' % mean_out[monind])
                 #New
                 results[i][num_yrs].append(' ')
