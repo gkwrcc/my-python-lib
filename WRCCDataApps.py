@@ -3048,7 +3048,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                             s_count = 0
                         elif flag == 'T':
                             if val ==' ' or not val:
-                                el_data[yr][doy] = 0.0025
+                                el_data[yr][doy] = 0.0
                             elif abs(100*val - float(int(100*val))) < 0.05:
                                 el_data[yr][doy] = 0.0025
                             else:
@@ -3073,14 +3073,21 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                         try:
                             vals.append(float(val))
                             yr_count+=1
-                            sm+=float(val)
+                            if el in ['maxt', 'mint']:
+                                sm+=round(float(val),1)
+                            else:
+                                sm+=round(float(val),3)
                             sms+= float(val)**2
                             n+=1
                         except:
                             continue
 
                 if sms > 0:
-                    ave = sm/n
+                    if el in ['maxt', 'mint']:
+                        ave = round(sm/n,1)
+                    else:
+                        ave = round(sm/n,3)
+                    #ave = sm/n
                     if sms > 1.5:
                         try:
                             std = float(numpy.sqrt((sms-(sm*sm)/n)/(n - 1)))
@@ -3095,12 +3102,14 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                     ave = float('NaN')
                     std = float('NaN')
 
+                ave = str(ave)
+                '''
                 if el in ['maxt','mint']:
                     ave = '%.1f' % ave
                 else:
                     ave = '%.3f' % ave
                 std = '%.3f' % std
-
+                '''
                 if el in ['maxt', 'mint']:
                     el_data_list[j].append([ave, std, str(yr_count)])
                     #el_data_list.append([ave, std, str(yr_count)])

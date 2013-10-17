@@ -100,6 +100,21 @@ MONTH_NAME_TO_NUMBER= {
     'Dec':'12',
 }
 
+NUMBER_TO_MONTH_NAME = {
+    '01':'Jan',
+    '02':'Feb',
+    '03':'Mar',
+    '04':'Apr',
+    '05':'May',
+    '06':'Jun',
+    '07':'Jul',
+    '08':'Aug',
+    '09':'Sep',
+    '10':'Oct',
+    '11':'Nov',
+    '12':'Dec'
+}
+
 MONTH_LENGTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 DELIMITERS = {
@@ -244,7 +259,7 @@ DISPLAY_PARAMS = {
     'mmax':'Monthly Maximum',
     'mmin':'Monthly Minimum',
     'msum':'Monthly Sum',
-    'mave':'Monthly Avererage',
+    'mave':'Monthly Average',
     'sd':'Standard Deviation',
     'ndays':'Number of Days',
     'rmon':'Range during Month',
