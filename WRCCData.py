@@ -276,8 +276,9 @@ DISPLAY_PARAMS = {
     'connector_line': 'Connect Data Points',
     'connector_line_width': 'Connector Line Width',
     'markers': 'Show Markers',
-    'marker_type': 'Marker Type'
-
+    'marker_type': 'Marker Type',
+    'axis_min':'Y-Axis minimum',
+    'axis_max':'Y-Axis maximum'
 }
 
 GRID_CHOICES = {
