@@ -2260,6 +2260,83 @@ def Sodlist(**kwargs):
         results[i]=stn_data
     return results
 
+def Sodlist_new(kwargs):
+    results = [];
+    '''
+    Summary of the day data lister
+    '''
+    #Find element list
+    if kwargs['include_tobs_evap']:
+        vx_list = [4,10,11,1,2,3,7]
+        el_list = ['pcpn','snow','snwd','maxt','mint','obst','evap']
+    else:
+        vx_list = [4,10,11,1,2]
+        el_list = ['pcpn','snow','snwd','maxt','mint']
+    #set up data request parameters
+    params = {
+        'sdate':kwargs['start_date'],
+        'edate':kwargs['end_date'],
+        'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'
+    }
+    if 'station_id' in kwargs.keys():params['sids'] = kwargs['station_id']
+    if 'station_ids' in kwargs.keys():params['sids'] = kwargs['station_ids']
+    if 'county' in kwargs.keys():params['county'] = kwargs['county']
+    if 'climate_division' in kwargs.keys():params['climdiv'] = kwargs['climate_division']
+    if 'county_warning_area' in kwargs.keys():params['cwa'] = kwargs['county_warning_area']
+    if 'basin' in kwargs.keys():params['basin'] = kwargs['basin']
+    if 'bbox' in kwargs.keys():params['bbox'] = kwargs['bounding_box']
+    elems = []
+    for vx in vx_list:
+        elem = {
+            'vX':vx,
+            'add':'f,t'
+        }
+        elems.append(elem)
+    params['elems'] = elems
+    #Get data
+    request = AcisWS.MultiStnData(params)
+    #Sanity check
+    if not request:
+        return results
+    if 'error' in request.keys():
+        return [request['error']]
+    if not 'data' in request.keys():
+        return ['No data found for this station selection!']
+    #Find Dates: Multi station calls don't return dates!
+    dates = WRCCUtils.get_dates(kwargs['start_date'],kwargs['end_date'],'Sodlist')
+    #Find indices for windowed data
+    start_indices, end_indices = WRCCUtils.get_windowed_indices(dates, kwargs['start_window'], kwargs['end_window'])
+    #format data and add dates
+    for stn_data in request['data']:
+        stn_dict = {'meta':{}, 'data':[]}
+        stn_id = ' '
+        if 'meta' in stn_data.keys():
+            stn_dict['meta'] =  WRCCUtils.format_station_meta(stn_data['meta'])
+            if 'sids' in stn_dict['meta'].keys():
+                stn_id = stn_dict['meta']['sids'][0][0]
+        if 'data'in stn_data.keys() and isinstance(stn_data['data'], list):
+            #stn_dict['data'] = stn_data['data']
+            for idx_idx, start_idx in enumerate(start_indices):
+                idx = start_idx
+                end = end_indices[idx_idx]
+                while idx <= end:
+                    #fix me: what's tobs?? different for each element
+                    dat = [stn_id + dates[idx]]
+                    for el_idx, vX in enumerate(vx_list):
+                        data_flag_tobs = stn_data['data'][idx][el_idx]
+                        #wrcc_data = [data_val, flag1, flag2, tobs]
+                        wrcc_data = WRCCUtils.format_sodlist_data(data_flag_tobs)
+                        if el_idx ==0:
+                            #add hour to data
+                            dat[0]+=wrcc_data[-1]
+                        dat.append(wrcc_data[0])
+                        dat.append(wrcc_data[1])
+                        dat.append(wrcc_data[2])
+                    stn_dict['data'].append(dat)
+                    idx+=1
+        results.append(stn_dict)
+    return results
+
 def Sodmonline(**kwargs):
     '''
     THIS PROGRAM WAS WRITTEN SPECIFICALLY FOR JOHN HANSON AT PGE, AND
@@ -3048,12 +3125,15 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                             s_count = 0
                         elif flag == 'T':
                             if val ==' ' or not val:
+                                #el_data[yr][doy] = 0.0025
                                 el_data[yr][doy] = 0.0
-                            elif abs(100*val - float(int(100*val))) < 0.05:
-                                el_data[yr][doy] = 0.0025
                             else:
                                 try:
-                                    el_data[yr][doy] = float(val)
+                                    float(val)
+                                    if abs(100*int(val) - float(100*int(val))) < 0.05:
+                                        el_data[yr][doy] = 0.0025
+                                    else:
+                                        el_data[yr][doy] = float(val)
                                 except:
                                     el_data[yr][doy] = 0.0
             #loop over day of year and compute averages
@@ -3073,10 +3153,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                         try:
                             vals.append(float(val))
                             yr_count+=1
-                            if el in ['maxt', 'mint']:
-                                sm+=round(float(val),1)
-                            else:
-                                sm+=round(float(val),3)
+                            sm+=float(val)
                             sms+= float(val)**2
                             n+=1
                         except:
@@ -3103,13 +3180,6 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                     std = float('NaN')
 
                 ave = str(ave)
-                '''
-                if el in ['maxt','mint']:
-                    ave = '%.1f' % ave
-                else:
-                    ave = '%.3f' % ave
-                std = '%.3f' % std
-                '''
                 if el in ['maxt', 'mint']:
                     el_data_list[j].append([ave, std, str(yr_count)])
                     #el_data_list.append([ave, std, str(yr_count)])

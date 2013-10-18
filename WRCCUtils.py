@@ -907,6 +907,46 @@ def get_station_meta(station_id):
         'elev':-999, 'climdiv':'', 'uid':-999, 'll':''}
     return stn_meta
 
+def format_station_meta(meta_data):
+    '''
+    Formats meta data comingout of ACIS
+    Deals with unicoe issues and assigns networks to each station id
+    '''
+    meta = {}
+    if not meta_data:
+        return {}
+    if not isinstance(meta_data, dict):
+        return {}
+    for key,val in meta_data.iteritems():
+        if key == 'name':
+            #strip apostrophes from name
+            meta['name'] = str(meta_data['name']).replace("\'"," ")
+        elif key == 'sids':
+            #find networks
+            meta['sids'] = []
+            for sid in meta_data['sids']:
+                sid_split = sid.split(' ')
+                #put coop id up front (for csc application metagraph  and possibly others)
+                if str(sid_split[1]) == '2':
+                    meta['sids'].insert(0,[str(sid_split[0]).replace("\'"," "), 'COOP'])
+                else:
+                    if str(sid_split[1]) in WRCCData.NETWORK_CODES.keys():
+                        meta['sids'].append([str(sid_split[0]).replace("\'"," "),WRCCData.NETWORK_CODES[str(sid_split[1])]])
+                    else:
+                        meta['sids'].append([str(sid_split[0]).replace("\'"," "),'Misc'])
+        elif key == 'll':
+            meta[str(key)]=val
+        elif key == 'valid_daterange':
+            meta['valid_daterange']=[]
+            for date_range in meta_data['valid_daterange']:
+                if not date_range or len(date_range) != 2:
+                    meta['valid_daterange'].append([])
+                else:
+                    meta['valid_daterange'].append([str(date_range[0]), str(date_range[1])])
+        else:
+            meta[str(key)] = str(val)
+    return meta
+
 def get_el_and_base_temp(el):
     '''
     strips base temp xx from gddxx ( hddxx, cddxx)
@@ -992,17 +1032,18 @@ def strip_data(val):
     '''
     Routine to strip data of attached flags
     '''
-    if not val:
+    v = str(val)
+    if not v:
         pos_val = ' '
         flag = ' '
-    elif val[0] == '-':
-        pos_val = val[1:]
+    elif v[0] == '-':
+        pos_val = v[1:]
     else:
-        pos_val = val
+        pos_val = v
     #Note: len(' ') =1!
     if len(pos_val) ==1:
         if pos_val.isdigit():
-            strp_val = val
+            strp_val = v
             flag = ' '
         else:
             strp_val = ' '
@@ -1013,11 +1054,11 @@ def strip_data(val):
                 flag = ' '
     else: #len(pos_val) >1
         if not pos_val[-1].isdigit():
-            flag = val[-1]
-            strp_val = val[0:-1]
+            flag = v[-1]
+            strp_val = v[0:-1]
         else:
             flag = ' '
-            strp_val = val
+            strp_val = v
 
     return strp_val, flag
 
@@ -1348,6 +1389,95 @@ def get_element_list(form_input, program):
         elements = [str(el) for el in form_input['elements']]
     return elements
 
+def format_sodlist_data(data_flag_tobs):
+    '''
+    Formats the data coming out of ACIS
+    to conform with Kelly's sodlist output
+    data_flags_tobs = [data_val, flag, time_obs]
+    data_val and flag are strings
+    time _obs is an interger
+    output is a list with 4 objects
+    [wrcc_data_val, flag_1= ACIS flag, flag_2='', str(time_obs)]
+    '''
+    wrcc_data = [' ', ' ',' ', '-1']
+    if not isinstance(data_flag_tobs, list):
+        return wrcc_data
+    if len(data_flag_tobs)!= 3:
+        return wrcc_data
+    data = str(data_flag_tobs[0])
+    acis_flag = str(data_flag_tobs[1])
+    tobs = str(data_flag_tobs[2])
+    if acis_flag in ['M', 'T', 'S']:
+        if data in ['M','S','T','',' ']:
+            wrcc_data[0] = '0'
+        else:
+            wrcc_data[0] = data
+    elif acis_flag in ['',' ']:
+        wrcc_data[0] = data
+    if acis_flag not in ['',' ']:
+        wrcc_data[1] = acis_flag
+    if tobs not in ['',' ','-1']:
+        if len(tobs) ==1:
+            wrcc_data[3] = '0'+tobs
+        else:
+            wrcc_data[3] = tobs
+    return wrcc_data
+
+def get_windowed_indices(dates, start_window, end_window):
+    '''
+    Finds start and end incdices for windowed data
+    start_date   -- start date of data array
+    end_date     -- end date of data array
+    start_window -- start date of window
+    end_window   -- end date of window
+    output: list of start_indices, list of end_indices
+    '''
+    if start_window == '0101' and end_window == '1231':
+        return [0],[len(dates)- 1]
+    start_indices = [];end_indices = []
+    for idx, date in enumerate(dates):
+        #put date in format yyyymmdd
+        d = ''.join(date.split('-'))
+        d = ''.join(d.split('/'))
+        if d[4:] == start_window:
+            start_indices.append(idx)
+        if d[4:] == end_window:
+                end_indices.append(idx)
+    #Date formatting needed to deal with end of data and window size
+    start_d = dates[0];end_d = dates[-1]
+    start_yr = int(start_d[0:4]);start_mon = int(start_d[4:6]);start_day = int(start_d[6:8])
+    end_yr = int(end_d[0:4]);end_mon = int(end_d[4:6]);end_day = int(end_d[6:8])
+    #Date formatting needed to deal with end of data and window size
+    #doy = day of year
+    if WRCCUtils.is_leap_year(start_yr) and start_mon > 2:
+        doy_first = datetime.datetime(start_yr, start_mon, start_day).timetuple().tm_yday -1
+    else:
+        doy_first = datetime.datetime(start_yr, start_mon, start_day).timetuple().tm_yday
+
+    if WRCCUtils.is_leap_year(end_yr) and end_mon > 2:
+        doy_last = datetime.datetime(end_yr, end_mon, end_day).timetuple().tm_yday - 1
+    else:
+        doy_last = datetime.datetime(end_yr, end_mon, end_day).timetuple().tm_yday
+    doy_window_st = WRCCUtils.compute_doy(start_window[0:2], start_window[2:4])
+    doy_window_end = WRCCUtils.compute_doy(end_window[0:2], end_window[2:4])
+    #Check end conditions at endpoints:
+    if doy_window_st == doy_window_end:
+        pass
+    elif doy_window_st < doy_window_end:
+        if doy_first <= doy_window_end and doy_window_st < doy_first:
+            start_indices.insert(0, 0)
+        if doy_last < doy_window_end and doy_window_st <= doy_last:
+            end_indices.insert(len(dates),len(dates)-1)
+    else: #doy_window_st > doy_window_end
+        if (doy_window_st > doy_first and doy_first <= doy_window_end) or (doy_window_st < doy_first and doy_first >= doy_window_end):
+            start_indices.insert(0, 0)
+        if (doy_last <= doy_window_st and doy_last < doy_window_end) or (doy_window_st <= doy_last and doy_last > doy_window_end):
+            end_indices.insert(len(dates),len(dates)-1)
+    #Sanity check
+    #if len(start_indices)!= len(end_indices):
+    #    return [],[]
+    return start_indices, end_indices
+
 def get_windowed_data(data, start_date, end_date, start_window, end_window):
     '''
     Routine to filter out data according to window specification(sodlist)
@@ -1421,6 +1551,8 @@ def get_windowed_data(data, start_date, end_date, start_window, end_window):
             add_data = data[start_indices[j]:end_indices[j]+1]
             windowed_data = windowed_data + add_data
     return windowed_data
+
+
 
 ###########################################################
 #KELLY's routines
