@@ -315,6 +315,14 @@ class SODDataJob:
         #Take first station id listed
         if not sids:
             return None
+        #If user id, find corresponding network
+        if 'sid' in self.params.keys():
+            stn_id = self.params['sid']
+            for sid in sids:
+                if sid.split(' ')[0] == stn_id:
+                    stn_network = WRCCData.NETWORK_CODES[sid.split(' ')[1]]
+                    break
+            return stn_id, stn_network
         #Pick first id in list
         stn_id = sids[0].split(' ')[0]
         stn_network = WRCCData.NETWORK_CODES[sids[0].split(' ')[1]]
