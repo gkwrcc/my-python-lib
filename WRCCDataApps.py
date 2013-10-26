@@ -3131,7 +3131,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                                 try:
                                     float(val)
                                     if abs(100*int(val) - float(100*int(val))) < 0.05:
-                                        el_data[yr][doy] = 0.0025
+                                        el_data[yr][doy] = 0.00025
                                     else:
                                         el_data[yr][doy] = float(val)
                                 except:
