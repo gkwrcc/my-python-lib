@@ -1114,7 +1114,7 @@ def Sodxtrmts(**kwargs):
                         if value > xmax:xmax=value
                         if value < xmin:xmin=value
                 else:
-                    ncheck = int(kwargs['max_missing_days']-1)
+                    ncheck = int(kwargs['max_missing_days'])-1
                     #For annual: for ave, thresholds, sums, include only full years
                     if kwargs['monthly_statistic']  in ['mave', 'ndays', 'msum']:
                         ncheck = 0

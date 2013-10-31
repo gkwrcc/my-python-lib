@@ -357,12 +357,12 @@ class SODDataJob:
             e_date = self.params['end_date']
         #deal with por input
         element_list = self.get_element_list()
-        if self.params['start_date'] == 'por' or self.params['end_date'] == 'por':
-            if self.params['start_date'] == 'por' and self.params['end_date'] == 'por':
+        if self.params['start_date'].lower() == 'por' or self.params['end_date'].lower() == 'por':
+            if self.params['start_date'].lower() == 'por' and self.params['end_date'].lower() == 'por':
                 vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min')
-            elif self.params['start_date'] == 'por' and self.params['end_date'] != 'por':
+            elif self.params['start_date'].lower() == 'por' and self.params['end_date'].lower() != 'por':
                 vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min', end_date=e_date)
-            elif self.params['start_date'] != 'por' and self.params['end_date'] == 'por':
+            elif self.params['start_date'].lower() != 'por' and self.params['end_date'].lower() == 'por':
                 vd = WRCCUtils.find_valid_daterange(self.station_ids[0],el_list=element_list,max_or_min='min', start_date=s_date)
             if vd:
                 s_date = vd[0];e_date=vd[1]

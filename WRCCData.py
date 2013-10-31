@@ -425,6 +425,8 @@ SXTR_ELEMENT_CHOICES = (
     ('wdmv', 'Daily Wind Movement'),
 )
 
+SXTR_ELEMENT_LIST = ['pcpn','snow','snwd','maxt','mint','avgt','dtr','hdd', 'cdd','gdd','evap','wdmv']
+
 SXTR_ANALYSIS_CHOICES = (
     ('mmax', 'Monthly Maximum'),
     ('mmin', 'Monthly Minimum'),
@@ -434,6 +436,7 @@ SXTR_ANALYSIS_CHOICES = (
     ('rmon', 'Range during Month'),
     ('msum', 'Monthly Sum'),
 )
+
 
 
 F_ANALYSIS_CHOICES = (
