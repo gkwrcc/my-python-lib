@@ -50,10 +50,10 @@ ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
               '11': {'name': 'snwd', 'name_long':'Snow Depth (in)', 'vX':11},
               '7': {'name': 'evap', 'name_long':'Pan Evaporation (in)', 'vX':7},
               '12': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12},
-              '45': {'name': 'dd', 'name_long':'Degree Days (Days)', 'vX':45},
-              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days (Days)', 'vX':45},
-              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days (Days)', 'vX':45},
-              '-44': {'name': 'gdd', 'name_long':'Growing Degree Days (Days)', 'vX':45}}
+              '45': {'name': 'dd', 'name_long':'Degree Days', 'vX':45},
+              '44': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':45},
+              '-45': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
+              '-44': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':45}}
               #bug fix needed for cdd = 44
 
 ACIS_ELEMENTS_DICT = {
@@ -65,9 +65,9 @@ ACIS_ELEMENTS_DICT = {
               'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (in)', 'vX':4},
               'snow': {'name': 'snow', 'name_long':'Snowfall (in)', 'vX':10},
               'snwd': {'name': 'snwd', 'name_long':'Snow Depth (in)', 'vX':11},
-              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days (F)', 'vX':45},
-              'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days (F)', 'vX':45},
-              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days (F)', 'vX':45},
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':45},
+              'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':45},
               'evap': {'name': 'evap', 'name_long':'Evaporation (in)', 'vX':7},
               'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (Mi)', 'vX':12}
               #bug fix needed for cdd = 44 (WAITING FOR BILL, ALSO IN PLACES BELOW, eg in station_locator_app, also in AcisWS.py)
@@ -76,8 +76,8 @@ ACIS_ELEMENTS_DICT = {
 ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
                       ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
-                      ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days (F)'], \
-                      ['hdd','Heating Degree Days (F)'], ['gdd', 'Growing Degree Days (F)'], \
+                      ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days'], \
+                      ['hdd','Heating Degree Days'], ['gdd', 'Growing Degree Days'], \
                       ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
 
 MONTH_NAMES_LONG = ['January', 'February', 'March', 'April', 'May', 'June',\
@@ -219,12 +219,12 @@ DISPLAY_PARAMS = {
     'pcpn': 'Precipitation (in)',
     'snow': 'Snowfall (in)',
     'snwd': 'Snow Depth (in)',
-    'gdd': 'Growing Degree Days (Days)',
-    'hdd': 'Heating Degree Days (Days)',
-    'cdd': 'Cooling Degree Days (Days)',
-    'hddxx': 'Heating Degree Days Base xx (Days)',
-    'cddxx': 'Cooling Degree Days Base xx (Days)',
-    'gddxx': 'Growing Degree Days Base xx (Days)',
+    'gdd': 'Growing Degree Days',
+    'hdd': 'Heating Degree Days',
+    'cdd': 'Cooling Degree Days',
+    'hddxx': 'Heating Degree Days Base xx',
+    'cddxx': 'Cooling Degree Days Base xx',
+    'gddxx': 'Growing Degree Days Base xx',
     'wdmv': 'Wind Movement (Mi)',
     'evap': 'Pan Evaporation (in)',
     #Other
@@ -263,7 +263,7 @@ DISPLAY_PARAMS = {
     'sd':'Standard Deviation',
     'ndays':'Number of Days',
     'rmon':'Range during Month',
-    'max_missing_days': 'Maximum Number of Missing Days allowed',
+    'max_missing_days': 'Maximum Number of Missing Days',
     'departures_from_averages': 'Show results as departures from averages',
     'frequency_analysis': 'Frequency Analysis',
     'frequency_analysis_type': 'Frequency Analysis Type',
