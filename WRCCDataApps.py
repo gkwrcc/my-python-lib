@@ -2366,7 +2366,7 @@ def Sodsumm(**kwargs):
     dates = kwargs['dates']
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    time_cats = ['Jan', 'Feb', 'May', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann', 'Win', 'Spr', 'Sum', 'Aut']
+    time_cats = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann', 'Win', 'Spr', 'Sum', 'Aut']
     #time_cats = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De']
     time_cats_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 366, 91, 92, 92, 91]
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -2429,6 +2429,9 @@ def Sodsumm(**kwargs):
                 else:
                     idx_start = sum(mon_lens[idx] for idx in range(cat_idx))
                     idx_end = idx_start + mon_lens[cat_idx]
+            #Note: all indices computed for leap year
+            #since we query ACIS bwith group_by=year --> 366 data entries per year
+            #Leap years are taken car of below in analysis code
             elif cat_idx == 12: #Annual
                 idx_start = 0
                 idx_end = 366
@@ -2450,7 +2453,14 @@ def Sodsumm(**kwargs):
                 el_data[element] = []
                 el_dates[element] = []
                 x_miss[cat_idx][element] = []
+                current_year = int(start_year) - 1
                 for yr in range(num_yrs):
+                    current_year+=1
+                    '''
+                    #Take care of non leap years
+                    if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
+                        idx_end = 59
+                    '''
                     flag = False
                     #Winter jumps year
                     if cat_idx == 13:
@@ -2533,15 +2543,19 @@ def Sodsumm(**kwargs):
                     data_list = []
                     dates_list = []
                     #keep track of which years to use for ann,sp,su,au,wi calculations
+                    current_year = int(start_year) -1
                     for yr in range(num_yrs):
-                        '''
-                        if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                        current_year+=1
+                        if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                             cat_l = 28
+                        elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l = 365
+                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l =  90
                         else:
                             cat_l = time_cats_lens[cat_idx]
-                        '''
-                        cat_l = time_cats_lens[cat_idx]
-                        idx_start = cat_l * yr
+                        idx_start = time_cats_lens[cat_idx] * yr
+                        #idx_start = cat_l * yr
                         idx_end = idx_start + cat_l
                         if x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
@@ -2599,8 +2613,8 @@ def Sodsumm(**kwargs):
                         means_yr.append(round(sm/cnt,2))
                         yr_list.append(str(int(start_year) + yr))
                 if means_yr:
-                    ave_low = min(means_yr)
-                    ave_high = max(means_yr)
+                    ave_low = round(min(means_yr),2)
+                    ave_high = round(max(means_yr),2)
                     yr_idx_low = means_yr.index(ave_low)
                     yr_idx_high = means_yr.index(ave_high)
                     yr_low = yr_list[yr_idx_low]
@@ -2639,7 +2653,7 @@ def Sodsumm(**kwargs):
                             cnt_days.append(len(yr_dat_thresh[0]))
                         if cnt_days:
                             try:
-                                val_list.append('%.1f' % numpy.mean(cnt_days))
+                                val_list.append('%.1f' % round(numpy.mean(cnt_days),2))
                             except:
                                 val_list.append('***')
                         else:
@@ -2653,18 +2667,23 @@ def Sodsumm(**kwargs):
                 for el in ['pcpn', 'snow']:
                     sum_yr=[]
                     yr_list = []
+                    current_year = int(start_year) -1
                     for yr in range(num_yrs):
+                        current_year+=1
                         #Omit data yrs where max_missing day threshold is not met
                         if x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
-                        '''
-                        if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year)):
+                        if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                             cat_l = 28
+                        elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l = 365
+                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l =  90
                         else:
                             cat_l = time_cats_lens[cat_idx]
-                        '''
-                        cat_l = time_cats_lens[cat_idx]
-                        idx_start = cat_l * yr
+
+                        #idx_start = cat_l * yr
+                        idx_start = time_cats_lens[cat_idx] * yr
                         idx_end = idx_start + cat_l
                         yr_dat = el_data[el][idx_start:idx_end]
                         sm = 0
@@ -2675,9 +2694,9 @@ def Sodsumm(**kwargs):
                         yr_list.append(str(int(start_year) + yr))
                     try:
                         if el == 'snow':
-                            val_list.append('%.1f' % numpy.mean(sum_yr))
+                            val_list.append('%.1f' % round(numpy.mean(sum_yr),2))
                         else:
-                            val_list.append('%.2f' % numpy.mean(sum_yr))
+                            val_list.append('%.2f' % round(numpy.mean(sum_yr),2))
                     except:
                         val_list.append('****')
                     if sum_yr:
@@ -2695,21 +2714,21 @@ def Sodsumm(**kwargs):
                             prec_low = 99.0
                             yr_low = '****'
                     if el == 'snow':
-                        val_list.append('%.1f' %prec_high)
+                        val_list.append('%.1f' %round(prec_high,2))
                     else:
-                        val_list.append('%.2f' %prec_high)
+                        val_list.append('%.2f' %round(prec_high,2))
                     val_list.append(yr_high)
                     if el == 'pcpn':
                         if el == 'snow':
-                            val_list.append('%.1f' %prec_low)
+                            val_list.append('%.1f' %round(prec_low,2))
                         else:
-                            val_list.append('%.2f' %prec_low)
+                            val_list.append('%.2f' %round(prec_low,2))
                         val_list.append(yr_low)
                         #2) Daily Prec max
                         prec_max = max(el_data['pcpn'])
                         idx_max = el_data['pcpn'].index(prec_max)
                         date_max = el_dates['pcpn'][idx_max]
-                        val_list.append('%.2f' %prec_max)
+                        val_list.append('%.2f' %round(prec_max,2))
                         val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
 
                 #3) Precip Thresholds
@@ -2757,16 +2776,23 @@ def Sodsumm(**kwargs):
                     for base_idx, base in enumerate(base_list[table]):
                         dd_acc = 0
                         yr_dat = []
+                        current_year = int(start_year) -1
                         for yr in range(num_yrs):
+                            current_year+=1
                             if cat_idx == 12:
                                 if x_miss[cat_idx]['maxt'][yr] > kwargs['max_missing_days'] or x_miss[cat_idx]['mint'][yr] > kwargs['max_missing_days']:
                                     continue
                             #Take care of leap years
-                            if cat_idx == 1 and not WRCCUtils.is_leap_year(int(start_year) + yr):
+                            if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                                 cat_l = 28
+                            elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
+                                cat_l = 365
+                            elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
+                                cat_l =  90
                             else:
                                 cat_l = time_cats_lens[cat_idx]
-                            idx_start = cat_l * yr
+                            #idx_start = cat_l * yr
+                            idx_start = time_cats_lens[cat_idx] * yr
                             idx_end = idx_start + cat_l
                             dd_sum = 0
                             dd_cnt = 0
@@ -2798,7 +2824,7 @@ def Sodsumm(**kwargs):
                                 continue
                             #Make adjustments for missing hdd - replace with mean days
                             if table in ['cdd', 'hdd']:
-                                if cat_idx != 12 and cat_l - dd_cnt < kwargs['max_missing_days']:
+                                if cat_idx != 12 and cat_l - dd_cnt <= kwargs['max_missing_days']:
                                     dd_sum = (dd_sum/dd_cnt)*float(cat_l)
                             yr_dat.append(dd_sum)
                         try:

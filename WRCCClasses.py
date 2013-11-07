@@ -165,7 +165,7 @@ class DownloadDataJob:
                     break
         if self.request:
             response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-            response['Content-Disposition'] = 'attachment;filename=%s.%s' % (self.output_file_name,self.file_extension[self.data_format])
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
             wb.save(response)
         else: #write to file
             try:
