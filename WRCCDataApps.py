@@ -2456,11 +2456,6 @@ def Sodsumm(**kwargs):
                 current_year = int(start_year) - 1
                 for yr in range(num_yrs):
                     current_year+=1
-                    '''
-                    #Take care of non leap years
-                    if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
-                        idx_end = 59
-                    '''
                     flag = False
                     #Winter jumps year
                     if cat_idx == 13:
@@ -2600,7 +2595,8 @@ def Sodsumm(**kwargs):
                     if x_miss[cat_idx]['avgt'][yr] > kwargs['max_missing_days']:
                         continue
                     idx_start = time_cats_lens[cat_idx] * yr
-                    idx_end = idx_start + time_cats_lens[cat_idx]
+                    #idx_end = idx_start + time_cats_lens[cat_idx]
+                    idx_end = idx_start + cat_l
                     yr_dat = el_data['avgt'][idx_start:idx_end]
                     sm = 0
                     cnt = 0
@@ -2644,7 +2640,8 @@ def Sodsumm(**kwargs):
                             if x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                                 continue
                             idx_start = time_cats_lens[cat_idx]*yr
-                            idx_end = idx_start + time_cats_lens[cat_idx]
+                            #idx_end = idx_start + time_cats_lens[cat_idx]
+                            idx_end = idx_start + cat_l
                             yr_dat = numpy.array(el_data[el][idx_start:idx_end])
                             if thresh == '90':
                                 yr_dat_thresh = numpy.where((yr_dat >= 90) & (abs(yr_dat + 9999.0) >= 0.05))
@@ -2741,7 +2738,8 @@ def Sodsumm(**kwargs):
                             if x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                                 continue
                             idx_start = time_cats_lens[cat_idx]*yr
-                            idx_end = idx_start + time_cats_lens[cat_idx]
+                            #idx_end = idx_start + time_cats_lens[cat_idx]
+                            idx_end = idx_start + cat_l
                             yr_dat = numpy.array(el_data['pcpn'][idx_start:idx_end])
                             yr_dat_thresh = numpy.where(yr_dat >= thresh)
                             cnt_days.append(len(yr_dat_thresh[0]))

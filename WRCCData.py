@@ -207,6 +207,8 @@ DISPLAY_PARAMS = {
     'X': 'X',
     'start_year': 'Start Year',
     'end_year': 'End Year',
+    'graph_start_year': 'Graph Start Year',
+    'graph_end_year': 'Graph End Year',
     'element':'Element',
     'elements':'Elements',
     'element_selection': 'Element Selection',
