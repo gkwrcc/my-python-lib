@@ -295,7 +295,9 @@ DISPLAY_PARAMS = {
     'markers': 'Show Markers',
     'marker_type': 'Marker Type',
     'axis_min':'Y-Axis minimum',
-    'axis_max':'Y-Axis maximum'
+    'axis_max':'Y-Axis maximum',
+    'vertical_axis_min':'Vertical Axis Minimum',
+    'vertical_axis_max':'Vertical Axis Maximum'
 }
 
 GRID_CHOICES = {
