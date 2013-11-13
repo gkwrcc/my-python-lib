@@ -215,12 +215,17 @@ def monthly_aves(request, el_list):
                             pass
                 if el in ['pcpn', 'snow']: #want total monthly values
                     summ = 0.0
+                    #count number of data values
+                    count = 0
                     for dat in new_data:
                         try:
                             summ+=float(dat)
                         except:
-                            pass
-                    yr_aves.append(summ)
+                            count+=1
+                    if count == len(new_data):
+                        yr_aves = []
+                    else:
+                        yr_aves.append(summ)
                 else: #want averages of averages
                     aves = []
                     for dat in new_data:
