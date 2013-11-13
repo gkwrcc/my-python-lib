@@ -10,7 +10,7 @@ import sys, os, datetime
 import fileinput
 from scipy import stats
 from math import ceil
-
+import sets
 #from django.conf import settings
 #import my_acis.settings as settings
 #LIB_PREFIX = settings.LIB_PREFIX
@@ -189,6 +189,10 @@ def monthly_aves(request, el_list):
             yr_aves = []
             for yr in range(len(request['data'])):
                 data = request['data'][yr][el_idx+1][idx_start:idx_end]
+                #Sanity check for missing data
+                if len(sets.Set(data)) == 1 and str(data[0]) == 'M':
+                #if all(str(val) == 'M' for val in data):
+                    continue
                 #deal with flags
                 new_data = ['M' for k in range(len(data))]
                 s_count = 0
@@ -213,6 +217,11 @@ def monthly_aves(request, el_list):
                             new_data[idx] = float(val)
                         except:
                             pass
+
+                #Sanity check for missing data
+                #if all(str(val) == 'M' for val in new_data):
+                if len(sets.Set(new_data)) == 1 and str(new_data[0]) == 'M':
+                    continue
                 if el in ['pcpn', 'snow']: #want total monthly values
                     summ = 0.0
                     #count number of data values
@@ -242,7 +251,7 @@ def monthly_aves(request, el_list):
                 results[el].append(round(numpy.mean(yr_aves),2))
             else:
                 results[el].append(9999.9)
-    return results
+    return dict(results)
 
 #####################################################
 #KELLY's DATA APPLICATION

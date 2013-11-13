@@ -928,7 +928,7 @@ def get_station_meta(station_id):
 
 def format_station_meta(meta_data):
     '''
-    Formats meta data comingout of ACIS
+    Formats meta data coming out of ACIS
     Deals with unicoe issues and assigns networks to each station id
     '''
     meta = {}
@@ -964,6 +964,24 @@ def format_station_meta(meta_data):
                     meta['valid_daterange'].append([str(date_range[0]), str(date_range[1])])
         else:
             meta[str(key)] = str(val)
+    return meta
+
+def metadict_to_display(metadata, key_order_list):
+    meta = [[WRCCData.DISPLAY_PARAMS[key]] for key in key_order_list]
+    for key, val in metadata.iteritems():
+        try:
+            idx = key_order_list.index(str(key))
+        except:
+            continue
+        if key == 'sids':
+            sid_list = []
+            for sid in val:
+                sid_l = sid.split()
+                sid_list.append('%s %s' %(str(sid_l[0]), WRCCData.NETWORK_CODES[str(sid_l[1])]))
+                #sid_list.append(sid.encode('ascii', 'ignore'))
+            meta[idx].append(sid_list)
+        else:
+            meta[idx].append(str(val))
     return meta
 
 def get_el_and_base_temp(el):
