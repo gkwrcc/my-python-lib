@@ -797,34 +797,21 @@ def get_sod_data(form_input, program):
         elts = []
         for el in elements:
             for sry in smry_opts:
-                elts.append(dict(name=str(el),smry=sry, groupby='year'))
-
-        '''
-        if len(elements) >1 and 'mint'in elements:
-            mint_indx = elements.index('mint')
-            elements.remove('mint')
-            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts\
-            , groupby="year") for el in elements]
-            elts.insert(mint_indx,dict(name='mint', interval='dly', duration='dly', \
-            smry={'reduce':'min', 'add':'date,mcnt'}, groupby="year"))
-            elements.insert(mint_indx, 'mint')
-        elif len(elements) == 1 and elements[0] == 'mint':
-            elts = [dict(name='mint', interval='dly', duration='dly',\
-            smry={'reduce':'min', 'add':'date,mcnt'}, groupby="year")]
-        else:
-            elts = [dict(name='%s' % el, interval='dly', duration='dly', smry=smry_opts, \
-            groupby="year") for el in elements]
-        '''
+                #elts.append(dict(name=str(el),smry=sry, groupby='year'))
+                elts.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],smry=sry, groupby='year'))
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts)
     elif program in ['Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
-        elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
+        #elems=[dict(name=el,interval='dly',duration='dly',groupby='year')for el in elements])
+        elems=[dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],interval='dly',duration='dly',groupby='year') for el in elements])
     elif program in ['Sodlist', 'Sodcnv']:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
-        elems=[dict(name=el,add='t')for el in elements])
+        #elems=[dict(name=el,add='t')for el in elements])
+        elems=[dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],add='t') for el in elements])
     else:
         params = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, \
-        elems=[dict(name=el)for el in elements])
+        #elems=[dict(name=el)for el in elements])
+        elems=[dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']) for el in elements])
     request = MultiStnData(params)
     if not request:
         request = {'error':'bad request, check params: %s'  % str(params)}
@@ -833,7 +820,6 @@ def get_sod_data(form_input, program):
         request['data']#list of data for the stations
     except:
         if request['error']:
-            print '%s' % str(request['error'])
             return datadict, dates, elements, coop_station_ids, station_names
             #sys.exit(1)
         else:

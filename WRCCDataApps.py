@@ -3301,6 +3301,7 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     results = defaultdict(dict)
     #Loop over stations
     for i, stn in enumerate(coop_station_ids):
+        #results[i] = [[] for el in elements]
         for j, el in enumerate(elements):
             smry_start_idx = 3*j
             smry_end_idx = 3*j +3

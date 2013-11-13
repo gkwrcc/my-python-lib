@@ -175,6 +175,15 @@ AREA_DEFAULTS = {
 }
 
 DISPLAY_PARAMS = {
+    #metadata
+    'uid':'Unique Station Identifier',
+    'coop_id': 'COOP Identifier',
+    'sids': 'Station ID/Network List',
+    'll':'Longitude, Latitude',
+    'elev':'Elevation',
+    'name':'Station Name',
+    'state':'State',
+    'valid_daterange': 'Valid Date Range (by element)',
     'select_grid_by':'Grid Selection By',
     'select_stations_by': 'Station Selection By',
     #search areas
