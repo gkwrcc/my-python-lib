@@ -131,9 +131,14 @@ DELIMITERS = {
 ###################################
 ###################################
 SEARCH_AREA_FORM_TO_ACIS = {
+    'station_id':'stnid',
+    'station_ids':'stnids',
     'climate_division':'climdiv',
+    'climdiv':'climdiv',
     'county_warning_area':'cwa',
+    'cwa':'cwa',
     'bounding_box':'bbox',
+    'bbox':'bbox',
     'state':'state',
     'county':'county',
     'basin':'basin',
@@ -159,10 +164,14 @@ ACIS_TO_SEARCH_AREA = {
 
 AREA_DEFAULTS = {
     'stnid': '266779',
+    'station_id':'266779',
+    'station_ids':'266779,050848',
     'stn_id':'266779',
     'stnids':'266779,050848',
     'climdiv':'NV01',
+    'climate_divison':'NV01',
     'cwa':'PUB',
+    'county_warning_area':'PUB',
     'bbox':'-115,34,-114,35',
     'bounding_box':'-115,34,-114,35',
     'state':'NV',
@@ -187,6 +196,8 @@ DISPLAY_PARAMS = {
     'select_grid_by':'Grid Selection By',
     'select_stations_by': 'Station Selection By',
     #search areas
+    'stnid': 'Station ID',
+    'stnids': 'Station IDs',
     'station_id': 'Station ID',
     'station_ID': 'Station ID',
     'station_ids': 'Station IDs',
@@ -207,6 +218,7 @@ DISPLAY_PARAMS = {
     'bounding_box': 'Bounding Box',
     'bbox': 'Bounding Box',
     'custom_shape': 'Custom Shape',
+    'shape': 'Custom Shape',
     #dates and elements
     'start_date': 'Start Date',
     'end_date': 'End Date',

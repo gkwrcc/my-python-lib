@@ -69,7 +69,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
     if str(dir_location)[-1]!='/':
         dr = str(dir_location) + '/'
     elif str(dir_location)[0]!='/':
-        return 'Need absolute path of directory. You eneterd: %s' %str(dir_location)
+        return 'Need absolute path of directory. You enetered: %s' %str(dir_location)
     else:
         dr = str(dir_location)
     try:
@@ -83,7 +83,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
 
 
     #Make General call to get the geojson for the input params
-    req = AcisWS.make_gen_call_by_state(str(area_type), str(state))
+    req = AcisWS.make_gen_call_by_state(WRCCData.SEARCH_AREA_FORM_TO_ACIS[str(area_type)], str(state))
     #Sanity Check:
     if 'error' in req.keys():
         return str(req['error'])
