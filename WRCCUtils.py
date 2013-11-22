@@ -1423,7 +1423,11 @@ def get_element_list(form_input, program):
     elif program == 'GPTimeSeries':
         elements = [str(form_input['element'])]
     else:
-        elements = [str(el) for el in form_input['elements']]
+        #Check if elements is given as string, if so, convert to list
+        if isinstance(form_input['elements'], basestring):
+            elements = form_input['elements'].replace(' ', '').split(',')
+        else:
+            elements = [str(el) for el in form_input['elements']]
     return elements
 
 def format_sodlist_data(data_flag_tobs):

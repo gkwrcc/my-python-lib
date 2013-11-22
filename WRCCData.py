@@ -169,7 +169,7 @@ AREA_DEFAULTS = {
     'stn_id':'266779',
     'stnids':'266779,050848',
     'climdiv':'NV01',
-    'climate_divison':'NV01',
+    'climate_division':'NV01',
     'cwa':'PUB',
     'county_warning_area':'PUB',
     'bbox':'-115,34,-114,35',
