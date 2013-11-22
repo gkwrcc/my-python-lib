@@ -5,6 +5,8 @@ Module WRCCFormCheck
 
 Checks input form parameters
 '''
+import datetime
+import re
 
 def check_start_year(form):
     err = None
@@ -43,6 +45,65 @@ def check_end_year(form):
     except:
         pass
     return err
+
+def check_start_date(form):
+    err = None
+    date = form['start_date'].replace('-','').replace('/','')
+    e_date = form['end_date'].replace('-','').replace('/','')
+    if date.lower() == 'por':
+        return err
+    if len(date)!=8:
+        return 'Year should be of form yyyymmdd. You entered %s' %date
+    try:
+        int(date)
+    except:
+        return 'Date should be an eight digit entry. You entered %s' %date
+    sd = datetime.datetime(int(date[0:4]), int(date[2:4]), int(date[4:6]))
+    try:
+        ed = datetime.datetime(int(e_date[0:4]), int(e_date[2:4]), int(e_date[4:6]))
+    except:
+        return err
+    try:
+        if int(ed) < int(sd):
+            return 'Start Year is later then End Year.'
+    except:
+        pass
+    return err
+
+def check_end_date(form):
+    err = None
+    s_date = form['start_date'].replace('-','').replace('/','')
+    date = form['end_date'].replace('-','').replace('/','')
+    if date.lower() == 'por':
+        return err
+    if len(date)!=8:
+        return 'Year should be of form yyyymmdd. You entered %s' %date
+    try:
+        int(date)
+    except:
+        return 'Date should be an eight digit entry. You entered %s' %date
+    try:
+        sd = datetime.datetime(int(s_date[0:4]), int(s_date[2:4]), int(s_date[4:6]))
+    except:
+        return err
+    ed = datetime.datetime(int(date[0:4]), int(date[2:4]), int(date[4:6]))
+    try:
+        if int(ed) < int(sd):
+            return 'Start Year is later then End Year.'
+    except:
+        pass
+
+    return err
+
+def check_elements(form):
+    err = None
+    el_list = form['elements'].replace(' ','').split(',')
+    for el in el_list:
+        #strip degree day digits
+        el_strip = re.sub(r'(\d+)(\d+)', '', el)
+        if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','gdd']:
+            return '%s is not a avlid element. Please consult with the helpful question mark!' %el
+
 
 def check_graph_start_year(form):
     err = None
