@@ -2505,9 +2505,10 @@ def Sodsumm(**kwargs):
                             x_miss[cat_idx][element].append(days_miss)
                         else:
                             if cat_idx == 12:mon_l = range(0,12)
-                            if cat_idx == 14:mon_l = [2,3,4]
-                            if cat_idx == 15:mon_l = [5,6,7]
-                            if cat_idx == 16:mon_l = [8,9,10]
+                            if cat_idx == 13:mon_l = [10,11,0]
+                            if cat_idx == 14:mon_l = [1,2,3]
+                            if cat_idx == 15:mon_l = [4,5,6]
+                            if cat_idx == 16:mon_l = [7,8,9]
                             for ct in mon_l:
                                 if x_miss[ct][element][yr] > kwargs['max_missing_days']:
                                     flag = True
@@ -2554,22 +2555,23 @@ def Sodsumm(**kwargs):
                     #keep track of which years to use for ann,sp,su,au,wi calculations
                     current_year = int(start_year) -1
                     for yr in range(num_yrs):
-                        current_year+=1
-                        if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
-                            cat_l = 28
-                        elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
-                            cat_l = 365
-                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
-                            cat_l =  90
-                        else:
-                            cat_l = time_cats_lens[cat_idx]
-                        idx_start = time_cats_lens[cat_idx] * yr
-                        #idx_start = cat_l * yr
-                        idx_end = idx_start + cat_l
                         if x_miss[cat_idx][el][yr] > kwargs['max_missing_days']:
                             continue
+                        current_year+=1
+                        idx_start = time_cats_lens[cat_idx] * yr
+                        if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l = 28
+                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
+                            cat_l = 90
+                        else:
+                            cat_l = time_cats_lens[cat_idx]
+                        idx_end = idx_start + cat_l
                         data_list.extend(el_data[el][idx_start:idx_end])
                         dates_list.extend(el_dates[el][idx_start:idx_end])
+                        #Delete Feb 29 if not leap year from annual
+                        if cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
+                            del data_list[idx_start + 59]
+                            del dates_list[idx_start + 59]
                     #Statistics
                     sm = 0
                     cnt = 0
@@ -2686,8 +2688,6 @@ def Sodsumm(**kwargs):
                             continue
                         if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                             cat_l = 28
-                        elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
-                            cat_l = 365
                         elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
                             cat_l =  90
                         else:
@@ -2699,6 +2699,9 @@ def Sodsumm(**kwargs):
                         yr_dat = el_data[el][idx_start:idx_end]
                         sm = 0
                         for yr_dat_idx, dat in enumerate(yr_dat):
+                            #Omit Feb 29 if leap year
+                            if cat_idx == 12 and not WRCCUtils.is_leap_year(current_year) and yr_dat_idx == 59:
+                                continue
                             if abs(dat + 9999.0) >= 0.05:
                                 sm+=dat
                         sum_yr.append(sm)
@@ -2740,7 +2743,10 @@ def Sodsumm(**kwargs):
                         idx_max = el_data['pcpn'].index(prec_max)
                         date_max = el_dates['pcpn'][idx_max]
                         val_list.append('%.2f' %round(prec_max,2))
-                        val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
+                        if cat_idx <12:
+                            val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
+                        else:
+                            val_list.append(date_max)
 
                 #3) Precip Thresholds
                 threshs = [0.01, 0.10, 0.50, 1.00]
@@ -2797,8 +2803,6 @@ def Sodsumm(**kwargs):
                             #Take care of leap years
                             if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                                 cat_l = 28
-                            elif cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
-                                cat_l = 365
                             elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
                                 cat_l =  90
                             else:
@@ -2810,6 +2814,9 @@ def Sodsumm(**kwargs):
                             dd_cnt = 0
                             count_missing_days = 0
                             for idx in range(idx_start, idx_end):
+                                #Omit feb 29 if leap year
+                                if cat_idx == 12 and not WRCCUtils.is_leap_year(current_year) and idx == idx_start + 59:
+                                    continue
                                 t_x = el_data['maxt'][idx]
                                 t_n = el_data['mint'][idx]
                                 if abs(t_x + 9999.0) < 0.05 or abs(t_n + 9999.0) < 0.05:
@@ -3103,8 +3110,8 @@ def Soddd(**kwargs):
                             mon_len = mon_lens[mon]
                         if day+1 > mon_len:
                             continue
-                        if abs(dd[yr][doy] + 9999.0)>0.001:
-                            sm+=dd[yr][doy]
+                        if abs(dd[yr][doy-1] + 9999.0)>0.001:
+                            sm+=dd[yr][doy-1]
                             sm_yrs+=1
                     if sm_yrs > 0.5:
                         results[i][day].append(int(round(float(sm)/sm_yrs)))
