@@ -1588,7 +1588,7 @@ def Sodthr(**kwargs):
                                 includ =1
                                 nyearl = nyear +1
                         else:
-                            if nddoy1 < 60:
+                            if ndoy1 < 60:
                                 includ =1
                                 nyearl = nyear +1
 
@@ -2568,10 +2568,12 @@ def Sodsumm(**kwargs):
                         idx_end = idx_start + cat_l
                         data_list.extend(el_data[el][idx_start:idx_end])
                         dates_list.extend(el_dates[el][idx_start:idx_end])
+                        '''
                         #Delete Feb 29 if not leap year from annual
                         if cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
                             del data_list[idx_start + 59]
                             del dates_list[idx_start + 59]
+                        '''
                     #Statistics
                     sm = 0
                     cnt = 0

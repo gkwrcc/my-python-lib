@@ -58,9 +58,9 @@ def check_start_date(form):
         int(date)
     except:
         return 'Date should be an eight digit entry. You entered %s' %date
-    sd = datetime.datetime(int(date[0:4]), int(date[2:4]), int(date[4:6]))
+    sd = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
     try:
-        ed = datetime.datetime(int(e_date[0:4]), int(e_date[2:4]), int(e_date[4:6]))
+        ed = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
     except:
         return err
     try:
@@ -83,10 +83,10 @@ def check_end_date(form):
     except:
         return 'Date should be an eight digit entry. You entered %s' %date
     try:
-        sd = datetime.datetime(int(s_date[0:4]), int(s_date[2:4]), int(s_date[4:6]))
+        sd = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
     except:
         return err
-    ed = datetime.datetime(int(date[0:4]), int(date[2:4]), int(date[4:6]))
+    ed = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
     try:
         if int(ed) < int(sd):
             return 'Start Year is later then End Year.'

@@ -43,6 +43,7 @@ class DownloadDataJob:
     '''
     def __init__(self,app_name, data_format, delimiter, output_file_name, request=None, json_in_file=None, data=[], flags=None):
         self.app_name = app_name
+        self.header = None
         self.data = data
         self.data_format = data_format
         self.delimiter = delimiter
@@ -67,11 +68,13 @@ class DownloadDataJob:
             'colon':':',
             'pipe':'|'
         }
-        self.headers = {
-            'Sodxtrmts':WRCCData.HEADERS['Sodxtrmts'],
+        self.column_headers = {
+            'Sodxtrmts':WRCCData.COLUMN_HEADERS['Sodxtrmts'],
             'Sodsumm':None,
             'area_time_series':['Date', 'Data']
         }
+
+
     def get_time_stamp(self):
         return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
 
@@ -92,6 +95,17 @@ class DownloadDataJob:
             with open(self.json_in_file, 'r') as json_f:
                 #need unicode converter since json.loads writes unicode
                 json_data = WRCCUtils.u_convert(json.loads(json_f.read()))
+                #Find header info if in json_data
+                if self.app_name == 'Sodxtrmts':
+                    try:
+                        self.header = json_data['header']
+                    except:
+                        pass
+                if self.app_name == 'Sodsumm':
+                    self.header = []
+                    labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year']
+                    for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end']):
+                        self.header.append([labels[idx], json_data[key]])
         except Exception, e:
             json_data = {}
         if self.app_data_dict[self.app_name] in json_data.keys():
@@ -100,7 +114,7 @@ class DownloadDataJob:
             data = []
         return data
 
-    def write_to_csv(self,header, data):
+    def write_to_csv(self,column_header, data):
         if self.request:
             response = HttpResponse(mimetype='text/csv')
             response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
@@ -116,9 +130,33 @@ class DownloadDataJob:
                 #Can' open user given file, create emergency writer object
                 writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[self.delimiter])
                 response = 'Error! Cant open file' + str(e)
-        #row = header
-        #row = ['%8s' %str(h) for h in header] #Kelly's format
-        row = ['%s' %str(h) for h in header]
+        #Write header if it exists
+        if self.header:
+            row = []
+            for idx,key_val in enumerate(self.header):
+                if len(key_val) != 2:
+                    continue
+                #three entries per row
+                row.append(key_val[0] + ': ' + key_val[1])
+                if (idx + 1) % 2 == 0 or idx == len(self.header) - 1:
+                    writer.writerow(row)
+                    row = []
+            writer.writerow(row)
+            writer.writerow([])
+            if self.app_name == 'Sodxtrmts':
+                row = ['a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,']
+                writer.writerow(row)
+                row = ['z = 26 or more days missing, A = Accumulations present']
+                writer.writerow(row)
+                row=['Long-term means based on columns; thus, the monthly row may not']
+                writer.writerow(row)
+                row=['sum (or average) to the long-term annual value.']
+                writer.writerow(row)
+
+        writer.writerow([])
+        #row = column_header
+        #row = ['%8s' %str(h) for h in column_header] #Kelly's format
+        row = ['%s' %str(h) for h in column_header]
         writer.writerow(row)
         for row_idx, row in enumerate(data):
             row_formatted = []
@@ -133,7 +171,7 @@ class DownloadDataJob:
             pass
         return response
 
-    def write_to_excel(self,header, data):
+    def write_to_excel(self,column_header, data):
         wb = Workbook()
         #Note row number limit is 65536 in some excel versions
         row_number = 0
@@ -151,8 +189,8 @@ class DownloadDataJob:
                     sheet_counter+=1
                     #add new workbook sheet
                     ws = wb.add_sheet('Sheet_%s' %sheet_counter)
-                    #Header
-                    for idx, head in enumerate(header):
+                    #Column Header
+                    for idx, head in enumerate(column_header):
                         ws.write(0, idx, head)
                         row_number = 1;flag = 0
                 try:
@@ -176,9 +214,9 @@ class DownloadDataJob:
                 response = 'Excel save error:' + str(e)
         return response
 
-    def write_to_json(self,header, data):
+    def write_to_json(self,column_header, data):
         if request:
-            response = json.dumps({'header':header,'data':data})
+            response = json.dumps({'column_header':column_header,'data':data})
         else:
             output_file = self.set_output_file_path()
             with open(output_file, 'w+') as jsonf:
@@ -188,13 +226,13 @@ class DownloadDataJob:
 
     def write_to_file(self):
         time_stamp = self.get_time_stamp()
-        header = self.headers[self.app_name]
+        column_header = self.column_headers[self.app_name]
         data = self.get_row_data()
         if self.app_name == 'Sodsumm':
             try:
-                header = data[0]
+                column_header = data[0]
             except:
-                header = []
+                column_header = []
             try:
                 data = data[1:]
             except:
@@ -207,11 +245,11 @@ class DownloadDataJob:
 
         #Write data to file
         if self.data_format in ['dlm', 'clm']:
-            response = self.write_to_csv(header, data)
+            response = self.write_to_csv(column_header, data)
         elif self.data_format == 'json':
-            response = self.write_to_json(header, data)
+            response = self.write_to_json(column_header, data)
         elif self.data_format == 'xl':
-            response = self.write_to_excel(header, data)
+            response = self.write_to_excel(column_header, data)
 
         return response
 

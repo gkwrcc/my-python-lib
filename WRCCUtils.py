@@ -1623,7 +1623,7 @@ def Catoju(mnth, dy):
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     ndoy =0
     for  mon in range(1,month+1):
-        if mon < month:ndoy+=mon_lens[mon]
+        if mon < month:ndoy+=mon_lens[mon -1]
         if mon == month: ndoy+=nday
     if month == -1 and nday == -1:ndoy = -1
     return ndoy
@@ -1635,9 +1635,9 @@ def Jutoca(ndoy):
     '''
     jstart = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]
     month = 0
-    for mon in range(12):
-        if ndoy >= jstart[mon]:
-            month = mon + 1
+    for mon in range(1,13):
+        if ndoy >= jstart[mon-1]:
+            month = mon
             if month == 12:
                 if ndoy < 367:
                     nday = ndoy - 336 +1
