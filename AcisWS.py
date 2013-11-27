@@ -519,7 +519,7 @@ def get_station_data(form_input, program):
     try:
         request['data']
         if not request['data']:
-            resultsdict['error'] = 'No data Found! Pameters: %s.' %(params)
+            resultsdict['error'] = 'No data found for this date range and/or these climate elements!'
             for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
                 resultsdict[key] = []
             return resultsdict

@@ -143,7 +143,8 @@ SEARCH_AREA_FORM_TO_ACIS = {
     'county':'county',
     'basin':'basin',
     'shape':None,
-    'location':'loc'
+    'location':'loc',
+    'point':'loc',
 }
 
 ACIS_TO_SEARCH_AREA = {
@@ -157,6 +158,7 @@ ACIS_TO_SEARCH_AREA = {
     'county':'county',
     'shape':'shape',
     'point':'location',
+    'loc':'location',
     'state':'state',
     'states':'states',
     'sw_states':'states'
@@ -203,6 +205,8 @@ DISPLAY_PARAMS = {
     'station_ids': 'Station IDs',
     'station_IDs':'Station IDs',
     'location': 'Location (lon, lat)',
+    'loc': 'Location (lon, lat)',
+    'point': 'Location (lon, lat)',
     'lat': 'Latitude',
     'lon': 'Longitude',
     'shape': 'Custom Shape',
