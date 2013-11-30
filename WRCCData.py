@@ -182,7 +182,8 @@ AREA_DEFAULTS = {
     'county':'08051',
     'basin':'10180002',
     'shape':'-115,34, -115, 35,-114,35, -114, 34',
-    'point': '-119,39'
+    'point': '-111,40',
+    'location':'-111,40'
 }
 
 DISPLAY_PARAMS = {
@@ -256,6 +257,8 @@ DISPLAY_PARAMS = {
     'evap': 'Pan Evaporation (in)',
     #Other
     'temporal_resolution': 'Temporal Resolution',
+    'temporal': 'Temporal Summary',
+    'spatial':'Spatial Summary',
     'dly':'Daily',
     'mly':'Monthly',
     'yly':'Yearly',

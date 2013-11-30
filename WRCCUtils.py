@@ -768,7 +768,10 @@ def format_grid_data(req, params):
         if key != 'elements':
             prms[key] = str(val)
         else:
-            prms[key] = val
+            if isinstance(val, list):
+                prms[key] = val
+            else:
+                prms[key] = val.replace(' ', '').split(',')
     if 'data_summary' in prms.keys():
         data_summary = prms['data_summary']
     else:
@@ -801,17 +804,19 @@ def format_grid_data(req, params):
                 data['meta']['elev'] = [[req['meta']['elev']]]
             else:
                 data['meta']['elev'] = req['meta']['elev']
-    if data_summary != 'none':
+    if data_summary == 'temporal':
         if 'smry' in req.keys():
             data['data'] = req['smry']
         else:
             data['data'] = []
 
+
     #Format data depending out data_format choice: json, summarized data or raw data request
     if prms['data_format'] == 'json':
         return req
-    elif data_summary != 'none':
-        #Sumaries have different format than raw data
+    elif data_summary == 'temporal':
+        #TEMPORAL SUMMARY
+        #has different format than raw data
         lats = data['meta']['lat']
         lons = data['meta']['lon']
         elevs = data['meta']['elev']
@@ -865,7 +870,7 @@ def format_grid_data(req, params):
                         data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
         return data_out
     else:
-        #Raw data request
+        #RAW DATA REQUEST OR SPATIAL SUMMARY
         lats = data['meta']['lat']
         lons = data['meta']['lon']
         elevs = data['meta']['elev']
@@ -883,7 +888,12 @@ def format_grid_data(req, params):
             data_out = [[] for i in range(length)]
         #Loop over data
         idx = -1
+        #Spatial summary output
+        data_s_summ = [[] for d in data['data']]
         for date_idx, date_vals in enumerate(data['data']):
+            data_s_summ[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
+            #for spatial summary
+            data_summ = [[] for el in el_list]
             if 'location' in prms.keys():
                 data_out[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
                 data_out[date_idx].append(round(lons[0][0],2))
@@ -892,6 +902,12 @@ def format_grid_data(req, params):
 
                 for el_idx in range(1,len(el_list) + 1):
                     data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
+                    try:
+                        v = float(date_vals[el_idx])
+                        if abs(v + 999.0)>0.0001:
+                            data_summ[el_idx-1].append(v)
+                    except:
+                        pass
             else:
                 for grid_idx, lat_grid in enumerate(lats):
                     lat = lat_grid[0]
@@ -915,7 +931,41 @@ def format_grid_data(req, params):
 
                         for el_idx in range(1,len(el_list) + 1):
                             data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
-        return data_out
+                            try:
+                                v = float(date_vals[el_idx][grid_idx][lon_idx])
+                                if abs(v + 999.0)>0.0001:
+                                    data_summ[el_idx-1].append(v)
+                            except:
+                                pass
+            if data_summary == "spatial":
+                if prms['spatial_summary'] == "max":
+                    for el_idx, el in enumerate(el_list):
+                        if data_summ[el_idx]:
+                            data_s_summ[date_idx].append(max(data_summ[el_idx]))
+                        else:
+                            data_s_summ[date_idx].append(-999.0)
+                if prms['spatial_summary'] == "min":
+                    for el_idx, el in enumerate(el_list):
+                        if data_summ[el_idx]:
+                            data_s_summ[date_idx].append(min(data_summ[el_idx]))
+                        else:
+                            data_s_summ[date_idx].append(-999.0)
+                if prms['spatial_summary'] == "mean":
+                    for el_idx, el in enumerate(el_list):
+                        if data_summ[el_idx]:
+                            data_s_summ[date_idx].append(round(sum(data_summ[el_idx]) / float(len(data_summ[el_idx])),2))
+                        else:
+                            data_s_summ[date_idx].append(-999.0)
+                if prms['spatial_summary'] == "sum":
+                    for el_idx, el in enumerate(el_list):
+                        if data_summ[el_idx]:
+                            data_s_summ[date_idx].append(sum(data_summ[el_idx]))
+                        else:
+                            data_s_summ[date_idx].append(-999.0)
+        if data_summary == 'spatial':
+            return data_s_summ
+        else:
+            return data_out
 
 def get_station_meta(station_id):
     meta_params = {"sids":station_id,"meta":"name,state,sids,ll ,elev,uid,county,climdiv"}
