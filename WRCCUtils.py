@@ -484,126 +484,128 @@ def find_mon_len(year,mon):
     m_idx = int(str(mon).lstrip('0')) -1
     return mon_lens[m_idx]
 
-def write_griddata_to_file(data, elements,delim, file_extension, f=None, request=None, output_file_name=None):
+def write_griddata_to_file(data, form, f=None, request=None):
     '''
     Writes gridded data to a file.
 
     Keyword aruments:
     data             -- data to write to file
-    elements         -- list of climate elements
-    delim            -- delimiter used to separate data vaules
-    file_extension   -- format of output data file (.dat, .txt, .xls)
+    form             -- form input dictionary containing:
+        elements         -- list of climate elements
+        delim            -- delimiter used to separate data vaules
+        file_extension   -- format of output data file (.dat, .txt, .xls)
+        output_file_name -- Name of output file. If default DataRequest, a time stamp will be added.
     f                -- file name (default None)
     request          -- data request object (default None)
-    output_file_name -- Name of output file. If default DataRequest, a time stamp will be added.
-
     If a file f is given, data will be written to file.
     If a request object is given, the file will be generated
     via the CSC webpages
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-    #set file name
-    if not output_file_name or output_file_name == 'DataRequest' or output_file_name =='':
-        file_name = 'DataRequest_'+ time_stamp
+    file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
+    if isinstance(form['elements'],list):
+        el_list = form['elements']
     else:
-        file_name = output_file_name
+        el_list = form['elements'].replace(' ','').split(',')
+    #set file name
+    if 'output_file_name' in form.keys():
+        file_name = form['output_file_name']
+    else:
+        file_name = 'DataRequest_'+ time_stamp
     #sanity check:
     if not f and not request:
-        response = 'Error! Need either a file or a reqest object!'
+        return 'Error! Need either a file or a reqest object!'
     elif f and request:
-        response = 'Error! Choose one of file f or request object'
-    else:
-        if file_extension in ['.dat', '.txt']:
-            import csv
-            if request:
-                response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
-                writer = csv.writer(response, delimiter=delim )
-            else: #file f given
-                try:
-                    csvfile = open(f, 'w+')
-                    writer = csv.writer(csvfile, delimiter=delim )
-                    response = None
-                except Exception, e:
-                    #Can' open user given file, create emergency writer object
-                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
-                    response = 'Error! Cant open file' + str(e)
+        return 'Error! Choose one of file f or request object'
 
-            #Find length of date values
-            date_len = len(data[0][0])
-            spaces = date_len - 5
-            date_space = ''
-            for i in range(spaces):
-                date_space+= ' '
-            row = [':date' + date_space, '     Lat', '     Lon', '   Elev']
-            for el in elements:row.append('%7s' % str(el))
-            writer.writerow(row)
-            for date_idx, date_vals in enumerate(data):
-                row = []
-                for idx, dat in enumerate(date_vals):
-                    if idx == 0:
-                        row.append(dat)
-                    elif idx in [1,2]:
-                        row.append('%8s' % str(dat))
-                    else:
-                        row.append('%7s' % str(dat))
-                writer.writerow(row)
-                #writer.writerow(date_vals)
+    if file_extension in ['.dat', '.txt']:
+        delim = WRCCData.DELIMITERS[form['delimiter']]
+        import csv
+        if request:
+            response = HttpResponse(mimetype='text/csv')
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
+            writer = csv.writer(response, delimiter=delim )
+        else: #file f given
             try:
-                csvfile.close()
-            except:
-                pass
-        elif file_extension == '.json':
-            with open(f, 'w+') as jsonf:
-                import json
-                json.dump(data, jsonf)
+                csvfile = open(f, 'w+')
+                writer = csv.writer(csvfile, delimiter=delim )
                 response = None
-        else: #Excel
-            from xlwt import Workbook
-            wb = Workbook()
-            #Note row number limit is 65536 in some excel versions
-            row_number = 0
-            flag = 0
-            sheet_counter = 0
-            for date_idx, date_vals in enumerate(data): #row
-                for j, val in enumerate(date_vals):#column
-                    if row_number == 0:
-                        flag = 1
-                    else:
-                        row_number+=1
-                    if row_number == 65535:flag = 1
+            except Exception, e:
+                #Can' open user given file, create emergency writer object
+                writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
+                response = 'Error! Cant open file' + str(e)
 
-                    if flag == 1:
-                        sheet_counter+=1
-                        #add new workbook sheet
-                        ws = wb.add_sheet('Sheet_%s' %sheet_counter)
-                        #Header
-                        ws.write(0, 0, 'Date')
+        #Find length of date values
+        if form['data_summary'] == 'spatial':
+            row = [':date']
+        else:
+            row = [':date', 'Lat', 'Lon', 'Elev']
+        for el in el_list:row.append('%s' % str(el))
+        writer.writerow(row)
+        for date_idx, date_vals in enumerate(data):
+            row = []
+            for idx, dat in enumerate(date_vals):
+                row.append('%s' % str(dat))
+            writer.writerow(row)
+        try:
+            csvfile.close()
+        except:
+            pass
+    elif file_extension == '.json':
+        with open(f, 'w+') as jsonf:
+            import json
+            json.dump(data, jsonf)
+            response = None
+    else: #Excel
+        from xlwt import Workbook
+        wb = Workbook()
+        #Note row number limit is 65536 in some excel versions
+        row_number = 0
+        flag = 0
+        sheet_counter = 0
+        for date_idx, date_vals in enumerate(data): #row
+            for j, val in enumerate(date_vals):#column
+                if row_number == 0:
+                    flag = 1
+                else:
+                    row_number+=1
+                if row_number == 65535:flag = 1
+
+                if flag == 1:
+                    sheet_counter+=1
+                    #add new workbook sheet
+                    ws = wb.add_sheet('Sheet_%s' %sheet_counter)
+                    #Header
+                    ws.write(0, 0, 'Date')
+                    if form['data_summary'] != 'spatial':
                         ws.write(0, 1, 'Lat')
                         ws.write(0, 2, 'Lon')
                         ws.write(0, 3, 'Elev')
-                        for k, el in enumerate(elements):ws.write(0, k+4, el)
-                        row_number = 1
-                        flag = 0
-                    try:
-                        try:
-                            ws.write(date_idx+1, j, float(val))
-                        except:
-                            ws.write(date_idx+1, j, str(val))#row, column, label
-                    except Exception, e:
-                        response = 'Excel write error:' + str(e)
-                        break
-            if f:
+                        for k, el in enumerate(el_list):ws.write(0, k+4, el)
+                    else:
+                        for k, el in enumerate(el_list):ws.write(0, k+1, el)
+                    row_number = 1
+                    flag = 0
                 try:
-                    wb.save(f)
-                    response = None
+                    try:
+                        ws.write(date_idx+1, j, float(val))
+                    except:
+                        ws.write(date_idx+1, j, str(val))#row, column, label
                 except Exception, e:
-                    response = 'Excel save error:' + str(e)
-            else: # request
-                response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
-                wb.save(response)
+                    response = 'Excel write error:' + str(e)
+                    break
+        if f:
+            try:
+                wb.save(f)
+                response = None
+            except Exception, e:
+                response = 'Excel save error:' + str(e)
+        else: # request
+            response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
+            wb.save(response)
     return response
+
 
 def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
     '''
