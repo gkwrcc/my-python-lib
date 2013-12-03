@@ -536,8 +536,18 @@ def write_griddata_to_file(data, form, f=None, request=None):
                 response = 'Error! Cant open file' + str(e)
 
         #Find length of date values
+        #header
+        row = [WRCCData.DISPLAY_PARAMS[form['select_grid_by']] + ': ' + form[form['select_grid_by']]]
+        writer.writerow(row)
+        if form['data_summary'] == 'none':
+            row = ['Data Summary: None']
+        else:
+            row = [form['data_summary'] + ' ' + form[form['data_summary'] + '_summary']]
+        writer.writerow(row)
         if form['data_summary'] == 'spatial':
             row = [':date']
+        elif form['data_summary'] == 'temporal':
+            row = [':date range', 'Lat', 'Lon', 'Elev']
         else:
             row = [':date', 'Lat', 'Lon', 'Elev']
         for el in el_list:row.append('%s' % str(el))
@@ -575,22 +585,30 @@ def write_griddata_to_file(data, form, f=None, request=None):
                     sheet_counter+=1
                     #add new workbook sheet
                     ws = wb.add_sheet('Sheet_%s' %sheet_counter)
-                    #Header
-                    ws.write(0, 0, 'Date')
-                    if form['data_summary'] != 'spatial':
-                        ws.write(0, 1, 'Lat')
-                        ws.write(0, 2, 'Lon')
-                        ws.write(0, 3, 'Elev')
-                        for k, el in enumerate(el_list):ws.write(0, k+4, el)
+                    #Header lines
+                    ws.write(0,0,form['select_grid_by'])
+                    ws.write(0,1,form[form['select_grid_by']])
+                    if form['data_summary'] == 'none':
+                        ws.write(0,2,'Data Summary')
+                        ws.write(0,3,'None')
                     else:
-                        for k, el in enumerate(el_list):ws.write(0, k+1, el)
+                        ws.write(0,2,form['data_summary'])
+                        ws.write(0,3,form[form['data_summary'] + '_summary'])
+                    ws.write(1, 0, 'Date')
+                    if form['data_summary'] != 'spatial':
+                        ws.write(1, 1, 'Lat')
+                        ws.write(1, 2, 'Lon')
+                        ws.write(1, 3, 'Elev')
+                        for k, el in enumerate(el_list):ws.write(1, k+4, el)
+                    else:
+                        for k, el in enumerate(el_list):ws.write(1, k+1, el)
                     row_number = 1
                     flag = 0
                 try:
                     try:
-                        ws.write(date_idx+1, j, float(val))
+                        ws.write(date_idx+2, j, float(val))
                     except:
-                        ws.write(date_idx+1, j, str(val))#row, column, label
+                        ws.write(date_idx+2, j, str(val))#row, column, label
                 except Exception, e:
                     response = 'Excel write error:' + str(e)
                     break
@@ -1381,21 +1399,23 @@ def find_start_end_dates(form_input):
     Converts form_input['start_date'] and form_input['end_date']
     to 8 digit start, end dates of format yyyymmdd.
     '''
+    end_date = str(form_input['start_date'].replace('-','').replace(':','').replace('/','').replace(' ',''))
     mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
     if 'start_date' not in form_input.keys():
         s_date = 'por'
     elif form_input['start_date'].lower() == 'por':
         s_date = 'por'
     else:
-        if str(form_input['start_date']) == '' or str(form_input['start_date']) == ' ':
+        start_date = str(form_input['start_date']).replace('-','').replace(':','').replace('/','').replace(' ','')
+        if start_date == '' or start_date == ' ':
             s_date = 'por'
         else:
-            if len(str(form_input['start_date'])) == 4:
-                s_date = str(form_input['start_date']) + '0101'
-            elif len(str(form_input['start_date'])) == 6:
-                s_date = str(form_input['start_date']) + '01'
-            elif len(str(form_input['start_date'])) == 8:
-                s_date = str(form_input['start_date'])
+            if len(start_date) == 4:
+                s_date = start_date + '0101'
+            elif len(start_date) == 6:
+                s_date = start_date + '01'
+            elif len(start_date) == 8:
+                s_date = start_date
             else:
                 print 'Invalid start date format, should be yyyy or yyyymmdd!'
                 s_date = None
@@ -1404,19 +1424,20 @@ def find_start_end_dates(form_input):
     elif form_input['end_date'].lower() == 'por':
         e_date = 'por'
     else:
-        if str(form_input['end_date']) == '' or str(form_input['end_date']) == ' ':
+        end_date = str(form_input['end_date'].replace('-','').replace(':','').replace('/','').replace(' ',''))
+        if end_date == '' or end_date == ' ':
             e_date = 'por'
         else:
-            if len(str(form_input['end_date'])) == 4:
-                e_date = str(form_input['end_date']) + '1231'
-            elif len(str(form_input['end_date'])) == 6:
-                if str(form_input['end_date'])[4:6] == '02' and WRCCUtils.is_leap_year(str(form_input['end_date'])[0:4]):
+            if len(end_date) == 4:
+                e_date = end_date + '1231'
+            elif len(end_date) == 6:
+                if end_date[4:6] == '02' and WRCCUtils.is_leap_year(end_date[0:4]):
                     mon_len = '29'
                 else:
-                    mon_len = mon_lens[int(str(form_input['end_date'])[4:6]) - 1]
-                e_date = str(form_input['end_date']) + mon_len
-            elif len(str(form_input['end_date'])) == 8:
-                e_date = str(form_input['end_date'])
+                    mon_len = mon_lens[int(end_date[4:6]) - 1]
+                e_date = end_date + mon_len
+            elif len(end_date) == 8:
+                e_date = end_date
             else:
                 print 'Invalid end date format, should be yyyy or yyyymmdd!'
                 e_date = None
@@ -1472,8 +1493,6 @@ def get_element_list(form_input, program):
         elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
     elif program == 'Sodcnv':
         elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
-    elif program == 'GPTimeSeries':
-        elements = [str(form_input['element'])]
     else:
         #Check if elements is given as string, if so, convert to list
         if isinstance(form_input['elements'], basestring):
