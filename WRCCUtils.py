@@ -176,6 +176,7 @@ def get_search_area_values(form_input_dict, app_type):
     '''
     search_type = 'default'
     key = None
+    if 'location' in form_input_dict.keys():key='location'
     if 'bounding_box' in form_input_dict.keys():key='bounding_box'
     if 'state' in form_input_dict.keys():key='state'
     if 'shape' in form_input_dict.keys():
@@ -208,7 +209,7 @@ def get_search_area_values(form_input_dict, app_type):
 
 def find_bbox_of_shape(shape):
     '''
-    Give shape, a list of lon, lat coordinates
+    Given a shape, i.e., a list of lon, lat coordinates
     defining the shape, this function find the enclosing bounding box
     '''
     lons_shape = [s for idx,s in enumerate(shape) if idx%2 == 0]
@@ -265,7 +266,7 @@ def get_bbox(shape):
         t = 'bbox'
         bbox = find_bbox_of_shape(s)
     elif len(s) == 2:
-        t = 'point'
+        t = 'location'
         bbox = str(s[0] - 0.001) + ',' + str(s[1] - 0.001) + ',' + str(s[0] + 0.001) + ',' + str(s[1] + 0.001)
     else:
         t = 'polygon'
