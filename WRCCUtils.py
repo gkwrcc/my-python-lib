@@ -158,54 +158,6 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
 
     return 'Success'
 
-def get_search_area_values(form_input_dict, app_type):
-    '''
-    Given form input of a web app,
-    we find the search parameter and
-    we return a list
-    [key, value, acis_parameter_name, name_long,search_type]
-    search type is either:
-    default --> direct ACIS query possible
-    or
-    custom --> direct ACIS query is not possible
-               we need to find enclosing bbox and query AC IS for that
-    if app_type == gridded
-       county/cwa/shape/basin/shape queries are custom
-    if app_type == station
-       shape query is custom
-    '''
-    search_type = 'default'
-    key = None
-    if 'location' in form_input_dict.keys():key='location'
-    if 'bounding_box' in form_input_dict.keys():key='bounding_box'
-    if 'state' in form_input_dict.keys():key='state'
-    if 'shape' in form_input_dict.keys():
-        coord_list = ','.split(form_input_dict['shape'])
-        if len(coord_list) == 2: #point location
-            key = 'location'
-        elif len(coord_list) == 4: #bbox
-            key = 'bounding_box'
-        else:
-            key='shape';search_type='custom'
-    if 'county' in form_input_dict.keys():
-        key='county'
-        if app_type == 'gridded':search_type='custom'
-    if 'climate_division' in form_input_dict.keys():
-        key='climate_division'
-        if app_type == 'gridded':search_type='custom'
-    if 'county_warning_area' in form_input_dict.keys():
-        key='county_warning_area'
-        if app_type == 'gridded':search_type='custom'
-    if 'basin' in form_input_dict.keys():
-        key='basin'
-        if app_type == 'gridded':search_type='custom'
-
-
-    if not key:
-        return None, None, None, None, None
-    else:
-        return key, form_input_dict[key],WRCCData.SEARCH_AREA_FORM_TO_ACIS[key], WRCCData.SHAPE_NAMES[key], search_type
-
 
 def find_bbox_of_shape(shape):
     '''

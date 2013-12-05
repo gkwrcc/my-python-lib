@@ -2505,10 +2505,10 @@ def Sodsumm(**kwargs):
                             x_miss[cat_idx][element].append(days_miss)
                         else:
                             if cat_idx == 12:mon_l = range(0,12)
-                            if cat_idx == 13:mon_l = [10,11,0]
-                            if cat_idx == 14:mon_l = [1,2,3]
-                            if cat_idx == 15:mon_l = [4,5,6]
-                            if cat_idx == 16:mon_l = [7,8,9]
+                            if cat_idx == 13:mon_l = [11,0,1]
+                            if cat_idx == 14:mon_l = [2,3,4]
+                            if cat_idx == 15:mon_l = [5,6,7]
+                            if cat_idx == 16:mon_l = [8,9,10]
                             for ct in mon_l:
                                 if x_miss[ct][element][yr] > kwargs['max_missing_days']:
                                     flag = True
@@ -2548,7 +2548,7 @@ def Sodsumm(**kwargs):
                 min_min = 9999.0
                 date_min ='00000000'
                 date_max = '00000000'
-                for el in ['maxt', 'mint', 'avgt']:
+                for el_idx,el in enumerate(['maxt', 'mint', 'avgt']):
                     #Omit data yrs for month where max_missing day threshold is not met
                     data_list = []
                     dates_list = []
@@ -2559,21 +2559,21 @@ def Sodsumm(**kwargs):
                             continue
                         current_year+=1
                         idx_start = time_cats_lens[cat_idx] * yr
+                        #Feb, if not leap year, omit feb 29
                         if cat_idx == 1 and not WRCCUtils.is_leap_year(current_year):
                             cat_l = 28
-                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year):
+                        #Winter, if not leap year, omit Feb 29
+                        elif cat_idx == 13 and not WRCCUtils.is_leap_year(current_year + 1):
                             cat_l = 90
                         else:
                             cat_l = time_cats_lens[cat_idx]
                         idx_end = idx_start + cat_l
                         data_list.extend(el_data[el][idx_start:idx_end])
                         dates_list.extend(el_dates[el][idx_start:idx_end])
-                        '''
                         #Delete Feb 29 if not leap year from annual
                         if cat_idx == 12 and not WRCCUtils.is_leap_year(current_year):
-                            del data_list[idx_start + 59]
-                            del dates_list[idx_start + 59]
-                        '''
+                            del data_list[-306]
+                            del dates_list[-306]
                     #Statistics
                     sm = 0
                     cnt = 0
@@ -2592,7 +2592,23 @@ def Sodsumm(**kwargs):
                         ave = round(sm/cnt,2)
                     else:
                         ave = 0.0
-                    val_list.append('%.1f' % ave)
+
+                    #Overrride ann,spr, wi,su,fa to match
+                    #Kelly's algirithm
+                    #Kelly just addas up months and averages the averaged values
+                    if cat_idx < 12:
+                        val_list.append('%.1f' % ave)
+                    else:
+                        if cat_idx == 12:m_idx = range(1,13)
+                        if cat_idx == 13:m_idx =[12,1,2]
+                        if cat_idx == 14:m_idx =[3,4,5]
+                        if cat_idx == 15:m_idx =[6,7,8]
+                        if cat_idx == 16:m_idx =[9,10,11]
+                        s_ave = 0.0
+                        for m in m_idx:
+                            s_ave+= float(results[i]['temp'][m][el_idx+1])
+                        s_ave = round(s_ave / len(m_idx),2)
+                        val_list.append('%.1f' % s_ave)
 
                 val_list.append(int(round(max_max,0)))
                 if cat_idx >=12:
@@ -2625,6 +2641,7 @@ def Sodsumm(**kwargs):
                         cnt+=1
                     if cnt!=0:
                         means_yr.append(round(sm/cnt,2))
+                        #means_yr.append(float(sm)/float(cnt))
                         yr_list.append(str(int(start_year) + yr))
                 if means_yr:
                     ave_low = round(min(means_yr),2)
