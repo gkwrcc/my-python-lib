@@ -54,7 +54,7 @@ class DownloadDataJob:
         self.app_data_dict = {
             'Sodxtrmts':'data',
             'Sodsumm':'table_data',
-            'area_time_series':'data'
+            'area_time_series':'download_data'
         }
         self.file_extension = {
             'dlm': '.dat',
@@ -71,7 +71,7 @@ class DownloadDataJob:
         self.column_headers = {
             'Sodxtrmts':WRCCData.COLUMN_HEADERS['Sodxtrmts'],
             'Sodsumm':None,
-            'area_time_series':['Date', 'Data']
+            'area_time_series':['Date']
         }
 
 
@@ -106,6 +106,11 @@ class DownloadDataJob:
                     labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year']
                     for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end']):
                         self.header.append([labels[idx], json_data[key]])
+                if self.app_name == 'area_time_series':
+                    self.header = json_data['search_params_list']
+                    for el in json_data['search_params']['element_list']:
+                        self.column_headers.append(el)
+
         except Exception, e:
             json_data = {}
         if self.app_data_dict[self.app_name] in json_data.keys():
