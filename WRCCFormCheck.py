@@ -101,8 +101,12 @@ def check_elements(form):
     for el in el_list:
         #strip degree day digits
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
-        if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','gdd']:
-            return '%s is not a avlid element. Please consult with the helpful question mark!' %el
+        if 'select_grid_by' in form.keys():
+            if el_strip not in ['maxt','mint','pcpn','gdd','hdd','cdd']:
+                return '%s is not a valid element. Please consult with the helpful question mark!' %el
+        else:
+            if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd']:
+                return '%s is not a valid element. Please consult with the helpful question mark!' %el
 
 
 def check_graph_start_year(form):

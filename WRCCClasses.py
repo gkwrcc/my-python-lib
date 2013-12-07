@@ -71,7 +71,7 @@ class DownloadDataJob:
         self.column_headers = {
             'Sodxtrmts':WRCCData.COLUMN_HEADERS['Sodxtrmts'],
             'Sodsumm':None,
-            'area_time_series':['Date']
+            'area_time_series':['Date      ']
         }
 
 
@@ -90,29 +90,29 @@ class DownloadDataJob:
     def get_row_data(self):
         if self.data:
             return self.data
-
         try:
             with open(self.json_in_file, 'r') as json_f:
                 #need unicode converter since json.loads writes unicode
                 json_data = WRCCUtils.u_convert(json.loads(json_f.read()))
+                #json_data = json.loads(json_f.read())
                 #Find header info if in json_data
-                if self.app_name == 'Sodxtrmts':
-                    try:
-                        self.header = json_data['header']
-                    except:
-                        pass
-                if self.app_name == 'Sodsumm':
-                    self.header = []
-                    labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year']
-                    for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end']):
-                        self.header.append([labels[idx], json_data[key]])
-                if self.app_name == 'area_time_series':
-                    self.header = json_data['search_params_list']
-                    for el in json_data['search_params']['element_list']:
-                        self.column_headers.append(el)
-
-        except Exception, e:
+        except:
             json_data = {}
+        #Set headers and column headers for the apps
+        if self.app_name == 'Sodxtrmts':
+            try:
+                self.header = json_data['header']
+            except:
+                pass
+        if self.app_name == 'Sodsumm':
+            self.header = []
+            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year']
+            for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end']):
+                self.header.append([labels[idx], json_data[key]])
+        if self.app_name == 'area_time_series':
+            self.header = json_data['display_params_list']
+            for el in json_data['search_params']['element_list']:
+                self.column_headers['area_time_series'].append(el)
         if self.app_data_dict[self.app_name] in json_data.keys():
             data = json_data[self.app_data_dict[self.app_name]]
         else:
@@ -159,9 +159,9 @@ class DownloadDataJob:
                 writer.writerow(row)
 
         writer.writerow([])
-        #row = column_header
+        row = column_header
         #row = ['%8s' %str(h) for h in column_header] #Kelly's format
-        row = ['%s' %str(h) for h in column_header]
+        #row = ['%s' %str(h) for h in column_header]
         writer.writerow(row)
         for row_idx, row in enumerate(data):
             row_formatted = []
@@ -194,15 +194,21 @@ class DownloadDataJob:
                     sheet_counter+=1
                     #add new workbook sheet
                     ws = wb.add_sheet('Sheet_%s' %sheet_counter)
+                    #Header
+                    if self.header:
+                        for idx,key_val in enumerate(self.header):
+                            ws.write(idx,0,key_val[0])
+                            ws.write(idx,1,key_val[1])
                     #Column Header
                     for idx, head in enumerate(column_header):
-                        ws.write(0, idx, head)
+                        ws.write(len(self.header), idx, head)
                         row_number = 1;flag = 0
                 try:
+                    row_idx = len(self.header) + 1 + date_idx
                     try:
-                        ws.write(date_idx+1, j, float(val))
+                        ws.write(row_idx, j, float(val))
                     except:
-                        ws.write(date_idx+1, j, str(val))#row, column, label
+                        ws.write(row_idx, j, str(val))#row, column, label
                 except Exception, e:
                     response = 'Excel write error:' + str(e)
                     break

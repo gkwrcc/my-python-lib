@@ -58,7 +58,7 @@ ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)'
 
 ACIS_ELEMENTS_DICT = {
               'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F)', 'vX':1},
-              'mint':{'name':'mint', 'name_long': 'Mininimum Daily Temperature (F)', 'vX':2},
+              'mint':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F)', 'vX':2},
               'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F)', 'vX':43},
               'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range (F)', 'vX':None},
               'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F)', 'vX':3},
