@@ -652,10 +652,13 @@ def get_grid_data(form_input, program):
     if 'shape' in form_input.keys():
         #Need to find enclosing bbox
         shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
-        if bbox is None:
-            params['bbox'] = ''
+        if shape_type == 'location':
+            params['loc'] =form_input['shape']
         else:
-            params['bbox'] = bbox
+            if bbox is None:
+                params['bbox'] = ''
+            else:
+                params['bbox'] = bbox
     #Find enclosing bbox via General ACIS call (find_bbox_of_area)
     if 'county_warning_area' in form_input.keys():
         params['bbox'] = find_bbox_of_area('cwa', form_input['county_warning_area'])

@@ -843,14 +843,20 @@ def format_grid_data(req, params):
                         data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
         return data_out
     else:
+        poly = None
         #RAW DATA REQUEST OR SPATIAL SUMMARY
-        lats = data['meta']['lat']
-        lons = data['meta']['lon']
-        elevs = data['meta']['elev']
-        if 'location' in prms.keys():
+        if isinstance(data['meta']['lat'],float):
+            #shape is location
+            lats = [[data['meta']['lat']]]
+            lons = [[data['meta']['lon']]]
+            elevs = [[data['meta']['elev']]]
+        else:
+            lats = data['meta']['lat']
+            lons = data['meta']['lon']
+            elevs = data['meta']['elev']
+        if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
             data_out = [[] for i in range(len(data['data']))]
         else:
-            poly = None
             #check for irregular shapes and define poly if so
             poly, PointIn = set_poly_and_PointIn(prms)
             #set output data_out
@@ -867,7 +873,7 @@ def format_grid_data(req, params):
             data_s_summ[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
             #for spatial summary
             data_summ = [[] for el in el_list]
-            if 'location' in prms.keys():
+            if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
                 data_out[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
                 data_out[date_idx].append(round(lons[0][0],2))
                 data_out[date_idx].append(round(lats[0][0],2))
