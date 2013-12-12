@@ -675,7 +675,6 @@ class SODApplication:
         #Sanity check, make sure data has data
         #if 'error' in self.data.keys() or not self.data['data']:
         #    return {}
-        print app_params.keys()
         Application = getattr(WRCCDataApps, self.app_name)
         if self.app_name == 'Sodxtrmts':
             results, fa_results = Application(**app_params)
@@ -776,21 +775,14 @@ class GridFigure(object) :
     image_padding = 20,80
     title = 'Acis GridData map'
     def __init__(self, params, img_offset=10, text_offset=(50, 50)) :
-        if 'state' in params.keys():
-            self.region = 'state'
-        elif 'bbox' in params.keys():
-            self.region = 'bbox'
-        if self.region == 'bbox':
-            self.bbox = params['bbox']
-        elif self.region == 'state':
-            self.state = params['state']
-        self.params = params
+        self.params= params
+        self.region =params['select_grid_by']
         if 'date' in params.keys():
             self.date = params['date']
         elif 'this' in params.keys():
             self.date = params['this']['date']
         else:
-            self.date = date = time.strftime('%Y%m%d')
+            self.date = time.strftime('%Y%m%d')
         if 'data' in params.keys():
             self.data = params['data']
         else:
@@ -798,11 +790,45 @@ class GridFigure(object) :
         self.image_offset = img_offset
         self.text_offset = text_offset
 
+    def set_levels(self):
+        levels = []
+        if self.params['image']['levels']:
+            return levels
+        element = self.params['elems'][0]['name']
+        level_number = self.params['level_number']
+        if level_number == '0':
+            return levels
+        summary = self.params['temporal_summary']
+        #find max, min and step size for given params
+        daily_min = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][0]
+        daily_max = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][1]
+
+        if summary == 'sum':
+            start_date = self.params['sdate'].replace(' ','').replace('/','').replace('-','').replace(':','')
+            end_date = self.params['edate'].replace(' ','').replace('/','').replace('-','').replace(':','')
+            try:
+                s_dt = datetime.datetime(int(start_date[0,4]), int(start_date[4,6].lstrip('0')), int(start_date[6,8].lstrip('0')))
+                e_dt = datetime.datetime(int(end_date[0,4]), int(end_date[4,6].lstrip('0')), int(end_date[6,8].lstrip('0')))
+                num_days = (e_dt - s_dt).days
+                daily_max = days*daily_max
+            except:
+                pass
+        if element in ['pcpn', 'snow', 'snwd']:
+            step = round(abs(daily_max - daily_min)/int(level_number),2)
+        else:
+            step = round(abs(daily_max - daily_min)/int(level_number))
+        x = daily_min
+        while x <= daily_max:
+            levels.append(x)
+            x+=step
+        return levels
 
     def get_grid(self) :
+        self.params['image']['levels'] = self.set_levels()
         try:
             if not self.data:
                 result = AcisWS.GridData(self.params)
+                self.data = result
             else:
                 result = self.data
             if not result or 'error' in result.keys() or not 'data' in result.keys():
@@ -810,7 +836,7 @@ class GridFigure(object) :
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
                 self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
                 'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
-                u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
+                u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':self.params['image']['levels'], \
                 'error':'bad request, check parameters %s' %str(self.params)}
             else:
                 self.results = result
@@ -819,7 +845,7 @@ class GridFigure(object) :
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
-            u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':[40,50,60], \
+            u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':self.params['image']['levels'], \
             'error':'bad request, check parameters %s' %str(self.params)}
 
         return self.results

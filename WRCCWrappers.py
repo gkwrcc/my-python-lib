@@ -27,13 +27,15 @@ class Wrapper:
         self.data = []; self.dates = []
         self.elements  = [];self.coop_station_ids = []
         self.station_names  = []
+        self.station_states = []
 
     def get_data(self):
         #(self.data, self.dates, self.elements, self.coop_station_ids, self.station_names) = \
         #AcisWS.get_sod_data(self.params, self.app_name)
         DJ = WRCCClasses.SODDataJob(self.app_name,self.params)
-        self.station_ids, self.station_names = DJ.get_station_ids_names()
+        #self.station_ids, self.station_names = DJ.get_station_ids_names()
         data = DJ.get_data()
+        self.station_names, self.station_states, self.station_ids, self.station_networks, self.station_lls, self.station_elevs,self.station_uids, self.station_climdivs, self.station_countys = DJ.get_station_meta()
         return data
 
     def run_app(self, data):
@@ -67,7 +69,8 @@ def sodxtrmts_wrapper(argv):
             output format choices:
                 list --> python list of list
                 txt_list --> output looks like Kelly's commandline output
-    Example: python WRCCWrappers.py sodxtrmts 266779 2000 2012 pcpn msum 5 04 F txt_list
+                html --> html output that Greg will use for wrapper
+    Example: python WRCCWrappers.py sodxtrmts 266779 2000 2012 avgt mave 5 04 F html
     '''
     #Sanity Check
     if len(argv) != 9:
@@ -92,6 +95,11 @@ def sodxtrmts_wrapper(argv):
     max_missing_days = int(argv[5]); start_month = str(argv[6])
     departures_from_averages=str(argv[7])
     output_format = str(argv[8])
+    #Change POR start/end year to 8 digit start/end dates
+    if start_year.lower() == 'POR' or end_year.lower() == 'POR':
+        valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
+        start_year = valid_daterange[0][0:4]
+        end_year = valid_daterange[1][0:4]
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -112,11 +120,15 @@ def sodxtrmts_wrapper(argv):
     data = SX_wrapper.get_data()
     #run app
     results, fa_results = SX_wrapper.run_app(data)
-    #format resulst if needed
+
+    #format results
     if output_format =='txt_list':
         #Header
         print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(stn_id, WRCCData.ACIS_ELEMENTS_DICT[element]['name_long'],statistics_dict[monthly_statistic])
-        print ' STATION : %s' %SX_wrapper.station_names[0]
+        try:
+            print ' STATION : %s' %SX_wrapper.station_names[0]
+        except:
+            print ' STATION : No station name found'
         print ' a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
         print ' z = 26 or more days missing, A = Accumulations present '
         print ' Long-term means based on columns; thus, the monthly row may not '
@@ -125,24 +137,114 @@ def sodxtrmts_wrapper(argv):
         print ' MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS :  %s' %max_missing_days
         print ''
         #Data
-        for yr_idx,yr_data in enumerate(results[0]):
-            if yr_idx == len(results[0]) - 6:
-                print ''
-            row = ''
-            for idx,val in enumerate(yr_data):
-                if str(val) == '-9999.00':
-                    v = '-9999'
-                elif  str(val) == '9999.00':
-                    v = '9999'
-                else:
-                    v = val
-                if idx == 0:
-                    row+='%7s ' %str(v)
-                elif idx != 0 and idx%2 ==0:
-                    row+='%s' %str(v)
-                else:
-                    row+='%6s' %str(v)
-            print row
+        if not results or not results[0]:
+            print 'NO DATA FOUND!'
+        else:
+            for yr_idx,yr_data in enumerate(results[0]):
+                if yr_idx == len(results[0]) - 6:
+                    print ''
+                row = ''
+                for idx,val in enumerate(yr_data):
+                    if str(val) == '-9999.00':
+                        v = '-9999'
+                    elif  str(val) == '9999.00':
+                        v = '9999'
+                    else:
+                        v = val
+                    if idx == 0:
+                        row+='%7s ' %str(v)
+                    elif idx != 0 and idx%2 ==0:
+                        row+='%s' %str(v)
+                    else:
+                        row+='%6s' %str(v)
+                print row
+    elif output_format =='html':
+        today = WRCCUtils.set_back_date(0)
+        if not data or not results or not results[0]:
+            print '<TITLE>  ' + statistics_dict[monthly_statistic] + ' of ' + \
+            WRCCData.DISPLAY_PARAMS[element]+', Station id: ' + stn_id + ', '+'</TITLE>'
+            print '<BODY BGCOLOR="#FFFFFF">'
+            print '<CENTER>'
+            print '<H1>Station Name: Not found!</H1>'
+            print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
+            print '<H3>(' + stn_id+ ')</H3>'
+            print '</CENTER>'
+            print '<CENTER>'
+            print '<CAPTION ALIGN=LEFT><CENTER>'
+            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
+            print '<BR>'
+            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
+            print '<BR>'
+            print 'z = 26 or more days missing, A = Accumulations present'
+            print '<BR>'
+            print 'Long-term means based on columns; thus, the monthly row may not'
+            print '<BR>'
+            print 'sum (or average) to the long-term annual value.'
+            print '<BR>'
+            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
+            print '<BR>'
+            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
+            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
+            print '<BR>'
+            print 'NO DATA FOUND!'
+            print '</CENTER>'
+            print '<PRE></PRE>'
+        else:
+            print '<TITLE>  ' + statistics_dict[monthly_statistic] + ' of ' + \
+            WRCCData.DISPLAY_PARAMS[element]+', ' + SX_wrapper.station_names[0].upper()+ ', '+ SX_wrapper.station_states[0].upper()+ '</TITLE>'
+            print '<BODY BGCOLOR="#FFFFFF">'
+            print '<CENTER>'
+            print '<H1>'+SX_wrapper.station_names[0].upper()+', '+SX_wrapper.station_states[0].upper()+'</H1>'
+            print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
+            print '<H3>(' + SX_wrapper.station_ids[0] + ')</H3>'
+            print '</CENTER>'
+            print '<CENTER>'
+            print '<CAPTION ALIGN=LEFT><CENTER>'
+            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
+            print '<BR>'
+            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
+            print '<BR>'
+            print 'z = 26 or more days missing, A = Accumulations present'
+            print '<BR>'
+            print 'Long-term means based on columns; thus, the monthly row may not'
+            print '<BR>'
+            print 'sum (or average) to the long-term annual value.'
+            print '<BR>'
+            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
+            print '<BR>'
+            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
+            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
+            print '<TABLE BORDER=0 CELLSPACING=2 CELLPADDING=0>'
+            header = '<TR><TD>YEAR(S)</TD>'
+            for mon in WRCCData.NUMBER_TO_MONTH_NAME.keys():
+                header+='<TD ALIGN=CENTER COLSPAN=2>' + WRCCData.NUMBER_TO_MONTH_NAME[mon].upper() + '</TD>'
+            header+='<TD ALIGN=CENTER COLSPAN=2>ANN</TD></TR>'
+            print header
+            for yr_idx,yr_data in enumerate(results[0]):
+                if yr_idx == len(results[0]) - 6:
+                    print '<TR> <TD ALIGN=CENTER COLSPAN=26> Period of Record Statistics  </TD> </TR>'
+                row = '<TR>'
+                for idx,val in enumerate(yr_data):
+                    if str(val) == '-9999.00':
+                        v = '-9999'
+                    elif  str(val) == '9999.00':
+                        v = '9999'
+                    else:
+                        v = val
+                    if idx == 0:
+                        row+='<TD ALIGN=CENTER WIDTH=8%>'
+                    elif idx % 2 == 0:
+                        row+='<TD ALIGN=LEFT WIDTH=1%>'
+                    else:
+                        row+='<TD ALIGN=RIGHT WIDTH=6%>'
+
+                    row+=v + '</TD>'
+                row+='</TR>'
+                print row
+            print '</TABLE>'
+            print '</CENTER>'
+            print '<PRE>'
+            print '</PRE>'
     else:
         print results[0]
 

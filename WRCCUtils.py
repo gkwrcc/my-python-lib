@@ -1270,7 +1270,9 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
             idx_start = el_idx + 1
             break
     if vd_start is None or vd_end is None:
-        return []
+        return ['','']
+    vd_start_date = ''
+    vd_end_date = ''
     #loop over valid dateranges for each elements and find max or min valid daterange
     for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange'][idx_start:]):
         vd_start_test = None;vd_end_test = None

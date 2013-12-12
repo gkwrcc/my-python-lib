@@ -7,6 +7,7 @@ Checks input form parameters
 '''
 import datetime
 import re
+import WRCCData
 
 def check_start_year(form):
     err = None
@@ -108,7 +109,9 @@ def check_elements(form):
             if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd']:
                 return '%s is not a valid element. Please consult with the helpful question mark!' %el
 
-
+###################
+#Plor Options
+####################
 def check_graph_start_year(form):
     err = None
     t_yr = form['start_year']
@@ -219,4 +222,24 @@ def check_vertical_axis_max(form):
             return 'Axis maximum should be greater than axis minimum. You entered %s' %vam
     except:
         pass
+    return err
+
+def check_level_number(form):
+    err = None
+    ln = form['level_number']
+    try:
+        int(ln)
+    except:
+        return 'Level number must be an integer. You entered: %s' %ln
+    if int(ln)< 1:
+        return 'Level number must at least 1. You entered: %s' %ln
+    if int(ln)> 20:
+        return 'Level number can be at most 20. You entered: %s' %ln
+    return err
+
+def check_cmap(form):
+    err = None
+    cmap = form['cmap']
+    if cmap not in WRCCData.CMAPS:
+        return 'Not a valid color map. Please refer to the list below to find your coor map name.'
     return err

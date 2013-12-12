@@ -125,6 +125,35 @@ DELIMITERS = {
     'pipe':'|'
 }
 
+CMAPS = [ 'Accent','Blues','BrBG','BuGn','BuPu','CMRmap','Dark2','GnBu','Greens',\
+    'Greys','OrRd','Oranges','PRGn','Paired','Pastel1','Pastel2','PiYG','PuBu',\
+    'PuBuGn','PuOr','PuRd','Purples','RdBu','RdGy','RdPu','RdYlBu','RdYlGn','Reds',\
+    'Set1','Set2','Set3','Spectral','YIGn','YlGnBu','YlOrBr','YlOrRd','afmhot','autumn',\
+    'binary','bone','brg','bwr','cool','coolwarm','copper','cubehelix','flag','gist_earth',\
+    'gist_gray','gist_rainbow','gist_heat','gits_ncar','gist_stern','gist_yarg','gnuplot',\
+    'gnuplot2','gray','hot','hsv','jet','ocean','pink','prism','rainbow','seismic','spectral',\
+    'spring','summer','terrain','winter']
+
+###########################
+#Thresholds
+############################
+#CLIM_SUM_MAPS element, min, max
+CLIM_SUM_MAPS_DAILY_THRESHES = {
+    'maxt':[-20,150],
+    'mint':[-70,80],
+    'avgt':[-50,100],
+    'dtr': [10,100],
+    'obst':[-70,150],
+    'pcpn': [0,5],
+    'snow': [0,20],
+    'snwd': [0,20],
+    'cdd': [0,50],
+    'hdd': [0,50],
+    'gdd': [0,50],
+    'evap': [0,10],
+    'wdmv': [0,100]
+}
+
 ###################################
 ###################################
 #FORM CHOICES/FORM related stuff
@@ -176,7 +205,7 @@ AREA_DEFAULTS = {
     'county_warning_area':'PUB',
     'bbox':'-115,34,-114,35',
     'bounding_box':'-115,34,-114,35',
-    'state':'NV',
+    'state':'nv',
     'states':'states',
     'sw_states':'states',
     'county':'08051',
