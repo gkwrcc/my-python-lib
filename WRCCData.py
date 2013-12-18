@@ -139,14 +139,14 @@ CMAPS = [ 'Accent','Blues','BrBG','BuGn','BuPu','CMRmap','Dark2','GnBu','Greens'
 ############################
 #CLIM_SUM_MAPS element, min, max
 CLIM_SUM_MAPS_DAILY_THRESHES = {
-    'maxt':[-20,150],
-    'mint':[-70,80],
+    'maxt':[-10,140],
+    'mint':[-50,80],
     'avgt':[-50,100],
-    'dtr': [10,100],
+    'dtr': [10,60],
     'obst':[-70,150],
-    'pcpn': [0,5],
-    'snow': [0,20],
-    'snwd': [0,20],
+    'pcpn': [0,3],
+    'snow': [0,10],
+    'snwd': [0,50],
     'cdd': [0,50],
     'hdd': [0,50],
     'gdd': [0,50],
@@ -178,15 +178,21 @@ SEARCH_AREA_FORM_TO_ACIS = {
 
 ACIS_TO_SEARCH_AREA = {
     'climdiv':'climate_division',
+    'climate_division':'climate_division',
     'cwa':'county_warning_area',
+    'county_warning_area':'county_warning_area',
     'bbox':'bounding_box',
+    'bounding_box':'bounding_box',
     'stnid':'station_id',
+    'station_id':'station_id',
     'stn_id': 'station_id',
     'stnids':'station_ids',
+    'station_ids':'station_ids',
     'basin':'basin',
     'county':'county',
     'shape':'shape',
     'point':'location',
+    'location':'location',
     'loc':'location',
     'state':'state',
     'states':'states',
@@ -265,10 +271,12 @@ DISPLAY_PARAMS = {
     'end_year': 'End Year',
     'graph_start_year': 'Graph Start Year',
     'graph_end_year': 'Graph End Year',
+    'dates_constraints': 'Date Constraints',
     'element':'Element',
     'elements':'Elements',
     'element_selection': 'Element Selection',
     'el_type':'Climate Element Type',
+    'elements_constraints':'Element Constraints',
     'base_temperature': 'Base Temperature',
     'maxt': 'Maximum Daily Temperature (F)',
     'mint': 'Minimum Daily Temperature (F)',
@@ -356,7 +364,12 @@ DISPLAY_PARAMS = {
     'axis_min':'Y-Axis minimum',
     'axis_max':'Y-Axis maximum',
     'vertical_axis_min':'Vertical Axis Minimum',
-    'vertical_axis_max':'Vertical Axis Maximum'
+    'vertical_axis_max':'Vertical Axis Maximum',
+    'level_number': 'Number of Levels',
+    'projection':'Projection',
+    'map_ol': 'Map Overlay',
+    'interpolation':'Interpolation Method',
+    'cmap': 'Color Map'
 }
 
 GRID_CHOICES = {

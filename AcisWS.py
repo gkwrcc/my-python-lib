@@ -373,6 +373,8 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         f = open('/www/apps/csc/media/tmp/' + f_name,'w+')
     else:
         f_name = time_stamp + 'stn.json'
+        #f_name = 'NV_stn.json'
+        #f = open('/www/apps/csc/media/tmp/' + f_name,'w+')
         f = open('/tmp/' +  f_name,'w+')
     f.write(stn_json_str)
     f.close()

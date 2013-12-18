@@ -772,9 +772,9 @@ class GridFigure(object) :
     '''
     ACIS Grid figure. Used in clim_sum_map
     '''
-    image_padding = 20,80
-    title = 'Acis GridData map'
-    def __init__(self, params, img_offset=10, text_offset=(50, 50)) :
+    image_padding = 0,200
+    #title = 'Acis GridData map'
+    def __init__(self, params, img_offset=0, text_offset=(80,50)) :
         self.params= params
         self.region =params['select_grid_by']
         if 'date' in params.keys():
@@ -788,21 +788,19 @@ class GridFigure(object) :
         else:
             self.data = None
         self.image_offset = img_offset
-        self.text_offset = text_offset
-
+        self.text_offset = (40,2.8*int(self.params['image']['height']))
     def set_levels(self):
         levels = []
-        if self.params['image']['levels']:
-            return levels
+        if 'levels' in self.params['image'].keys() and self.params['image']['levels']:
+            return self.params['image']['levels']
         element = self.params['elems'][0]['name']
         level_number = self.params['level_number']
         if level_number == '0':
             return levels
         summary = self.params['temporal_summary']
         #find max, min and step size for given params
-        daily_min = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][0]
-        daily_max = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][1]
-
+        daily_min = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][0];mn = 9999.0
+        daily_max = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][1];mx = -9999.0
         if summary == 'sum':
             start_date = self.params['sdate'].replace(' ','').replace('/','').replace('-','').replace(':','')
             end_date = self.params['edate'].replace(' ','').replace('/','').replace('-','').replace(':','')
@@ -824,31 +822,25 @@ class GridFigure(object) :
         return levels
 
     def get_grid(self) :
-        self.params['image']['levels'] = self.set_levels()
-        try:
-            if not self.data:
-                result = AcisWS.GridData(self.params)
-                self.data = result
-            else:
-                result = self.data
-            if not result or 'error' in result.keys() or not 'data' in result.keys():
-                with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
-                    encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
-                self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
-                'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
-                u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':self.params['image']['levels'], \
-                'error':'bad request, check parameters %s' %str(self.params)}
-            else:
-                self.results = result
-        except ValueError:
-            with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
-                encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
-            self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
-            'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
-            u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'levels':self.params['image']['levels'], \
-            'error':'bad request, check parameters %s' %str(self.params)}
+        with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+            encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
+        empty_img = {'data':encoded_string, 'range':[0.0, 0.0], \
+        'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
+        u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], \
+        'error':'bad request, check parameters %s' %str(self.params)}
+        levels = self.set_levels()
+        if levels:
+            empty_img['levels'] = levels
+            self.params['image']['levels'] = levels
 
-        return self.results
+        try:
+            self.data = AcisWS.GridData(self.params)
+        except:
+            self.data = empty_img
+
+        if not self.data or 'error' in self.data.keys() or not 'data' in self.data.keys():
+            self.data = empty_img
+        return self.data
 
     @staticmethod
     def get_color(rgb) :
@@ -865,6 +857,7 @@ class GridFigure(object) :
         elif j == 'r' : w = -w
         ctx.rel_move_to(w,h)
         ctx.show_text(txt)
+
 
     def build_figure(self, image_info, out_name) :
         img_buf = StringIO(image_info['data'][21:].decode('base64'))
@@ -889,7 +882,7 @@ class GridFigure(object) :
         ctx.rectangle(pad_w/2,self.image_offset,width,height)
         ctx.stroke()
 
-        #self.add_title()
+        self.add_title()
         ctx.set_matrix(cairo.Matrix(y0=self.image_offset+height+5))
         #self.add_footer()
         ctx.set_matrix(cairo.Matrix(x0=15+25,
@@ -901,26 +894,25 @@ class GridFigure(object) :
 
     def add_title(self) :
         ctx = self.ctx
+        title = WRCCData.DISPLAY_PARAMS[self.params['temporal_summary']]
+        title+=' of ' + WRCCData.DISPLAY_PARAMS[self.params['elems'][0]['name']]
+        area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
+        area_description+= ': ' + self.params[self.params['select_grid_by']]
         date_str = '%s to %s' % (self.params['sdate'], self.params['edate'])
         ctx.set_font_size(16.)
         #if self.region == 'eny' : just = 'c'
         #else :
         just = 'l'
+        ctx.set_font_size(24.)
+        #ctx.set_source_rgb(.8,.1,.1)
         ctx.move_to(*self.text_offset)
-        self.place_text(self.title,j=just)
+        self.place_text(title,j=just)
         ctx.move_to(*self.text_offset)
-        ctx.rel_move_to(0,20)
+        ctx.rel_move_to(0,30)
+        self.place_text(area_description,j=just)
+        ctx.move_to(*self.text_offset)
+        ctx.rel_move_to(0,60)
         self.place_text(date_str,j=just)
-        ctx.move_to(*self.text_offset)
-        ctx.rel_move_to(0,25)
-        ctx.set_font_size(16.)
-        ctx.set_source_rgb(.8,.1,.1)
-        if 'bbox' in self.params.keys():
-            fig_title = 'Element: %s Bounding Box: %s' %( self.params['elems'][0]['name'], self.params['bbox'])
-        elif 'state' in self.params.keys():
-            fig_title = 'Element: %s State: %s' %( self.params['elems'][0]['name'], self.params['state'])
-        #self.place_text(fig_title,j=just,v='t')
-        self.place_text(fig_title,j=just,v='t')
 
     def add_legend(self, image_info) :
         ctx = self.ctx

@@ -898,7 +898,6 @@ def Sodxtrmts(**kwargs):
                                 nval_n = int(val_n)
                                 if el_type == 'dtr':
                                     value = nval_x - nval_n
-                                    print value
                                 elif el_type == 'avgt':
                                     value = (nval_x + nval_n)/2.0
                                 elif el_type in ['hdd','cdd', 'gdd']:
@@ -942,7 +941,7 @@ def Sodxtrmts(**kwargs):
                             sumda+=1
                         if nda  == mon_len -1:
                             if sumda >= 0.5:
-                                table_1[yr][mon] =summ/sumda
+                                table_1[yr][mon] =float(summ)/sumda
                                 table_2[yr][mon] = mon_len - sumda
 
                     elif kwargs['monthly_statistic'] == 'sd':
@@ -1023,7 +1022,7 @@ def Sodxtrmts(**kwargs):
                         if nda  == mon_len -1:
                             if el_type in ['hdd', 'cdd', 'gdd']:
                                 if nummsg != 0 and nummsg <= kwargs['max_missing_days'] and sumda > 0.5:
-                                    summ = summ/sumda * float(mon_len -1)
+                                    summ = float(summ)/sumda * float(mon_len -1)
 
                         if nda  == mon_len -1:
                             table_1[yr][mon] = summ
@@ -2580,10 +2579,10 @@ def Sodsumm(**kwargs):
                     for idx, dat in enumerate(data_list):
                         if abs(dat + 9999.0) < 0.05:
                             continue
-                        if el == 'maxt' and dat > max_max:
+                        if el == 'maxt' and (dat > max_max or abs(dat - max_max)< 0.001):
                             max_max = dat
                             date_max = dates_list[idx]
-                        if el == 'mint' and dat < min_min:
+                        if el == 'mint' and (dat < min_min or abs(dat - min_min)< 0.001):
                             min_min = dat
                             date_min = dates_list[idx]
                         sm+=dat
@@ -2593,6 +2592,7 @@ def Sodsumm(**kwargs):
                     else:
                         ave = 0.0
 
+                    #val_list.append('%.1f' % ave)
                     #Overrride ann,spr, wi,su,fa to match
                     #Kelly's algirithm
                     #Kelly just addas up months and averages the averaged values
@@ -2735,11 +2735,17 @@ def Sodsumm(**kwargs):
                     if sum_yr:
                         prec_high = max(sum_yr)
                         yr_idx_high = sum_yr.index(prec_high)
-                        yr_high = yr_list[yr_idx_high]
+                        if cat_idx ==13:
+                            yr_high = str(int(yr_list[yr_idx_high])+1)
+                        else:
+                            yr_high = yr_list[yr_idx_high]
                         if el == 'pcpn':
                             prec_low = min(sum_yr)
                             yr_idx_low = sum_yr.index(prec_low)
-                            yr_low = yr_list[yr_idx_low]
+                            if cat_idx ==13:
+                                yr_low = str(int(yr_list[yr_idx_low])+1)
+                            else:
+                                yr_low = yr_list[yr_idx_low]
                     else:
                         prec_high = -99.0
                         yr_high = '****'
@@ -3127,11 +3133,19 @@ def Soddd(**kwargs):
                             mon_len = 28
                         else:
                             mon_len = mon_lens[mon]
+                        '''
+                        mon_len = mon_lens[mon]
                         if day+1 > mon_len:
                             continue
-                        if abs(dd[yr][doy-1] + 9999.0)>0.001:
-                            sm+=dd[yr][doy-1]
-                            sm_yrs+=1
+                        '''
+                        if doy < 60:
+                            dy = doy -1
+                        else:
+                            dy = doy
+                        if abs(dd[yr][dy] + 9999.0)>0.001:
+                            if day+1 <=mon_len:
+                                sm+=dd[yr][dy]
+                                sm_yrs+=1
                     if sm_yrs > 0.5:
                         results[i][day].append(int(round(float(sm)/sm_yrs)))
                         results[i][day].append(sm_yrs)
