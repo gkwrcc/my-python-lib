@@ -160,60 +160,46 @@ def sodxtrmts_wrapper(argv):
                 print row
     elif output_format =='html':
         today = WRCCUtils.set_back_date(0)
+        print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
+        print 'Content-type: text/html \r\n\r\n'
+        print '<HTML>'
+        print '<HEAD><TITLE>' + statistics_dict[monthly_statistic] + ' of ' + \
+        WRCCData.DISPLAY_PARAMS[element]+', Station id: ' + stn_id +'</TITLE></HEAD>'
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<CENTER>'
+        '''
         if not data or not results or not results[0]:
-            print '<TITLE>  ' + statistics_dict[monthly_statistic] + ' of ' + \
-            WRCCData.DISPLAY_PARAMS[element]+', Station id: ' + stn_id + ', '+'</TITLE>'
-            print '<BODY BGCOLOR="#FFFFFF">'
-            print '<CENTER>'
             print '<H1>Station Name: Not found!</H1>'
             print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
             print '<H3>(' + stn_id+ ')</H3>'
-            print '</CENTER>'
-            print '<CENTER>'
-            print '<CAPTION ALIGN=LEFT><CENTER>'
-            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
-            print '<BR>'
-            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
-            print '<BR>'
-            print 'z = 26 or more days missing, A = Accumulations present'
-            print '<BR>'
-            print 'Long-term means based on columns; thus, the monthly row may not'
-            print '<BR>'
-            print 'sum (or average) to the long-term annual value.'
-            print '<BR>'
-            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
-            print '<BR>'
-            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
-            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
-            print '<BR>'
+        else:
+            print '<H1>'+SX_wrapper.station_names[0].upper()+', '+SX_wrapper.station_states[0].upper()+'</H1>'
+            print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
+            print '<H3>(' + SX_wrapper.station_ids[0] + ')</H3>'
+        '''
+        print '</CENTER>'
+        print '<CENTER>'
+        print '<CAPTION ALIGN=LEFT><CENTER>'
+        print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
+        print '<BR>'
+        print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
+        print '<BR>'
+        print 'z = 26 or more days missing, A = Accumulations present'
+        print '<BR>'
+        print 'Long-term means based on columns; thus, the monthly row may not'
+        print '<BR>'
+        print 'sum (or average) to the long-term annual value.'
+        print '<BR>'
+        print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
+        print '<BR>'
+        print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
+        print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
+        print '<BR>'
+        if not data or not results or not results[0]:
             print 'NO DATA FOUND!'
             print '</CENTER>'
             print '<PRE></PRE>'
         else:
-            print '<TITLE>  ' + statistics_dict[monthly_statistic] + ' of ' + \
-            WRCCData.DISPLAY_PARAMS[element]+', ' + SX_wrapper.station_names[0].upper()+ ', '+ SX_wrapper.station_states[0].upper()+ '</TITLE>'
-            print '<BODY BGCOLOR="#FFFFFF">'
-            print '<CENTER>'
-            print '<H1>'+SX_wrapper.station_names[0].upper()+', '+SX_wrapper.station_states[0].upper()+'</H1>'
-            print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
-            print '<H3>(' + SX_wrapper.station_ids[0] + ')</H3>'
-            print '</CENTER>'
-            print '<CENTER>'
-            print '<CAPTION ALIGN=LEFT><CENTER>'
-            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
-            print '<BR>'
-            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
-            print '<BR>'
-            print 'z = 26 or more days missing, A = Accumulations present'
-            print '<BR>'
-            print 'Long-term means based on columns; thus, the monthly row may not'
-            print '<BR>'
-            print 'sum (or average) to the long-term annual value.'
-            print '<BR>'
-            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
-            print '<BR>'
-            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
-            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
             print '<TABLE BORDER=0 CELLSPACING=2 CELLPADDING=0>'
             header = '<TR><TD>YEAR(S)</TD>'
             for mon in WRCCData.NUMBER_TO_MONTH_NAME.keys():
@@ -245,6 +231,8 @@ def sodxtrmts_wrapper(argv):
             print '</CENTER>'
             print '<PRE>'
             print '</PRE>'
+            print '</BODY>'
+            print '</HTML>'
     else:
         print results[0]
 

@@ -33,6 +33,8 @@ NETWORK_CODES = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':
 '8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
 NETWORK_ICONS = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
 '6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
+#NETWORK_ICONS = {'1': 'yellow', '2': 'blue', '3': 'green','4':'purple', '5': 'gray', \
+#'6': 'orange', '7': 'white', '8': 'black', '9':'brown', '10':'red', '11': 'shadow'}
 #1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
 KELLY_NETWORK_CODES = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
 '8':'CoCoRaHS', '9':'RCC', '10':'Threadex', '11':'Misc'}

@@ -106,7 +106,7 @@ def check_elements(form):
             if el_strip not in ['maxt','mint','pcpn','gdd','hdd','cdd']:
                 return '%s is not a valid element. Please consult with the helpful question mark!' %el
         else:
-            if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd']:
+            if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
                 return '%s is not a valid element. Please consult with the helpful question mark!' %el
 
 ###################

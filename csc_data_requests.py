@@ -318,7 +318,7 @@ def proc_runner(params_list):
             logger.info('Wrote grid results to file.')
         elif 'select_stations_by' in params.keys():
             logger.info('Retrieved station results.')
-            save_error = WRCCUtils.write_point_data_to_file(data['stn_data'], data['dates'],data['stn_names'], data['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
+            save_error = WRCCUtils.write_station_data_to_file(data['stn_data'], data['dates'],data['stn_names'], data['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
             logger.info('Wrote station results to file.')
         else:
             save_error = 'Weirdo error. This should never happen.'

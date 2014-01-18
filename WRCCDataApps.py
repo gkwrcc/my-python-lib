@@ -294,14 +294,14 @@ def Sodpiii(**kwargs):
              9.00, 10.00, 11.00, 12.00, 14.00, 16.00, 18.00, 20.00]
     apctan = [.024, .032, .040, .064, .077, .087, .098, .107, \
              .116, .125, .131, .138, .171, .199, .226, .253]
-    #ask = [1.20, 1.10, .92, .92, .95, 1.07, .94, .85, \
-          #.80, .75, .70, .64, .46, .45, .43, .32]
-    #acv = [.26, .26, .26, .27, .27, .26, .25, .24, \
-          #.24, .24, .23, .23, .23, .23, .22, .21]
-    ask = [2.00, 1.50, 1.00, .90, .85, .80, .75, .70, \
-          .65, .60, .55, .50, .45, .40, .35, .30]
-    acv = [.25, .25, .25, .25, .25, .25, .25, .25, \
-          .25, .25, .25, .25, .25, .25, .25, .25]
+    ask = [1.20, 1.10, .92, .92, .95, 1.07, .94, .85, \
+          .80, .75, .70, .64, .46, .45, .43, .32]
+    acv = [.26, .26, .26, .27, .27, .26, .25, .24, \
+          .24, .24, .23, .23, .23, .23, .22, .21]
+    #ask = [2.00, 1.50, 1.00, .90, .85, .80, .75, .70, \
+          #.65, .60, .55, .50, .45, .40, .35, .30]
+    #acv = [.25, .25, .25, .25, .25, .25, .25, .25, \
+          #.25, .25, .25, .25, .25, .25, .25, .25]
     #Read in piii table:
     piii = {}
     count = 0
@@ -3030,8 +3030,12 @@ def Soddd(**kwargs):
     for i, stn in enumerate(kwargs['coop_station_ids']):
         yrs = max(len(kwargs['data'][i][j]) for j in range(len(kwargs['elements'])))
         dd = [[-9999.0 for day in range(366)] for yr in range(yrs)]
+        year = int(kwargs['dates'][0][0:4]) -1
         for yr in range(yrs):
+            year+=1
             for doy in range(366):
+                #if not WRCCUtils.is_leap_year(year) and doy ==60:
+                #    continue
                 maxt = str(kwargs['data'][i][0][yr][doy])
                 mint = str(kwargs['data'][i][1][yr][doy])
                 val_x, flag_x = WRCCUtils.strip_data(maxt)
@@ -3042,18 +3046,22 @@ def Soddd(**kwargs):
                 except:
                     continue
                 #Truncation if desired
-                if 'trunc_high' in kwargs.keys() and val_x > kwargs['trunc_high']:
+                #if 'trunc_high' in kwargs.keys() and val_x > kwargs['trunc_high']:
+                if 'trunc_high' in kwargs.keys() and int(val_x) > int(kwargs['trunc_high']):
                     val_x = kwargs['trunc_high']
-                if 'trunc_low' in kwargs.keys() and val_n < kwargs['trunc_low']:
+                #if 'trunc_low' in kwargs.keys() and val_n < kwargs['trunc_low']:
+                if 'trunc_low' in kwargs.keys() and int(val_n) < int(kwargs['trunc_low']):
                     val_n = kwargs['trunc_low']
                 ave = (val_x + val_n)/2.0
                 #Implement skip days if desired
-                if 'skip_max_above' in kwargs.keys() and val_x > kwargs['skip_max_above']:
-                    dd[yr][doy] = 0
-                    continue
-                if 'skip_min_below' in kwargs.keys() and val_n < kwargs['skip_min_below']:
-                    dd[yr][doy] = 0
-                    continue
+                if 'skip_max_above' in kwargs.keys() and int(val_x) > int(kwargs['skip_max_above']):
+                    if doy != 60 or not WRCCUtils.is_leap_year(year):
+                        dd[yr][doy] = 0
+                        continue
+                if 'skip_min_below' in kwargs.keys() and int(val_n)  < int(kwargs['skip_min_below']):
+                    if doy != 60 or not WRCCUtils.is_leap_year(year):
+                        dd[yr][doy] = 0
+                        continue
                 #NCDC roundoff of ave if desired
                 if kwargs['ncdc_round']:
                     ave = numpy.ceil(ave)
@@ -3082,7 +3090,7 @@ def Soddd(**kwargs):
                 year+=1
                 results[i][yr].append(year)
                 for mon in range(12):
-                    sm = 0
+                    sm = 0.0
                     sm_miss = 0
                     #Take care of leap years
                     if mon == 1 and not WRCCUtils.is_leap_year(year):
@@ -3091,6 +3099,7 @@ def Soddd(**kwargs):
                         mon_len = mon_lens[mon]
                     if mon > 0:
                         last_day+= mon_lens[mon-1]
+
                     for day in range(mon_len):
                         dd_val = dd[yr][last_day+day]
                         if abs(dd_val + 9999.0) > 0.001:
@@ -3126,26 +3135,18 @@ def Soddd(**kwargs):
                 for mon in range(12):
                     sm = 0
                     sm_yrs = 0
-                    doy = WRCCUtils.compute_doy(str(mon+1), str(day+1))
+                    doy = WRCCUtils.compute_doy_leap(str(mon+1), str(day+1))
                     for yr in range(yrs):
                         year+=1
-                        if mon == 1 and not WRCCUtils.is_leap_year(year):
-                            mon_len = 28
-                        else:
-                            mon_len = mon_lens[mon]
-                        '''
                         mon_len = mon_lens[mon]
-                        if day+1 > mon_len:
+                        if day+1 >mon_len:
                             continue
-                        '''
-                        if doy < 60:
-                            dy = doy -1
-                        else:
+                        dy = doy -1
+                        if doy == 61:
                             dy = doy
                         if abs(dd[yr][dy] + 9999.0)>0.001:
-                            if day+1 <=mon_len:
-                                sm+=dd[yr][dy]
-                                sm_yrs+=1
+                            sm+=dd[yr][dy]
+                            sm_yrs+=1
                     if sm_yrs > 0.5:
                         results[i][day].append(int(round(float(sm)/sm_yrs)))
                         results[i][day].append(sm_yrs)

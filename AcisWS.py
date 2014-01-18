@@ -219,13 +219,19 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         for i, stn in enumerate(request['meta']):
             #if custom shape, check if  stn lies within shape
             if by_type == 'shape':
-                shape = val.split(',')
+                if shape_type in ['bbox','location']:
+                    shape = bbox.split(',')
+                else:
+                    shape = val.split(',')
                 shape = [float(s) for s in shape]
                 if shape_type == 'circle':
                     poly = shape
                     stn_in = WRCCUtils.point_in_circle(stn['ll'][0], stn['ll'][1], poly)
-                elif shape_type == 'polygon':
-                    poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+                else:
+                    if shape_type in ['bbox','location']:
+                        poly = [(shape[0],shape[1]), (shape[0],shape[3]),(shape[2],shape[3]),(shape[2],shape[1])]
+                    else:
+                        poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
                     stn_in = WRCCUtils.point_in_poly(stn['ll'][0], stn['ll'][1], poly)
                 if not stn_in:
                     continue
@@ -541,6 +547,10 @@ def get_station_data(form_input, program):
     resultsdict['stn_names'] = ['' for stn in request['data']]
     resultsdict['stn_ids'] = [[] for stn in request['data']]
     resultsdict['stn_data'] = [[] for stn in request['data']]
+    resultsdict['stn_state'] = [' ' for stn in request['data']]
+    resultsdict['stn_lat'] = [' ' for stn in request['data']]
+    resultsdict['stn_lon'] = [' ' for stn in request['data']]
+    resultsdict['stn_elev'] = [' ' for stn in request['data']]
     idx_empty_list = []
     stn_idx = -1
     for stn, data in enumerate(request['data']):
@@ -570,6 +580,10 @@ def get_station_data(form_input, program):
             del resultsdict['stn_names'][stn_idx]
             del resultsdict['stn_ids'][stn_idx]
             del resultsdict['stn_data'][stn_idx]
+            del resultsdict['stn_state'][stn_idx]
+            del resultsdict['stn_lat'][stn_idx]
+            del resultsdict['stn_lon'][stn_idx]
+            del resultsdict['stn_elev'][stn_idx]
             stn_idx-=1
             continue
 
@@ -600,15 +614,31 @@ def get_station_data(form_input, program):
                 else:
                     resultsdict['stn_ids'][stn_idx].append(ids)
         except:
-            resultsdict['stn_ids'][stn_idx] = []
+            pass
         try:
             resultsdict['stn_names'][stn_idx] = str(data['meta']['name'])
         except:
-            resultsdict['stn_names'][stn_idx] = ''
+            pass
         try:
             resultsdict['stn_data'][stn_idx] = data['data']
         except:
-            resultsdict['stn_data'][stn_idx] = []
+            pass
+        try:
+            resultsdict['stn_state'][stn_idx] = str(data['meta']['state'])
+        except:
+            pass
+        try:
+            resultsdict['stn_lon'][stn_idx] = str(data['meta']['ll'][0])
+        except:
+            pass
+        try:
+            resultsdict['stn_lat'][stn_idx] = str(data['meta']['ll'][1])
+        except:
+            pass
+        try:
+            resultsdict['stn_elev'][stn_idx] = str(data['meta']['elev'])
+        except:
+            pass
 
         if not resultsdict['stn_data'][stn_idx]:
             resultsdict['stn_errors'][stn_idx] = 'No data found!'

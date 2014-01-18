@@ -214,12 +214,12 @@ def get_bbox(shape):
     if len(s)==3:
         t = 'circle'
         bbox = find_bbox_of_circle(s[0], s[1], s[2])
-    elif len(s) ==4: #bbox
+    elif len(s) == 4: #bbox
         t = 'bbox'
         bbox = find_bbox_of_shape(s)
     elif len(s) == 2:
         t = 'location'
-        bbox = str(s[0] - 0.001) + ',' + str(s[1] - 0.001) + ',' + str(s[0] + 0.001) + ',' + str(s[1] + 0.001)
+        bbox = str(s[0] - 0.1) + ',' + str(s[1] - 0.1) + ',' + str(s[0] + 0.1) + ',' + str(s[1] + 0.1)
     else:
         t = 'polygon'
         bbox = find_bbox_of_shape(s)
@@ -490,19 +490,19 @@ def write_griddata_to_file(data, form, f=None, request=None):
 
         #Find length of date values
         #header
-        row = [WRCCData.DISPLAY_PARAMS[form['select_grid_by']] + ': ' + form[form['select_grid_by']]]
+        row = [':',str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']])+': ',str(form[form['select_grid_by']])]
         writer.writerow(row)
         if form['data_summary'] == 'none':
-            row = ['Data Summary: None']
+            row = [':','Data Summary:','None']
         else:
-            row = [form['data_summary'] + ' ' + form[form['data_summary'] + '_summary']]
+            row = [':Data Summary: ',form['data_summary'],form[form['data_summary'] + '_summary']]
         writer.writerow(row)
         if form['data_summary'] == 'spatial':
             row = [':date']
         elif form['data_summary'] == 'temporal':
             row = [':date range', 'Lat', 'Lon', 'Elev']
         else:
-            row = [':date', 'Lat', 'Lon', 'Elev']
+            row = [':Date', 'Lat', 'Lon', 'Elev']
         for el in el_list:row.append('%s' % str(el))
         writer.writerow(row)
         for date_idx, date_vals in enumerate(data):
@@ -539,14 +539,15 @@ def write_griddata_to_file(data, form, f=None, request=None):
                     #add new workbook sheet
                     ws = wb.add_sheet('Sheet_%s' %sheet_counter)
                     #Header lines
-                    ws.write(0,0,form['select_grid_by'])
+                    ws.write(0,0,WRCCData.DISPLAY_PARAMS[form['select_grid_by']])
                     ws.write(0,1,form[form['select_grid_by']])
                     if form['data_summary'] == 'none':
-                        ws.write(0,2,'Data Summary')
+                        ws.write(0,2,'Data Summary:')
                         ws.write(0,3,'None')
                     else:
-                        ws.write(0,2,form['data_summary'])
-                        ws.write(0,3,form[form['data_summary'] + '_summary'])
+                        ws.write(0,2,'Data Summary:')
+                        ws.write(0,3,form['data_summary'])
+                        ws.write(0,4,form[form['data_summary'] + '_summary'])
                     ws.write(1, 0, 'Date')
                     if form['data_summary'] != 'spatial':
                         ws.write(1, 1, 'Lat')
@@ -578,17 +579,23 @@ def write_griddata_to_file(data, form, f=None, request=None):
     return response
 
 
-def write_point_data_to_file(data, dates, station_names, station_ids, elements,delim, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
+def write_station_data_to_file(resultsdict, delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
+    #def write_station_data_to_file(data, dates, station_names, station_ids, elements,delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
     '''
     Writes station data to a file.
 
     Keyword aruments:
-    data             -- data to write to file
-    dates            -- list of dates of data request
-    station_names    -- list of station names of data request
-    station_ids      -- list of station ids of data request
-    elements         -- list of climate elements
-    delim            -- delimiter used to separate data vaules
+    resultsdict      -- output of get_station_data call, has keys:
+        stn_data             -- data to write to file
+        dates            -- list of dates of data request
+        stn_names    -- list of station names of data request
+        stn_ids      -- list of station ids of data request
+        elements         -- list of climate elements
+        stn_state        -- list of station states
+        stn_lat          -- list of station latitiudes
+        stn_lon          -- list of station longitudes
+        stn_elev         -- list of station elevations
+    delimiter        -- delimiter used to separate data vaules
     file_extension   -- format of output data file (.dat, .txt, .xls)
     f                -- file name (default None)
     request          -- data request object (default None)
@@ -615,21 +622,23 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
             if request:
                 response = HttpResponse(mimetype='text/csv')
                 response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
-                writer = csv.writer(response, delimiter=delim )
+                writer = csv.writer(response, delimiter=delimiter )
             else: #file f given
                 try:
                     csvfile = open(f, 'w+')
-                    writer = csv.writer(csvfile, delimiter=delim )
+                    writer = csv.writer(csvfile, delimiter=delimiter )
                     response = None
                 except Exception, e:
                     #Can' open user given file, create emergency writer object
-                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim)
+                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delimiter)
                     response = 'Error!' + str(e)
-            for stn, dat in enumerate(data):
-                row = [':Station ID: %s' %str(station_ids[stn][0]).split(' ')[0], 'Station_name: %s' %str(station_names[stn])]
+            for stn, dat in enumerate(resultsdict['stn_data']):
+                row = [':Station ID: %s' %str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'Station_name: %s' %str(resultsdict['stn_names'][stn])]
+                writer.writerow(row)
+                row = [':State: %s' %str(resultsdict['stn_state'][stn]), 'Latitude: %s' %str(resultsdict['stn_lat'][stn]), 'Longitude: %s' %str(resultsdict['stn_lon'][stn]),'Elevation: %s' %str(resultsdict['stn_elev'][stn])]
                 writer.writerow(row)
                 row = [':date   ']
-                for el in elements:
+                for el in resultsdict['elements']:
                     if show_flags == 'F' and show_observation_time == 'F':
                         row.append('%7s' % str(el))
                     elif show_flags == 'T' and show_observation_time == 'F':
@@ -660,60 +669,68 @@ def write_point_data_to_file(data, dates, station_names, station_ids, elements,d
                     writer.writerow(row)
         elif file_extension == '.json':
             with open(f, 'w+') as jsonf:
-                jsonf.write(json.dumps(data))
+                jsonf.write(json.dumps(resultsdict['stn_data']))
                 response = None
         elif file_extension == '.xls': #Excel
             from xlwt import Workbook
             wb = Workbook()
-            for stn, dat in enumerate(data):
-                #ws = wb.add_sheet('Station_%s_%s' %(str(station_ids[stn][0]).split(' ')[0], str(stn)))
-                ws = wb.add_sheet('%s' %(str(station_ids[stn][0]).split(' ')[0]))
+            for stn, dat in enumerate(resultsdict['stn_data']):
+                #ws = wb.add_sheet('Station_%s_%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0], str(stn)))
+                ws = wb.add_sheet('%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0]))
                 #Header
-                ws.write(0, 0, 'Date')
+                ws.write(0,0,'Stn Name');ws.write(0,1,'Stn ID');ws.write(0,2,'State');ws.write(0,3,'Lat');ws.write(0,4,'Lon');ws.write(0,5,'Elev');
+                ws.write(1,0,str(resultsdict['stn_names'][stn]))
+                ws.write(1,1,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
+                ws.write(1,2,str(resultsdict['stn_state'][stn]))
+                ws.write(1,3,str(resultsdict['stn_lat'][stn]))
+                ws.write(1,4,str(resultsdict['stn_lon'][stn]))
+                ws.write(1,5,str(resultsdict['stn_elev'][stn]));
+
+                ws.write(3, 0, 'Date')
                 idx = 0
-                for k, el in enumerate(elements):
+                for k, el in enumerate(resultsdict['elements']):
                     idx+=1
                     if show_flags == 'F' and show_observation_time == 'F':
-                        ws.write(0, k+1, el)
+                        ws.write(3, k+1, el)
                     elif show_flags == 'T' and show_observation_time == 'F':
-                        ws.write(0, idx, el)
-                        ws.write(0, idx+1,'flag')
+                        ws.write(3, idx, el)
+                        ws.write(3, idx+1,'flag')
                         idx+=1
                     elif show_flags == 'F' and show_observation_time == 'T':
-                        ws.write(0, idx, el)
-                        ws.write(0, idx+1,'obs time')
+                        ws.write(3, idx, el)
+                        ws.write(3, idx+1,'obs time')
                         idx+=1
                     else:
-                        ws.write(0, idx, el)
-                        ws.write(0, idx+1,'flag')
-                        ws.write(0, idx+2,'obs time')
+                        ws.write(3, idx, el)
+                        ws.write(3, idx+1,'flag')
+                        ws.write(3, idx+2,'obs time')
                         idx+=2
                 #Data
                 for j, vals in enumerate(dat):
                     idx = 0
-                    ws.write(j+1,0,vals[0])
+                    ws.write(j+4,0,vals[0])
                     for l,val in enumerate(vals[1:]):
                         idx+=1
                         if show_flags == 'F' and show_observation_time == 'F':
                             try:
-                                ws.write(j+1, idx, float(val[0]))
+                                ws.write(j+4, idx, float(val[0]))
                             except:
-                                ws.write(j+1, idx, val[0])
+                                ws.write(j+4, idx, val[0])
                         elif show_flags == 'T' and show_observation_time == 'F':
-                            ws.write(j+1, idx, val[0]) #row, column, label
-                            ws.write(j+1, idx+1, val[1])
+                            ws.write(j+4, idx, val[0]) #row, column, label
+                            ws.write(j+4, idx+1, val[1])
                             idx+=1
                         elif show_flags == 'F' and show_observation_time == 'T':
-                            ws.write(j+1, idx, val[0]) #row, column, label
-                            ws.write(j+1, idx+1, int(val[2]))
+                            ws.write(j+4, idx, val[0]) #row, column, label
+                            ws.write(j+4, idx+1, int(val[2]))
                             idx+=1
                         else:
                             try:
-                                ws.write(j+1, idx, float(val[0])) #row, column, label
+                                ws.write(j+4, idx, float(val[0])) #row, column, label
                             except:
-                                ws.write(j+1, idx, val[0])
-                            ws.write(j+1, idx+1, val[1])
-                            ws.write(j+1, idx+2, int(val[2]))
+                                ws.write(j+4, idx, val[0])
+                            ws.write(j+4, idx+1, val[1])
+                            ws.write(j+4, idx+2, int(val[2]))
                             idx+=2
             if f:
                 try:
@@ -1021,6 +1038,8 @@ def get_el_and_base_temp(el):
     Keyword arguments:
     el -- climate element abbreviation
     '''
+    element = el
+    base_temp = None
     el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
     b = el[-2:len(el)]
     try:
@@ -1031,9 +1050,6 @@ def get_el_and_base_temp(el):
             base_temp = '65'
         elif b == 'dd' and el == 'gdd':
             base_temp = '50'
-        else:
-            base_temp = None
-        element = el
     return element, base_temp
 
 

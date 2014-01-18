@@ -282,7 +282,7 @@ for idx, req_params_file in enumerate(params_list):
     if 'select_grid_by' in req_params.keys():
         save_error = WRCCUtils.write_griddata_to_file(results, elements,delimiter, file_extension, f=results_file)
     if 'select_station_by' in req_params.keys():
-        save_error = WRCCUtils.write_point_data_to_file(results['stn_data'], results['dates'],results['stn_names'], results['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
+        save_error = WRCCUtils.write_station_data_to_file(results['stn_data'], results['dates'],results['stn_names'], results['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
 
 
 #Write e-mails to users if needed:
