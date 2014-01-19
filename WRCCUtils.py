@@ -490,12 +490,12 @@ def write_griddata_to_file(data, form, f=None, request=None):
 
         #Find length of date values
         #header
-        row = [':',str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']])+': ',str(form[form['select_grid_by']])]
+        row = [':'+ str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']]) + ': ' + str(form[form['select_grid_by']])]
         writer.writerow(row)
         if form['data_summary'] == 'none':
-            row = [':','Data Summary:','None']
+            row = [':'+'Data Summary: '+'None']
         else:
-            row = [':Data Summary: ',form['data_summary'],form[form['data_summary'] + '_summary']]
+            row = [':Data Summary: '+form['data_summary']+form[form['data_summary'] + '_summary']]
         writer.writerow(row)
         if form['data_summary'] == 'spatial':
             row = [':date']
