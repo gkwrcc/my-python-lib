@@ -2913,6 +2913,7 @@ def Sodpad(**kwargs):
             continue
         s_count = 0
         #Take care of data flags, Feb 29's are set to 99.00, missing data to 99.99
+        #Kelly: don't do leap years, too complicated
         for yr in range(num_yrs):
             for doy in range(366):
                 if doy == 59:
@@ -2955,6 +2956,8 @@ def Sodpad(**kwargs):
             leapda = 0
             sumpcpn = [0 for l in range(num_yrs)]
             misdys = [1 for l in range(num_yrs)]
+            #leap KEEPS TRACK OF WHETHER A LEAP DAY IS IN THE ACCUMULATION INTERVAL
+            #  when leap(i) = 0, then it's a leap year. default to no leap year
             leap = [1 for l in range(num_yrs)]
             #loop over durations
             #for idx, idur in enumerate(lenper):
@@ -2969,10 +2972,12 @@ def Sodpad(**kwargs):
                     if iyeart > range(num_yrs)[-1]:
                         continue
                     #look for leap days and skip Feb 29 if not a leap year
+                    #note that -99.00 applies just to day 60, else it's -99.99
                     dates = kwargs['dates']
-                    if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.05:
+                    if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.005:
                         leap[yr] = 0
-                    if iyeart == int(dates[0][0:4]) and ndoyt == 59:
+                    #if iyeart == int(dates[0][0:4]) and ndoyt == 59:
+                    if iyeart == 0 and ndoyt == 59:
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
@@ -3004,8 +3009,14 @@ def Sodpad(**kwargs):
                     if nprsnt != 0:
                         pcthr = 100.0 * sumthr/float(nprsnt+1)
                     results[i][doy][icount][ithr] = '%.1f' % pcthr
+                #it is possible there may be a few edge effects in december
                 if aveobs != 0:
-                    avepre = sumpre / aveobs
+                    avepre = round(sumpre / aveobs,3)
+                    if int(str(avepre)[-1]) >= 5 and len(str(avepre)) > 5:
+                        try:
+                            avepre = float(str(avepre)[0:-2] + str(int(str(avepre)[-2]) +1))
+                        except:
+                            pass
                     results[i][doy][icount][19] = '%.2f' % avepre
                 icount+=1
     return results
