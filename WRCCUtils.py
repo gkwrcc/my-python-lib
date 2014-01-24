@@ -1530,8 +1530,12 @@ def get_windowed_indices(dates, start_window, end_window):
         d = ''.join(d.split('/'))
         if d[4:] == start_window:
             start_indices.append(idx)
+        #deal with Feb 29 start
+        if start_window == '0229':
+            if end_window != '0229' and not is_leap_year(d[0:4]) and d[4:] == '0301':
+                start_indices.append(idx)
         if d[4:] == end_window:
-                end_indices.append(idx)
+            end_indices.append(idx)
     #Date formatting needed to deal with end of data and window size
     start_d = dates[0];end_d = dates[-1]
     start_yr = int(start_d[0:4]);start_mon = int(start_d[4:6]);start_day = int(start_d[6:8])
@@ -1563,8 +1567,8 @@ def get_windowed_indices(dates, start_window, end_window):
         if (doy_last <= doy_window_st and doy_last < doy_window_end) or (doy_window_st <= doy_last and doy_last > doy_window_end):
             end_indices.insert(len(dates),len(dates)-1)
     #Sanity check
-    #if len(start_indices)!= len(end_indices):
-    #    return [],[]
+    if len(start_indices)!= len(end_indices):
+        return [],[]
     return start_indices, end_indices
 
 def get_windowed_data(data, start_date, end_date, start_window, end_window):

@@ -2334,15 +2334,34 @@ def Sodlist_new(kwargs):
                 end = end_indices[idx_idx]
                 while idx <= end:
                     #fix me: what's tobs?? different for each element
-                    dat = [stn_id + dates[idx]]
+                    #FIXED: upon Greg's request, we choose tmin tobs
+                    if kwargs['output_format'] == 'kr_csv':
+                        if kwargs['minimize']:
+                            dat =[dates[idx][0:4],dates[idx][4:6],dates[idx][6:8]]
+                        else:
+                            dat =[stn_id[0:2], stn_id[2:6],dates[idx][0:4],dates[idx][4:6],dates[idx][6:8]]
+                    else:
+                        if kwargs['minimize']:
+                            dat = [dates[idx]]
+                        else:
+                            dat = [stn_id + dates[idx]]
                     for el_idx, vX in enumerate(vx_list):
                         data_flag_tobs = stn_data['data'][idx][el_idx]
                         #wrcc_data = [data_val, flag1, flag2, tobs]
                         wrcc_data = WRCCUtils.format_sodlist_data(data_flag_tobs)
-                        if el_idx ==0:
+                        if str(vX) == '4':
                             #add hour to data
-                            dat[0]+=wrcc_data[-1]
-                        dat.append(wrcc_data[0])
+                            if not kwargs['minimize']:
+                                if kwargs['output_format'] == 'kr_csv':
+                                    dat.append(wrcc_data[-1])
+                                else:
+                                    dat[0]+=wrcc_data[-1]
+                        #Format to Kelly's output:
+                        #pcpn, snow,snwd in 100th of inches
+                        if str(vX) in ['4','10','11','7']:
+                            dat.append(int(100*float(wrcc_data[0])))
+                        else:
+                            dat.append(wrcc_data[0])
                         dat.append(wrcc_data[1])
                         dat.append(wrcc_data[2])
                     stn_dict['data'].append(dat)
