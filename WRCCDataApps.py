@@ -2613,7 +2613,7 @@ def Sodsumm(**kwargs):
 
                     #val_list.append('%.1f' % ave)
                     #Overrride ann,spr, wi,su,fa to match
-                    #Kelly's algirithm
+                    #Kelly's algorithm
                     #Kelly just addas up months and averages the averaged values
                     if cat_idx < 12:
                         val_list.append('%.1f' % ave)
@@ -2745,10 +2745,35 @@ def Sodsumm(**kwargs):
                         sum_yr.append(sm)
                         yr_list.append(str(int(start_year) + yr))
                     try:
+                        '''
                         if el == 'snow':
+                            #val_list.append('%.1f' % round(sum(sum_yr)/len(sum_yr),2))
                             val_list.append('%.1f' % round(numpy.mean(sum_yr),2))
                         else:
+                            #val_list.append('%.2f' % round(sum(sum_yr)/len(sum_yr),2))
                             val_list.append('%.2f' % round(numpy.mean(sum_yr),2))
+                        '''
+                        #Kelly's algorithm (inetrmediate rounding)
+                        if cat_idx < 12:
+                            if el == 'snow':
+                                val_list.append('%.1f' % round(numpy.mean(sum_yr),2))
+                            else:
+                                val_list.append('%.2f' % round(numpy.mean(sum_yr),3))
+                        else:
+                            if cat_idx == 12:m_idx = range(1,13)
+                            if cat_idx == 13:m_idx =[12,1,2]
+                            if cat_idx == 14:m_idx =[3,4,5]
+                            if cat_idx == 15:m_idx =[6,7,8]
+                            if cat_idx == 16:m_idx =[9,10,11]
+                            s_ave = 0.0
+                            for m in m_idx:
+                                s_ave+= float(results[i]['prsn'][m][1])
+                            if el == 'snow':
+                                s_ave = round(s_ave,1)
+                                val_list.append('%.1f' % s_ave)
+                            else:
+                                s_ave = round(s_ave,2)
+                                val_list.append('%.2f' % s_ave)
                     except:
                         val_list.append('****')
                     if sum_yr:
