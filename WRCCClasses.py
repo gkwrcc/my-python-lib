@@ -789,34 +789,17 @@ class GridFigure(object) :
             self.data = None
         self.image_offset = img_offset
         self.text_offset = (40,2.8*int(self.params['image']['height']))
+
     def set_levels(self):
         levels = []
-        if 'levels' in self.params['image'].keys() and self.params['image']['levels']:
-            return self.params['image']['levels']
-        element = self.params['elems'][0]['name']
         level_number = self.params['level_number']
-        if level_number == '0':
-            return levels
-        summary = self.params['temporal_summary']
-        #find max, min and step size for given params
-        daily_min = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][0];mn = 9999.0
-        daily_max = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[element][1];mx = -9999.0
-        if summary == 'sum':
-            start_date = self.params['sdate'].replace(' ','').replace('/','').replace('-','').replace(':','')
-            end_date = self.params['edate'].replace(' ','').replace('/','').replace('-','').replace(':','')
-            try:
-                s_dt = datetime.datetime(int(start_date[0,4]), int(start_date[4,6].lstrip('0')), int(start_date[6,8].lstrip('0')))
-                e_dt = datetime.datetime(int(end_date[0,4]), int(end_date[4,6].lstrip('0')), int(end_date[6,8].lstrip('0')))
-                num_days = (e_dt - s_dt).days
-                daily_max = days*daily_max
-            except:
-                pass
-        if element in ['pcpn', 'snow', 'snwd']:
-            step = round(abs(daily_max - daily_min)/int(level_number),2)
-        else:
-            step = round(abs(daily_max - daily_min)/int(level_number))
-        x = daily_min
-        while x <= daily_max:
+        #data_min = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[self.params['elems'][0]['name']][0]
+        #data_max = WRCCData.CLIM_SUM_MAPS_DAILY_THRESHES[self.params['elems'][0]['name']][1]
+        data_min = self.data['range'][0]
+        data_max = self.data['range'][1]
+        step = abs(data_max - data_min) / float(level_number)
+        x = data_min
+        while x <= data_max:
             levels.append(x)
             x+=step
         return levels
@@ -824,20 +807,17 @@ class GridFigure(object) :
     def get_grid(self) :
         with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
             encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
-        empty_img = {'data':encoded_string, 'range':[0.0, 0.0], \
+        empty_img = {'data':encoded_string, 'range':[0.0, 0.0], 'levels':[0,1,2,3,4,5,6,7,8],\
         'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
         u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], \
         'error':'bad request, check parameters %s' %str(self.params)}
-        levels = self.set_levels()
-        if levels:
-            empty_img['levels'] = levels
-            self.params['image']['levels'] = levels
-
         try:
             self.data = AcisWS.GridData(self.params)
+            #levels = self.set_levels()
+            #self.params['image']['levels'] = levels
         except:
             self.data = empty_img
-
+        #Overwrite levels according to data range
         if not self.data or 'error' in self.data.keys() or not 'data' in self.data.keys():
             self.data = empty_img
         return self.data
@@ -929,7 +909,10 @@ class GridFigure(object) :
             ctx.move_to((idx+1)*w,10)
             ctx.rel_line_to(0,5)
             ctx.rel_move_to(-2,3)
-            self.place_text('%d'%(value),j='c',v='t')
+            if value >0.0 and value < 1.0:
+                self.place_text('%.2f'%(value),j='c',v='t')
+            else:
+                self.place_text('%d'%(value),j='c',v='t')
         ctx.stroke()
 
     def draw_thumbnail(self, image_info, out_name) :

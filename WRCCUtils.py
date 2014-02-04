@@ -5,6 +5,7 @@ Module WRCCUtils
 '''
 
 import datetime, time, sys, os
+import re
 import json
 import numpy,math
 import re
@@ -128,10 +129,11 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
         else:
             poly_state = ''
         coords = poly['geojson']['coordinates'][0][0]
+        name = re.sub('[^a-zA-Z0-9\n\.]', ' ', poly['name'])
 
         kml_file.write('    <Placemark>\n')
         kml_file.write('      <name>%s</name>\n' %poly['id'])
-        kml_file.write('      <description>%s (%s)</description>\n' %(poly['name'], poly['id']))
+        kml_file.write('      <description>%s (%s)</description>\n' %(name, poly['id']))
         kml_file.write('      <styleUrl>#poly%s</styleUrl>\n' %poly_idx)
         kml_file.write('      <Polygon>\n')
         kml_file.write('      <tessellate>1</tessellate>\n')
