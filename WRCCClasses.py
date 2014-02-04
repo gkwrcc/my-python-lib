@@ -772,7 +772,7 @@ class GridFigure(object) :
     '''
     ACIS Grid figure. Used in clim_sum_map
     '''
-    image_padding = 0,200
+    image_padding = 0,100
     #title = 'Acis GridData map'
     def __init__(self, params, img_offset=0, text_offset=(80,50)) :
         self.params= params
@@ -788,7 +788,8 @@ class GridFigure(object) :
         else:
             self.data = None
         self.image_offset = img_offset
-        self.text_offset = (40,2.8*int(self.params['image']['height']))
+        #self.text_offset = (40,2.8*int(self.params['image']['height']))
+        self.text_offset = (40,int(self.params['image']['height']))
 
     def set_levels(self):
         levels = []
@@ -862,7 +863,7 @@ class GridFigure(object) :
         ctx.rectangle(pad_w/2,self.image_offset,width,height)
         ctx.stroke()
 
-        self.add_title()
+        #self.add_title()
         ctx.set_matrix(cairo.Matrix(y0=self.image_offset+height+5))
         #self.add_footer()
         ctx.set_matrix(cairo.Matrix(x0=15+25,
