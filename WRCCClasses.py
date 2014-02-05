@@ -772,8 +772,7 @@ class GridFigure(object) :
     '''
     ACIS Grid figure. Used in clim_sum_map
     '''
-    image_padding = 0,100
-    #title = 'Acis GridData map'
+    image_padding = 0,150
     def __init__(self, params, img_offset=0, text_offset=(80,50)) :
         self.params= params
         self.region =params['select_grid_by']
@@ -788,8 +787,6 @@ class GridFigure(object) :
         else:
             self.data = None
         self.image_offset = img_offset
-        #self.text_offset = (40,2.8*int(self.params['image']['height']))
-        self.text_offset = (40,int(self.params['image']['height']))
 
     def set_levels(self):
         levels = []
@@ -810,12 +807,14 @@ class GridFigure(object) :
             encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
         empty_img = {'data':encoded_string, 'range':[0.0, 0.0], 'levels':[0,1,2,3,4,5,6,7,8],\
         'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
-        u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], \
+        u'#5dff00', u'#ffcc00', u'#ee0000', u'#cccccc'], 'size':[self.params['image']['width'],300],\
         'error':'bad request, check parameters %s' %str(self.params)}
         try:
             self.data = AcisWS.GridData(self.params)
             #levels = self.set_levels()
             #self.params['image']['levels'] = levels
+            if not 'data' in self.data.keys():
+                self.data = empty_img
         except:
             self.data = empty_img
         #Overwrite levels according to data range
@@ -852,7 +851,7 @@ class GridFigure(object) :
             width+pad_w, height+pad_h+self.image_offset)
         self.ctx = ctx = cairo.Context(out_img)
         # set background color
-        ctx.set_source_rgb(1.,1.,1.)
+        ctx.set_source_rgb(255,239,213)
         ctx.paint()
         # place image
         ctx.set_source_surface(in_img,pad_w/2,self.image_offset)
@@ -863,8 +862,10 @@ class GridFigure(object) :
         ctx.rectangle(pad_w/2,self.image_offset,width,height)
         ctx.stroke()
 
-        #self.add_title()
-        ctx.set_matrix(cairo.Matrix(y0=self.image_offset+height+5))
+        ctx.set_matrix(cairo.Matrix(x0=15+25,y0=self.image_offset+height+80))
+        #ctx.move_to(35,self.image_offset+self.params['image']['height']+30)
+        self.add_title()
+        #ctx.set_matrix(cairo.Matrix(y0=self.image_offset+height+5))
         #self.add_footer()
         ctx.set_matrix(cairo.Matrix(x0=15+25,
             y0=self.image_offset+height+30))
@@ -876,30 +877,41 @@ class GridFigure(object) :
     def add_title(self) :
         ctx = self.ctx
         title = WRCCData.DISPLAY_PARAMS[self.params['temporal_summary']]
-        title+=' of ' + WRCCData.DISPLAY_PARAMS[self.params['elems'][0]['name']]
+        title+=' ' + WRCCData.DISPLAY_PARAMS[self.params['elems'][0]['name']]
         area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
-        area_description+= ': ' + self.params[self.params['select_grid_by']]
+        area_description+= ': ' + self.params[self.params['select_grid_by']].upper()
         date_str = '%s to %s' % (self.params['sdate'], self.params['edate'])
-        ctx.set_font_size(16.)
-        #if self.region == 'eny' : just = 'c'
-        #else :
-        just = 'l'
-        ctx.set_font_size(24.)
+        if self.params['image']['width']<301:
+            ctx.set_font_size(8.)
+            h = 10
+        elif self.params['image']['width']>300 and self.params['image']['width']<501:
+            ctx.set_font_size(10.)
+            h=20
+        else:
+            ctx.set_font_size(12.)
+            h=30
         #ctx.set_source_rgb(.8,.1,.1)
-        ctx.move_to(*self.text_offset)
-        self.place_text(title,j=just)
-        ctx.move_to(*self.text_offset)
-        ctx.rel_move_to(0,30)
-        self.place_text(area_description,j=just)
-        ctx.move_to(*self.text_offset)
-        ctx.rel_move_to(0,60)
-        self.place_text(date_str,j=just)
+        ctx.move_to(0,0)
+        self.place_text(title,j='l', v='t')
+        ctx.move_to(0,0)
+        ctx.rel_move_to(0,h)
+        self.place_text(area_description,j='l',v='t')
+        ctx.move_to(0,0)
+        ctx.rel_move_to(0,2*h)
+        self.place_text(date_str,j='l',v='t')
 
     def add_legend(self, image_info) :
         ctx = self.ctx
         #ctx.set_matrix(cairo.Matrix(yy=-1,y0=height))
-        ctx.set_font_size(12.)
-        w = 450./len(image_info['cmap'])
+        if image_info['size'][0]<301:
+            ctx.set_font_size(8.)
+            w = image_info['size'][0]/(len(image_info['cmap']) + 3)
+        elif image_info['size'][0]>300 and image_info['size'][0]<501:
+            ctx.set_font_size(10.)
+            w = image_info['size'][0]/(len(image_info['cmap'])+2)
+        else:
+            ctx.set_font_size(12.)
+            w = image_info['size'][0]/(len(image_info['cmap'])+2)
         for idx,color in enumerate(image_info['cmap']) :
             ctx.rectangle(idx*w,0,w,10)
             ctx.set_source_rgb(*self.get_color(color))

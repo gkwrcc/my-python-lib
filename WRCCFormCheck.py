@@ -54,7 +54,7 @@ def check_start_date(form):
     if date.lower() == 'por':
         return err
     if len(date)!=8:
-        return 'Year should be of form yyyymmdd. You entered %s' %date
+        return 'Date should be of form yyyymmdd. You entered %s' %date
     try:
         int(date)
     except:
@@ -65,8 +65,8 @@ def check_start_date(form):
     except:
         return err
     try:
-        if int(ed) < int(sd):
-            return 'Start Year is later then End Year.'
+        if ed < sd:
+            return 'Start Date is later then End Year.'
     except:
         pass
     return err
@@ -78,7 +78,7 @@ def check_end_date(form):
     if date.lower() == 'por':
         return err
     if len(date)!=8:
-        return 'Year should be of form yyyymmdd. You entered %s' %date
+        return 'Date should be of form yyyymmdd. You entered %s' %date
     try:
         int(date)
     except:
@@ -89,8 +89,8 @@ def check_end_date(form):
         return err
     ed = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
     try:
-        if int(ed) < int(sd):
-            return 'Start Year is later then End Year.'
+        if ed < sd:
+            return 'Start Date is later then End Year.'
     except:
         pass
 
@@ -104,13 +104,19 @@ def check_elements(form):
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
         if 'select_grid_by' in form.keys():
             if el_strip not in ['maxt','mint','pcpn','gdd','hdd','cdd']:
-                return '%s is not a valid element. Please consult with the helpful question mark!' %el
+                err = '%s is not a valid element. Please consult with the helpful question mark!' %el
         else:
             if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
-                return '%s is not a valid element. Please consult with the helpful question mark!' %el
+                err = '%s is not a valid element. Please consult with the helpful question mark!' %el
+    return err
 
+def check_state(form):
+    err = None
+    if form['state'].upper() not in WRCCData.STATE_CHOICES:
+        err = '%s is not a valid US state abbreviation.' %form['state']
+    return err
 ###################
-#Plor Options
+#Plot Options
 ####################
 def check_graph_start_year(form):
     err = None
