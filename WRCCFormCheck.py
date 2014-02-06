@@ -103,7 +103,7 @@ def check_elements(form):
         #strip degree day digits
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
         if 'select_grid_by' in form.keys():
-            if el_strip not in ['maxt','mint','pcpn','gdd','hdd','cdd']:
+            if el_strip not in ['maxt','mint','avgt','pcpn','gdd','hdd','cdd']:
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el
         else:
             if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
@@ -115,6 +115,80 @@ def check_state(form):
     if form['state'].upper() not in WRCCData.STATE_CHOICES:
         err = '%s is not a valid US state abbreviation.' %form['state']
     return err
+
+def check_location(form):
+    err = None
+    ll_list = form['location'].replace(' ','').split(',')
+    if len(ll_list) !=2:
+        return '%s is not a valid longitude,latitude pair.' %form['location']
+    for idx, s in enumerate(ll_list):
+        try:
+            float(s)
+        except:
+            return '%s is not a valid longitude,latitude pair.' %form['location']
+        if idx == 0 and float(s) >0:
+            return '%s is not a valid longitude.' %s
+        if idx == 1 and float(s) < 0:
+            return '%s is not a valid latitude.' %s
+    return err
+
+def check_county(form):
+    err = None
+    c = form['county'].replace(' ','')
+    if len(c)!=5:
+        return '%s is not a valid county FIPS code. County codes are 5 digit numbers.' %c
+    try:
+        int(str(c).lstrip('0'))
+    except:
+        return '%s is not a valid county FIPS code. County codes are 5 digit numbers.' %c
+    return err
+
+def check_climate_division(form):
+    err = None
+    climdiv = form['climate_division']
+    if len(climdiv) != 4:
+        return '%s is not a valid climate division.' %climdiv
+    if climdiv[0:2].upper() not in WRCCData.STATE_CHOICES:
+        return 'First two letters should be a two letter US state abreviation.'
+    cd = str(climdiv[2:]).lstrip('0')
+    if cd == '':
+        return None
+    try:
+        int(cd)
+    except:
+        return '%s is not a valid climate division.' %climdiv
+    return err
+
+def check_county_warning_area(form):
+    err = None
+    cwa = form['county_warning_area']
+    if len(cwa) != 3:
+        return '%s is not a valid 3-letter county warning area code.' %cwa
+    if not cwa.isalpha():
+        return '%s is not a valid 3-letter county warning area code.' %cwa
+    return err
+
+def check_basin(form):
+    err = None
+    b = form['basin']
+    if len(b)!=8:
+        return '%s is not a valid basin code. Basin codes are 8 digit numbers.' %b
+    try:
+        int(str(b).lstrip('0'))
+    except:
+        return '%s is not a valid basin code. Basin codes are 8 digit numbers.' %b
+    return err
+
+def check_shape(form):
+    err = None
+    s_list = form['shape'].replace(' ','').split(',')
+    for s in s_list:
+        try:
+            float(s)
+        except:
+            return 'Not a valid coordinate list. Please check you longitude, latitude pairs.'
+    return err
+
 ###################
 #Plot Options
 ####################

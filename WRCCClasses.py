@@ -8,7 +8,7 @@ Defines classes used in my_acis project
 ##############################################################################
 # import modules required by Acis
 #import  pprint, time
-import time
+import time, re
 import json
 from cStringIO import StringIO
 import cairo
@@ -877,7 +877,14 @@ class GridFigure(object) :
     def add_title(self) :
         ctx = self.ctx
         title = WRCCData.DISPLAY_PARAMS[self.params['temporal_summary']]
-        title+=' ' + WRCCData.DISPLAY_PARAMS[self.params['elems'][0]['name']]
+        el_strip = re.sub(r'(\d+)(\d+)', '', self.params['elems'][0]['name'])
+        try:
+            base_temp = int(self.params['elems'][0]['name'][-2:])
+        except:
+            base_temp = None
+        title+=' ' + WRCCData.DISPLAY_PARAMS[el_strip]
+        if base_temp:
+            title+= ' Base Temperature: ' + str(base_temp)
         area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
         area_description+= ': ' + self.params[self.params['select_grid_by']].upper()
         date_str = '%s to %s' % (self.params['sdate'], self.params['edate'])
