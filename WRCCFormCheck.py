@@ -116,6 +116,16 @@ def check_state(form):
         err = '%s is not a valid US state abbreviation.' %form['state']
     return err
 
+def check_station_id(form):
+    err = None
+    s = form['station_id']
+    return err
+
+def check_station_ids(form):
+    err = None
+    s = form['station_ids']
+    return err
+
 def check_location(form):
     err = None
     ll_list = form['location'].replace(' ','').split(',')
