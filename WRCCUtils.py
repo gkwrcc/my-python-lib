@@ -492,19 +492,22 @@ def write_griddata_to_file(data, form, f=None, request=None):
 
         #Find length of date values
         #header
-        row = [':'+ str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']]) + ': ' + str(form[form['select_grid_by']])]
+        header_seperator = ':'
+        if delim== ':':
+            header_seperator = ' '
+        row = ['*'+ str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']]),str(form[form['select_grid_by']])]
         writer.writerow(row)
         if form['data_summary'] == 'none':
-            row = [':'+'Data Summary: '+'None']
+            row = ['*'+'DataSummary','None']
         else:
-            row = [':Data Summary: '+form['data_summary']+form[form['data_summary'] + '_summary']]
+            row = ['*DataSummary',form['data_summary']+'_'+form[form['data_summary'] + '_summary']]
         writer.writerow(row)
         if form['data_summary'] == 'spatial':
-            row = [':date']
+            row = ['*Date']
         elif form['data_summary'] == 'temporal':
-            row = [':date range', 'Lat', 'Lon', 'Elev']
+            row = ['*DateRange', 'Lat', 'Lon', 'Elev']
         else:
-            row = [':Date', 'Lat', 'Lon', 'Elev']
+            row = ['*Date', 'Lat', 'Lon', 'Elev']
         for el in el_list:row.append('%s' % str(el))
         writer.writerow(row)
         for date_idx, date_vals in enumerate(data):
@@ -632,23 +635,31 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
                     response = None
                 except Exception, e:
                     #Can' open user given file, create emergency writer object
-                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delimiter)
+                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delimiter,quoting=csv.QUOTE_NONE)
                     response = 'Error!' + str(e)
             for stn, dat in enumerate(resultsdict['stn_data']):
-                row = [':Station ID: %s' %str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'Station_name: %s' %str(resultsdict['stn_names'][stn])]
+                #NOTE: row writer does not like delimiter characters in string,
+                #need to set space char to be used in header string
+                stn_name = str(resultsdict['stn_names'][stn])
+                header_seperator = ':'
+                if delimiter == ' ':
+                    stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
+                if delimiter== ':':
+                    header_seperator = ''
+                row = ['*StationID' + header_seperator,str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator,stn_name]
                 writer.writerow(row)
-                row = [':State: %s' %str(resultsdict['stn_state'][stn]), 'Latitude: %s' %str(resultsdict['stn_lat'][stn]), 'Longitude: %s' %str(resultsdict['stn_lon'][stn]),'Elevation: %s' %str(resultsdict['stn_elev'][stn])]
+                row = ['*State' + header_seperator,str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator,str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator,str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator,str(resultsdict['stn_elev'][stn])]
                 writer.writerow(row)
-                row = [':date   ']
+                row = ['*date']
                 for el in resultsdict['elements']:
                     if show_flags == 'F' and show_observation_time == 'F':
-                        row.append('%7s' % str(el))
+                        row.append(str(el))
                     elif show_flags == 'T' and show_observation_time == 'F':
-                        row.append(el);row.append('   flag')
+                        row.append(str(el));row.append('flag')
                     elif show_flags == 'F' and show_observation_time == 'T':
-                        row.append('%7s' % str(el));row.append('ObsTime')
+                        row.append(str(el));row.append('ObsTime')
                     else:
-                        row.append('%7s' % str(el));row.append('   flag');row.append('ObsTime')
+                        row.append(str(el));row.append('flag');row.append('ObsTime')
                 writer.writerow(row)
 
                 for j, vals in enumerate(dat):
@@ -657,17 +668,17 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
                     row.append(vals[0])
                     for val in vals[1:]:
                         if show_flags == 'F' and show_observation_time == 'F':
-                            row.append('%7s' % str(val[0]))
+                            row.append(str(val[0]))
                         elif show_flags == 'T' and show_observation_time == 'F':
-                            row.append('%7s' % str(val[0]))
-                            row.append('%7s' % str(val[1]))
+                            row.append(str(val[0]))
+                            row.append(str(val[1]))
                         elif show_flags == 'F' and show_observation_time == 'T':
-                            row.append('%7s' % str(val[0]))
-                            row.append('%7s' % str(val[2]))
+                            row.append(str(val[0]))
+                            row.append(str(val[2]))
                         else:
-                            row.append('%7s' % str(val[0]))
-                            row.append('%7s' % str(val[1]))
-                            row.append('%7s' % str(val[2]))
+                            row.append(str(val[0]))
+                            row.append(str(val[1]))
+                            row.append(str(val[2]))
                     writer.writerow(row)
         elif file_extension == '.json':
             with open(f, 'w+') as jsonf:
@@ -820,7 +831,7 @@ def format_grid_data(req, params):
             end_date = prms['end_date']
         else:
             end_date = '00000000'
-        date_range = '%s - %s' %(start_date, end_date)
+        date_range = '%s-%s' %(start_date, end_date)
         if 'location' in prms.keys():
             #Single gridpoint format
             data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]

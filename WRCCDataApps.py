@@ -814,7 +814,7 @@ def Sodxtrmts(**kwargs):
                 results[i][yr] = [str(year)]
         results[i][num_yrs] = ['MEAN'];results[i][num_yrs+1]=['S.D.']
         results[i][num_yrs+2] = ['SKEW'];results[i][num_yrs+3]=['MAX']
-        results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YEARS']
+        results[i][num_yrs+4] = ['MIN'];results[i][num_yrs+5]=['YRS']
         #Read in Pearson III lookup tables/to be done
         #PIII = []
         table_1 = [[-9999.0 for mon in range(13)] for yr in range(num_yrs)]
