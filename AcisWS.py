@@ -485,15 +485,6 @@ def get_station_data(form_input, program):
         params['sids'] = form_input['station_id']
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
-        #NOTE: ACIS quirk when data request are multiple stations
-                #If a station in the list has no data, nothing is returned instead of an empty list
-                # We need to registed an aempty stn data return for this list:
-                #check
-                #if id is in input_stn_list, if so, delete from that list
-                #any stn that is left over in input_stn_list after we run through all request data
-                #had no data returned
-        #input_stn_list = form_input['station_ids']
-        stn_list_in = form_input['station_ids']
     elif 'county' in form_input.keys():
         params['county'] = form_input['county']
     elif 'climate_division' in form_input.keys():
@@ -536,7 +527,7 @@ def get_station_data(form_input, program):
         for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
             resultsdict[key] = []
         return resultsdict
-    #Initialize outpout lists
+    #Initialize output lists
     if s_date is not None and e_date is not None:
         dates = WRCCUtils.get_dates(s_date, e_date, program)
     else:
@@ -574,7 +565,6 @@ def get_station_data(form_input, program):
                 stn_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
             except:
                 stn_in = False
-
         if not stn_in:
             del resultsdict['stn_errors'][stn_idx]
             del resultsdict['stn_names'][stn_idx]
@@ -586,7 +576,6 @@ def get_station_data(form_input, program):
             del resultsdict['stn_elev'][stn_idx]
             stn_idx-=1
             continue
-
         #Order the data
         if not 'data' in data.keys():
             data['data'] = []
@@ -597,15 +586,6 @@ def get_station_data(form_input, program):
             stn_id_list = data['meta']['sids']
             for sid in stn_id_list:
                 stn_id = str(sid.split(' ')[0])
-                #Case: comma list of stations: if id is in input_stn_list, if so, delete from that list
-                #any stn that is left over in input_stn_list after we run through all request data
-                #had no data returned
-                if 'station_ids' in form_input.keys():
-                    if stn_id in stn_list_in:
-                        idx = stn_list_in.index(stn_id)
-                        #Omit duplicates
-                        if not idx in idx_empty_list:
-                            idx_empty_list.append(idx)
                 network_id_name = WRCCData.NETWORK_CODES[str(sid.split(' ')[1])]
                 ids = '%s %s' %(stn_id, network_id_name)
                 #Put COOP upfront

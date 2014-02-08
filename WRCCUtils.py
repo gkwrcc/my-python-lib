@@ -645,10 +645,10 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
                 if delimiter == ' ':
                     stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
                 if delimiter== ':':
-                    header_seperator = ''
-                row = ['*StationID' + header_seperator,str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator,stn_name]
+                    header_seperator = ' '
+                row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator+stn_name]
                 writer.writerow(row)
-                row = ['*State' + header_seperator,str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator,str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator,str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator,str(resultsdict['stn_elev'][stn])]
+                row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator+str(resultsdict['stn_elev'][stn])]
                 writer.writerow(row)
                 row = ['*date']
                 for el in resultsdict['elements']:
