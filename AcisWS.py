@@ -172,8 +172,8 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     '''
     stn_list = []
     stn_json={'network_codes': WRCCData.KELLY_NETWORK_CODES, 'network_icons': WRCCData.KELLY_NETWORK_ICONS}
-    vX_list= ['1','2','43','3','4','10','11','7','45']
-    vX_tuple = '1,2,43,3,4,10,11,7,45'
+    vX_list= ['1','2','43','3','4','10','11','7','45','44']
+    vX_tuple = '1,2,43,3,4,10,11,7,45,44'
     shape_type = None
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     if by_type == 'county':
@@ -349,7 +349,9 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 for j,rnge in enumerate(valid_date_range_list):
                     if rnge:
                         available_elements.append([WRCCData.ACIS_ELEMENTS[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
-
+                        #append growing degree days
+                        if WRCCData.ACIS_ELEMENTS[vX_list[j]]['name'] == 'cdd':
+                            available_elements.append([WRCCData.ACIS_ELEMENTS['-44']['name_long'], [str(rnge[0]), str(rnge[1])]])
                 if available_elements:
                     stn_dict['available_elements'] = available_elements
                 #find index in alphabetically ordered list of station names
@@ -438,8 +440,10 @@ def get_station_data(form_input, program):
                     base_temp = int(el[3:])
                 except:
                     base_temp = None
-                if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
+                if el_strip in ['cdd', 'hdd','gdd'] and base_temp is not None:
                     elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp))
+                elif el_strip == 'gdd' and base_temp is None:
+                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=50))
                 else:
                     elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']))
 
@@ -485,6 +489,7 @@ def get_station_data(form_input, program):
         params['sids'] = form_input['station_id']
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
+        stn_list = form_input['station_ids'].replace(' ','').split(',')
     elif 'county' in form_input.keys():
         params['county'] = form_input['county']
     elif 'climate_division' in form_input.keys():
@@ -532,6 +537,7 @@ def get_station_data(form_input, program):
         dates = WRCCUtils.get_dates(s_date, e_date, program)
     else:
         dates = []
+
     resultsdict['dates'] = dates
     resultsdict['elements'] = elements
     resultsdict['stn_errors'] = ['' for stn in request['data']]

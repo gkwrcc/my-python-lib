@@ -124,6 +124,9 @@ def check_station_id(form):
 def check_station_ids(form):
     err = None
     s = form['station_ids']
+    s_list = s.replace(' ','').split(',')
+    if len(s_list) == 1:
+        err = '%s is not a comma seperated list of two or more stations.' %s
     return err
 
 def check_location(form):
@@ -174,6 +177,7 @@ def check_county_warning_area(form):
     cwa = form['county_warning_area']
     if len(cwa) != 3:
         return '%s is not a valid 3-letter county warning area code.' %cwa
+
     if not cwa.isalpha():
         return '%s is not a valid 3-letter county warning area code.' %cwa
     return err
