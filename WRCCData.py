@@ -424,6 +424,13 @@ DATA_FORMAT_CHOICES_LTD = (
 
 )
 
+DATE_FORMAT = {
+    'none':'',
+    'dash':'-',
+    'colon':':',
+    'slash': '/'
+}
+
 #width, height in pixels
 IMAGE_SIZES = {
     'small':[510, 290],

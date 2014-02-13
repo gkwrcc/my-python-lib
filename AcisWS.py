@@ -216,6 +216,8 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     if 'meta' in request.keys():
         #For alphabetic ordering of station names
         sorted_list =[]
+        #Keep track of duplicates
+        unique_stations = []
         for i, stn in enumerate(request['meta']):
             #if custom shape, check if  stn lies within shape
             if by_type == 'shape':
@@ -340,9 +342,9 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
             #Generate one entry per network that the station belongs to
             for j, sid in enumerate(stn_networks):
-                stn_dict = {"name":name,"uid":uid,"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
-                "state":state_key, 'marker_icon': marker_icons[j], 'marker_category':stn_networks[j], \
-                'stn_networks':stn_networks, 'stn_network_codes': stn_network_codes}
+                stn_dict = {"name":name,"uid":uid,"sid":stn_sids[j],"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
+                "state":state_key, "marker_icon": marker_icons[j], "marker_category":stn_networks[j],\
+                "stn_networks":stn_networks,"stn_network":stn_networks[j],"stn_network_codes": stn_network_codes}
                 #check which elements are available at the stations[valid_daterange is not empty]
                 valid_date_range_list = stn['valid_daterange']
                 available_elements = []
@@ -451,10 +453,10 @@ def get_station_data(form_input, program):
             try:
                 meta_request = StnMeta(meta_params)
                 if not 'meta' in meta_request.keys() or not meta_request['meta']:
-                    resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s.' %(str(meta_params))
+                    resultsdict['errors'] = 'Metadata could not be for this station. Please check that you are using a valid station ID.'
                     return resultsdict
             except Exception, e:
-                resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(str(meta_params), str(e))
+                resultsdict['errors'] = 'Metadata request fail. Error: %s' %str(e)
                 return resultsdict
             #Find largest daterange
             try:
@@ -463,7 +465,7 @@ def get_station_data(form_input, program):
                 idx_s = 0
                 idx_e = 0
             except Exception, e:
-                resultsdict['errors'] = 'Metadata request fail. Cant find start, end data for station. Pameters: %s. Error: %s' %(str(meta_params), str(e))
+                resultsdict['errors'] = 'Metadata request fail. Start, End data for this station could not be found. Error: %s' %str(e)
                 return resultsdict
             for el_idx, dr in enumerate(meta_request['meta'][0]['valid_daterange']):
                 new_start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][0][8:10]))
@@ -631,7 +633,9 @@ def get_station_data(form_input, program):
         #Add dates
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
-                resultsdict['stn_data'][stn_idx][idx].insert(0, date)
+                d = date.replace(' ','').replace(':','').replace('/','').replace('-','')
+                dlm = WRCCData.DATE_FORMAT[form_input['date_format']]
+                resultsdict['stn_data'][stn_idx][idx].insert(0, d[0:4] + dlm + d[4:6] + dlm + d[6:8])
 
     #final check on station data if comma separated list of stations
     if 'station_ids' in form_input.keys():

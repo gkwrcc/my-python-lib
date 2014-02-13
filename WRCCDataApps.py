@@ -250,7 +250,7 @@ def monthly_aves(request, el_list):
                 #results[el].append(numpy.mean(yr_aves))
                 results[el].append(round(numpy.mean(yr_aves),2))
             else:
-                results[el].append(9999.9)
+                results[el].append(None)
     return dict(results)
 
 #####################################################
@@ -2358,8 +2358,10 @@ def Sodlist_new(kwargs):
                                     dat[0]+=wrcc_data[-1]
                         #Format to Kelly's output:
                         #pcpn, snow,snwd in 100th of inches
-                        if str(vX) in ['4','10','11','7']:
+                        if str(vX) in ['4','7']:
                             dat.append(int(100*float(wrcc_data[0])))
+                        elif str(vX) == '10':
+                            dat.append(int(10*float(wrcc_data[0])))
                         else:
                             dat.append(wrcc_data[0])
                         dat.append(wrcc_data[1])
@@ -3055,13 +3057,18 @@ def Sodpad(**kwargs):
                     results[i][doy][icount][ithr] = '%.1f' % pcthr
                 #it is possible there may be a few edge effects in december
                 if aveobs != 0:
-                    avepre = round(sumpre / aveobs,3)
-                    if int(str(avepre)[-1]) >= 5 and len(str(avepre)) > 5:
+                    avepre = round(100.0*sumpre / aveobs,3)
+                    #deal with rounding issue (round(2.675,2) =  2.67 since 2.675
+                    #decimal fraction is closer to 2.67
+                    '''
+                    if int(str(avepre)[-1]) == 5 and len(str(avepre)) >= 4:
                         try:
-                            avepre = float(str(avepre)[0:-2] + str(int(str(avepre)[-2]) +1))
+                            avepre = float(str(avepre)[0:-1] + str(int(str(avepre)[-1]) +1))
                         except:
                             pass
-                    results[i][doy][icount][19] = '%.2f' % avepre
+                    '''
+                    results[i][doy][icount][19] = '%.2f' % round(avepre /100.0,2)
+                    #results[i][doy][icount][19] = avepre
                 icount+=1
     return results
 

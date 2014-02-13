@@ -767,6 +767,7 @@ def format_grid_data(req, params):
     '''
     #Make sure params are formatted correctly
     prms = {}
+    dlm = WRCCData.DATE_FORMAT[params['date_format']]
     for key, val in params.iteritems():
         if key != 'elements':
             prms[key] = str(val)
@@ -824,14 +825,16 @@ def format_grid_data(req, params):
         lons = data['meta']['lon']
         elevs = data['meta']['elev']
         if 'start_date' in prms.keys():
-            start_date = prms['start_date']
+            d = prms['start_date'].replace(' ','').replace(':','').replace('/','').replace('-','')
+            start_date = d[0:4] + dlm + d[4:6] + dlm + d[6:8]
         else:
-            start_date = '00000000'
+            start_date = '0000'+dlm+'00'+dlm+'00'
         if 'end_date' in prms.keys():
-            end_date = prms['end_date']
+            d = prms['end_date'].replace(' ','').replace(':','').replace('/','').replace('-','')
+            end_date = d[0:4] + dlm + d[4:6] + dlm + d[6:8]
         else:
-            end_date = '00000000'
-        date_range = '%s-%s' %(start_date, end_date)
+            end_date = '0000'+dlm+'00'+dlm+'00'
+        date_range = '%s - %s' %(start_date, end_date)
         if 'location' in prms.keys():
             #Single gridpoint format
             data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]
@@ -900,15 +903,15 @@ def format_grid_data(req, params):
         #Spatial summary output
         data_s_summ = [[] for d in data['data']]
         for date_idx, date_vals in enumerate(data['data']):
-            data_s_summ[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
+            d = str(date_vals[0]).replace(' ','').replace(':','').replace('/','').replace('-','')
+            data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
             #for spatial summary
             data_summ = [[] for el in el_list]
             if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
-                data_out[date_idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
+                data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                 data_out[date_idx].append(round(lons[0][0],2))
                 data_out[date_idx].append(round(lats[0][0],2))
                 data_out[date_idx].append(elevs[0][0])
-
                 for el_idx in range(1,len(el_list) + 1):
                     data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
                     try:
@@ -933,7 +936,7 @@ def format_grid_data(req, params):
                                 del data_out[idx]
                                 idx-=1
                                 continue
-                        data_out[idx].append('%s%s%s' %(str(date_vals[0])[0:4], str(date_vals[0])[5:7], str(date_vals[0])[8:10]))
+                        data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                         data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                         data_out[idx].append(round(lat,2))
                         data_out[idx].append(elevs[grid_idx][lon_idx])
