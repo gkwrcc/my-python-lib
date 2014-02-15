@@ -108,9 +108,13 @@ def check_elements(form):
     for el in el_list:
         #strip degree day digits
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
+        if el_strip[0:4] in ['yly_', 'mly_']:
+            el_strip = el_strip[4:]
         if 'select_grid_by' in form.keys():
             if el_strip not in ['maxt','mint','avgt','pcpn','gdd','hdd','cdd']:
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el
+            if form['grid']=='21' and form['temporal_resolution'] in ['yly','mly'] and el_strip not in ['maxt','mint','avgt','pcpn']:
+                err = '%s is not a valid PRISM element. Please choose from maxt,mint,avgt,pcpn!' %el_strip
         else:
             if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el

@@ -630,9 +630,14 @@ def get_station_data(form_input, program):
 
         if not resultsdict['stn_data'][stn_idx]:
             resultsdict['stn_errors'][stn_idx] = 'No data found!'
-        #Add dates
+        #Add dates and convert to metric if needed
         if dates and len(dates) == len(data['data']):
             for idx, date in  enumerate(dates):
+                #Units:
+                if 'units' in form_input.keys() and form_input['units'] == 'metric':
+                    for el_idx, el in enumerate(form_input['elements'].replace(' ','').split(',')):
+                        resultsdict['stn_data'][stn_idx][idx][el_idx][0] = WRCCUtils.convert_to_metric(el, resultsdict['stn_data'][stn_idx][idx][el_idx][0])
+                #Dates
                 d = date.replace(' ','').replace(':','').replace('/','').replace('-','')
                 dlm = WRCCData.DATE_FORMAT[form_input['date_format']]
                 resultsdict['stn_data'][stn_idx][idx].insert(0, d[0:4] + dlm + d[4:6] + dlm + d[6:8])

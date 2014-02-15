@@ -22,6 +22,46 @@ import WRCCClasses, AcisWS, WRCCData, WRCCUtils
 ####################################
 #FUNCTIONS
 #####################################
+def convert_to_metric(element, value):
+    el,base_temp = get_el_and_base_temp(element)
+    try:
+        float(value)
+    except:
+        return value
+    if el in ['maxt','mint','avgt','obst']:
+        v = round((float(value) - 32.0)*5.0/9.0,1)
+    elif el in ['hdd','cdd','gdd']:
+        #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
+        #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
+        v = int(round(float(value)*10.0/18.0))
+    elif el in ['pcpn','snow','snwd','evap']:
+        v = round(float(value)*25.4,2)
+    elif el in ['wdmv']:
+        v = round(float(value)*1.60934,1)
+    else:
+        v = value
+    return v
+
+def convert_to_english(element, value):
+    el,base_temp = get_el_and_base_temp(element)
+    try:
+        float(value)
+    except:
+        return value
+    if el in ['maxt','mint','avgt','obst']:
+        v = int(round(9.0/5.0*float(value) + 32.0),1)
+    elif el in ['hdd','cdd','gdd']:
+        #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
+        #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
+        v = int(round(float(value)*18.0/10.0))
+    elif el in ['pcpn','snow','snwd','evap']:
+        v = round(float(value)/25.4,2)
+    elif el in ['wdmv']:
+        v = int(round(float(value)/1.60934),1)
+    else:
+        v = value
+    return v
+
 def set_back_date(days_back):
     '''
     Calculates today - days_back
@@ -650,6 +690,8 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
                 writer.writerow(row)
                 row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator+str(resultsdict['stn_elev'][stn])]
                 writer.writerow(row)
+                row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
+                writer.writerow(row)
                 row = ['*date']
                 for el in resultsdict['elements']:
                     if show_flags == 'F' and show_observation_time == 'F':
@@ -697,8 +739,12 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
                 ws.write(1,2,str(resultsdict['stn_state'][stn]))
                 ws.write(1,3,str(resultsdict['stn_lat'][stn]))
                 ws.write(1,4,str(resultsdict['stn_lon'][stn]))
-                ws.write(1,5,str(resultsdict['stn_elev'][stn]));
-
+                ws.write(1,5,str(resultsdict['stn_elev'][stn]))
+                ws.write(2,0,'DataFlags')
+                ws.write(2,1,'M=Missing')
+                ws.write(2,2,'T=Trace')
+                ws.write(2,3,'S=Subsequent')
+                ws.write(2,4,'A=Accumulated')
                 ws.write(3, 0, 'Date')
                 idx = 0
                 for k, el in enumerate(resultsdict['elements']):
@@ -834,7 +880,7 @@ def format_grid_data(req, params):
             end_date = d[0:4] + dlm + d[4:6] + dlm + d[6:8]
         else:
             end_date = '0000'+dlm+'00'+dlm+'00'
-        date_range = '%s - %s' %(start_date, end_date)
+        date_range = '%s-%s' %(start_date, end_date)
         if 'location' in prms.keys():
             #Single gridpoint format
             data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]
@@ -873,7 +919,10 @@ def format_grid_data(req, params):
                     data_out[idx].append(elevs[grid_idx][lon_idx])
 
                     for el_idx in range(len(data['data'])):
-                        data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
+                        if params['units'] == 'metric':
+                            data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx],data['data'][el_idx][grid_idx][lon_idx]))
+                        else:
+                            data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
         return data_out
     else:
         poly = None
@@ -904,20 +953,36 @@ def format_grid_data(req, params):
         data_s_summ = [[] for d in data['data']]
         for date_idx, date_vals in enumerate(data['data']):
             d = str(date_vals[0]).replace(' ','').replace(':','').replace('/','').replace('-','')
-            data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+            if prms['temporal_resolution'] == 'yly':
+                data_s_summ[date_idx].append(d[0:4])
+            elif prms['temporal_resolution'] == 'mly':
+                data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6])
+            else:
+                data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
             #for spatial summary
             data_summ = [[] for el in el_list]
             if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
-                data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+                if prms['temporal_resolution'] == 'yly':
+                    data_out[date_idx].append(d[0:4])
+                elif prms['temporal_resolution'] == 'mly':
+                    data_out[date_idx].append(d[0:4]+dlm+d[4:6])
+                else:
+                    data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                 data_out[date_idx].append(round(lons[0][0],2))
                 data_out[date_idx].append(round(lats[0][0],2))
                 data_out[date_idx].append(elevs[0][0])
                 for el_idx in range(1,len(el_list) + 1):
-                    data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
+                    if params['units'] == 'metric':
+                        data_out[date_idx].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],str(date_vals[el_idx]).strip(' ')))
+                    else:
+                        data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
                     try:
                         v = float(date_vals[el_idx])
                         if abs(v + 999.0)>0.0001:
-                            data_summ[el_idx-1].append(v)
+                            if params['units'] == 'metric':
+                                data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],v))
+                            else:
+                                data_summ[el_idx-1].append(v)
                     except:
                         pass
             else:
@@ -936,17 +1001,28 @@ def format_grid_data(req, params):
                                 del data_out[idx]
                                 idx-=1
                                 continue
-                        data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+                        if prms['temporal_resolution'] == 'yly':
+                            data_out[idx].append(d[0:4])
+                        elif prms['temporal_resolution'] == 'mly':
+                            data_out[idx].append(d[0:4]+dlm+d[4:6])
+                        else:
+                            data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                         data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                         data_out[idx].append(round(lat,2))
                         data_out[idx].append(elevs[grid_idx][lon_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
-                            data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
+                            if params['units'] == 'metric':
+                                data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],date_vals[el_idx][grid_idx][lon_idx]))
+                            else:
+                                data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
                             try:
                                 v = float(date_vals[el_idx][grid_idx][lon_idx])
                                 if abs(v + 999.0)>0.0001:
-                                    data_summ[el_idx-1].append(v)
+                                    if params['units'] == 'metric':
+                                        data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
+                                    else:
+                                        data_summ[el_idx-1].append(v)
                             except:
                                 pass
             if data_summary == "spatial":
