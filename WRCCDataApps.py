@@ -1081,7 +1081,7 @@ def Sodxtrmts(**kwargs):
             elif kwargs['monthly_statistic'] == 'mave':
                 if count > 0.5:
                     table_1[yr][12] = float(sumann)/float(count)
-                    table_2[yr][12] = 12.0 - count
+                    table_2[yr][12] = 12 - count
             elif kwargs['monthly_statistic'] == 'sd':
                 table_1[yr][12] = 0.0
                 table_2[yr][12] = 12.0
@@ -1108,7 +1108,7 @@ def Sodxtrmts(**kwargs):
             count = 0.0
 
             for yr in range(num_yrs):
-                if el_type in ['snow', 'pcpn', 'snwd', 'evap']:
+                if  mon == 12 and el_type in ['snow', 'pcpn', 'snwd', 'evap']:
                     value = round(table_1[yr][mon],2)
                 else:
                     value = table_1[yr][mon]
@@ -1118,61 +1118,84 @@ def Sodxtrmts(**kwargs):
                 #Treat monthly totals and annual totals differently
                 #For annual totals, ignore years with at least one
                 #Month that does not meet the missing day criterium
-                if mon <= 11:
-                    if missng <= int(kwargs['max_missing_days']):
-                        summ+=value
-                        summ2+= value**2
-                        summ3+=value**3
-                        count+=1
-                        if value > xmax:xmax=value
-                        if value < xmin:xmin=value
+                if kwargs['monthly_statistic']  in ['mave', 'ndays', 'msum'] and mon >11:
+                    ncheck = 0
+                elif mon >11 and kwargs['monthly_statistic'] not in ['mave', 'ndays', 'msum']:
+                    ncheck = int(kwargs['max_missing_days']) - 1
                 else:
-                    ncheck = int(kwargs['max_missing_days'])-1
-                    #For annual: for ave, thresholds, sums, include only full years
-                    if kwargs['monthly_statistic']  in ['mave', 'ndays', 'msum']:
-                        ncheck = 0
-                    if missng <= ncheck:
-                        summ+=value
-                        summ2+= value**2
-                        summ3+=value**3
-                        count+=1
-                        if value > xmax:xmax=value
-                        if value < xmin:xmin=value
+                    ncheck = int(kwargs['max_missing_days'])
+                if int(missng) <= int(ncheck):
+                    summ+=value
+                    summ2+= value*value
+                    summ3+=value*value*value
+                    count+=1
+                    if value > xmax:xmax=value
+                    if value < xmin:xmin=value
             #End year loop
             if count > 0.5:
                 mean_out[monind] = round(summ/count,2)
-                results[i][num_yrs].append('%.2f' % mean_out[monind])
+                if kwargs['monthly_statistic'] == 'ndays':
+                    results[i][num_yrs].append('%d' % int(round(mean_out[monind])))
+                else:
+                    results[i][num_yrs].append('%.2f' % round(mean_out[monind],2))
+                #New
+                results[i][num_yrs].append(' ')
+            else:
+                if kwargs['monthly_statistic'] == 'ndays':
+                    results[i][num_yrs].append(0)
+                else:
+                    results[i][num_yrs].append(0.00)
                 #New
                 results[i][num_yrs].append(' ')
             sk = 0.0
             if count > 1.5:
                 try:
-                    results[i][num_yrs+1].append('%.2f' % numpy.sqrt((summ2 - summ**2/count)/(count -1)))
+                    if kwargs['monthly_statistic'] == 'ndays':
+                        results[i][num_yrs+1].append('%d' % int(round(numpy.sqrt((summ2 - summ**2/count)/(count -1)))))
+                    else:
+                        results[i][num_yrs+1].append('%.2f' % round(numpy.sqrt((summ2 - summ**2/count)/(count -1)),2))
                     #New
                     results[i][num_yrs+1].append(' ')
                 except:
                     pass
-                h1 = summ/count
-                h2 = summ2/count
-                h3 = summ3/count
-                xm2 = h2 - h1**2
-                xm3 = h3 - 3.0*h1*h2 + 2.0*h1**3
+                h1 = float(summ)/float(count)
+                h2 = float(summ2)/float(count)
+                h3 = float(summ3)/float(count)
+                xm2 = h2 - h1*h1
+                xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
                 if abs(xm2) > 0.00001:
                     try:
-                        sk = xm3 / (xm2*numpy.sqrt(xm2))
+                        sk = xm3 / (xm2*numpy.sqrt(abs(xm2)))
                     except:
                         sk = 0.0
+            else:
+                if kwargs['monthly_statistic'] == 'ndays':
+                    results[i][num_yrs+1].append(0)
+                else:
+                    results[i][num_yrs+1].append(0.00)
 
-            results[i][num_yrs+2].append('%.2f' % sk)
+            if kwargs['monthly_statistic'] == 'ndays':
+                results[i][num_yrs+2].append('%.1f' % round(sk,1))
+            else:
+                results[i][num_yrs+2].append('%.2f' %round(sk,2))
             #New
             results[i][num_yrs+2].append(' ')
-            results[i][num_yrs+3].append('%.2f' % xmax)
+            if kwargs['monthly_statistic'] == 'ndays':
+                results[i][num_yrs+3].append('%d' % int(round(xmax)))
+            else:
+                results[i][num_yrs+3].append('%.2f' % xmax)
             #New
             results[i][num_yrs+3].append(' ')
-            results[i][num_yrs+4].append('%.2f' % xmin)
+            if kwargs['monthly_statistic'] == 'ndays':
+                results[i][num_yrs+4].append('%d' % int(round(xmin)))
+            else:
+                results[i][num_yrs+4].append('%.2f' % round(xmin,2))
             #New
             results[i][num_yrs+4].append(' ')
-            results[i][num_yrs+5].append('%.2f' % count)
+            if kwargs['monthly_statistic'] == 'ndays':
+                results[i][num_yrs+5].append('%d' % int(round(count)))
+            else:
+                results[i][num_yrs+5].append('%.2f' % round(count,2))
             #New
             results[i][num_yrs+5].append(' ')
         #End month loop
@@ -1203,7 +1226,10 @@ def Sodxtrmts(**kwargs):
 
                 if kwargs['departures_from_averages']  == 'F':
                     #results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
-                    results[i][yr].append('%.2f' % table_1[yr][mon])
+                    if kwargs['monthly_statistic'] == 'ndays':
+                        results[i][yr].append('%d' % int(table_1[yr][mon]))
+                    else:
+                        results[i][yr].append('%.2f' % table_1[yr][mon])
                     results[i][yr].append('%s' % outchr[monind])
                 else:
                     #results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
@@ -2609,14 +2635,15 @@ def Sodsumm(**kwargs):
                         sm+=dat
                         cnt+=1
                     if cnt !=0:
-                        ave = round(sm/cnt,2)
+                        #ave = round(sm/cnt,2)
+                        ave = round(float(sm)/float(cnt),1)
                     else:
                         ave = 0.0
 
                     #val_list.append('%.1f' % ave)
                     #Overrride ann,spr, wi,su,fa to match
                     #Kelly's algorithm
-                    #Kelly just addas up months and averages the averaged values
+                    #Kelly just adds up months and averages the averaged values
                     if cat_idx < 12:
                         val_list.append('%.1f' % ave)
                     else:
@@ -2628,7 +2655,8 @@ def Sodsumm(**kwargs):
                         s_ave = 0.0
                         for m in m_idx:
                             s_ave+= float(results[i]['temp'][m][el_idx+1])
-                        s_ave = round(s_ave / len(m_idx),2)
+                        s_ave = round(s_ave / len(m_idx),1)
+                        #s_ave = s_ave/ len(m_idx)
                         val_list.append('%.1f' % s_ave)
 
                 val_list.append(int(round(max_max,0)))

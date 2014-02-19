@@ -375,12 +375,12 @@ def convert_db_dates(messy_date):
         return '0000-00-00'
 
     try:
-        mon = WRCCData.MONTH_NAME_TO_NUMBER[date_list[0][0:3]]
+        mon = WRCCData.MONTH_NAME_TO_NUMBER[date_list[0][0:3].rstrip('.')]
     except:
         mon = '00'
     try:
         day = date_list[1][0:2]
-        if day[-1] == ',':
+        if day[-1] == ',' or len(day) ==1:
             day = '0' + day[0]
     except:
         day = '00'
@@ -1112,12 +1112,17 @@ def metadict_to_display(metadata, key_order_list):
         except:
             continue
         if key == 'sids':
-            sid_list = []
+            sid_str = ''
             for sid in val:
                 sid_l = sid.split()
-                sid_list.append('%s %s' %(str(sid_l[0]), WRCCData.NETWORK_CODES[str(sid_l[1])]))
+                sid_str+='%s/%s ' %(str(sid_l[0]), WRCCData.NETWORK_CODES[str(sid_l[1])])
                 #sid_list.append(sid.encode('ascii', 'ignore'))
-            meta[idx].append(sid_list)
+            meta[idx].append(sid_str)
+        elif key == 'll':
+            try:
+                meta[idx].append('%s, %s' %(str(val[0]),str(val[1])))
+            except:
+                meta[idx].append(str(val))
         else:
             meta[idx].append(str(val))
     return meta
