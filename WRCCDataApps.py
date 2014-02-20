@@ -979,7 +979,7 @@ def Sodxtrmts(**kwargs):
                             elif kwargs['less_greater_or_between'] == 'g' and value > float(kwargs['threshold_for_less_or_greater']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
-                            elif kwargs['less_greater_or_between'] == 'b' and value > float(kwargs['threshold_low_for_between']) and value < float(kwargs['threshold_high_for_between']):
+                            elif kwargs['less_greater_or_between'] == 'b' and value > float(kwargs['threshold_low_for_between']) and value <= float(kwargs['threshold_high_for_between']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
 
@@ -2636,7 +2636,7 @@ def Sodsumm(**kwargs):
                         cnt+=1
                     if cnt !=0:
                         #ave = round(sm/cnt,2)
-                        ave = round(float(sm)/float(cnt),1)
+                        ave =float(sm)/float(cnt)
                     else:
                         ave = 0.0
 
@@ -2645,7 +2645,7 @@ def Sodsumm(**kwargs):
                     #Kelly's algorithm
                     #Kelly just adds up months and averages the averaged values
                     if cat_idx < 12:
-                        val_list.append('%.1f' % ave)
+                        val_list.append('%.1f' % round(ave,1))
                     else:
                         if cat_idx == 12:m_idx = range(1,13)
                         if cat_idx == 13:m_idx =[12,1,2]
