@@ -1115,16 +1115,12 @@ def metadict_to_display(metadata, key_order_list):
             sid_str = ''
             for sid in val:
                 sid_l = sid.split()
-                sid_str+='%s/%s ' %(str(sid_l[0]), WRCCData.NETWORK_CODES[str(sid_l[1])])
+                sid_str+='%s/%s, ' %(str(sid_l[0]), WRCCData.NETWORK_CODES[str(sid_l[1])])
                 #sid_list.append(sid.encode('ascii', 'ignore'))
             meta[idx].append(sid_str)
-        elif key == 'll':
-            try:
-                meta[idx].append('%s, %s' %(str(val[0]),str(val[1])))
-            except:
-                meta[idx].append(str(val))
         else:
             meta[idx].append(str(val))
+
     return meta
 
 def get_el_and_base_temp(el):
@@ -1204,7 +1200,7 @@ def format_stn_meta(meta_dict):
                 Val.append(dr)
         else:
             Val = str(val)
-        Meta[key] = Val
+        Meta[str(key)] = Val
     return Meta
 
 def strip_data(val):

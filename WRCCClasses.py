@@ -47,6 +47,9 @@ class DownloadDataJob:
         self.data = data
         self.data_format = data_format
         self.delimiter = delimiter
+        self.spacer = ': '
+        if self.delimiter == ':':
+            self.spacer = ' '
         self.request = request
         self.json_in_file = json_in_file
         self.output_file_name = output_file_name
@@ -106,8 +109,8 @@ class DownloadDataJob:
                 pass
         if self.app_name == 'Sodsumm':
             self.header = []
-            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year']
-            for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end']):
+            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year', 'Climate Variable']
+            for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end', 'table_name_long']):
                 self.header.append([labels[idx], json_data[key]])
         if self.app_name == 'area_time_series':
             self.header = json_data['display_params_list']
@@ -120,6 +123,7 @@ class DownloadDataJob:
         return data
 
     def write_to_csv(self,column_header, data):
+
         if self.request:
             response = HttpResponse(mimetype='text/csv')
             response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
@@ -142,20 +146,20 @@ class DownloadDataJob:
                 if len(key_val) != 2:
                     continue
                 #three entries per row
-                row.append(key_val[0] + ': ' + key_val[1])
+                row.append(key_val[0] + self.spacer + key_val[1])
                 if (idx + 1) % 2 == 0 or idx == len(self.header) - 1:
                     writer.writerow(row)
                     row = []
             writer.writerow(row)
             writer.writerow([])
             if self.app_name == 'Sodxtrmts':
-                row = ['a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,']
+                row = ['*a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,']
                 writer.writerow(row)
-                row = ['z = 26 or more days missing, A = Accumulations present']
+                row = ['*z = 26 or more days missing, A = Accumulations present']
                 writer.writerow(row)
-                row=['Long-term means based on columns; thus, the monthly row may not']
+                row=['*Long-term means based on columns; thus, the monthly row may not']
                 writer.writerow(row)
-                row=['sum (or average) to the long-term annual value.']
+                row=['*sum (or average) to the long-term annual value.']
                 writer.writerow(row)
 
         writer.writerow([])
