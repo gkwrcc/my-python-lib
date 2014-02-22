@@ -109,7 +109,7 @@ class DownloadDataJob:
                 pass
         if self.app_name == 'Sodsumm':
             self.header = []
-            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year', 'Climate Variable']
+            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year', 'Climate Variables']
             for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end', 'table_name_long']):
                 self.header.append([labels[idx], json_data[key]])
         if self.app_name == 'area_time_series':
@@ -348,7 +348,9 @@ class SODDataJob:
     def set_area_params(self):
         area = None; val=None
         if 'sid' in self.params.keys():area = 'sids';val = self.params['sid']
+        if 'station_id' in self.params.keys():area = 'sids';val = self.params['station_id']
         if 'sids' in self.params.keys():area = 'sids';val = self.params['sids']
+        if 'station_ids' in self.params.keys():area = 'sids';val = self.params['station_ids']
         if 'county' in self.params.keys():area = 'county';val = self.params['county']
         if 'climdiv' in self.params.keys():area = 'climdiv';val = self.params['climdiv']
         if 'cwa' in self.params.keys():area = 'cwa';val = self.params['cwa']

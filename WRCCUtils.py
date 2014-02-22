@@ -94,6 +94,21 @@ def get_N_HexCol(N=5):
     return HEX_list
 
 
+def check_for_file(dir_location, file_name):
+    '''
+    Checks if file exists in dir_location
+    '''
+    #Check if kml file exists, if not generate it
+    file_path =  dir_location + file_name
+    file_exists = True
+    try:
+        with open(file_path, 'r') as kml_f:
+            pass
+    except:
+        file_exists = False
+    return file_exists
+
+
 def generate_kml_file(area_type, state, kml_file_name, dir_location):
     '''
     This functions makes a call to ACIS General
@@ -110,7 +125,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
     if str(dir_location)[-1]!='/':
         dr = str(dir_location) + '/'
     elif str(dir_location)[0]!='/':
-        return 'Need absolute path of directory. You enetered: %s' %str(dir_location)
+        return 'Need absolute path of directory. You entered: %s' %str(dir_location)
     else:
         dr = str(dir_location)
     try:
@@ -169,6 +184,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
         else:
             poly_state = ''
         coords = poly['geojson']['coordinates'][0][0]
+        #Remove special characters from name
         name = re.sub('[^a-zA-Z0-9\n\.]', ' ', poly['name'])
 
         kml_file.write('    <Placemark>\n')

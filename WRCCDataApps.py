@@ -2422,6 +2422,8 @@ def Sodsumm(**kwargs):
     THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
     THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
     '''
+    if not kwargs['max_missing_days']:
+        kwargs['max_missing_days'] = 0
     elements = kwargs['elements']
     dates = kwargs['dates']
     tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
