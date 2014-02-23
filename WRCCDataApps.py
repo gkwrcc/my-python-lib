@@ -2639,8 +2639,12 @@ def Sodsumm(**kwargs):
                     if cnt !=0:
                         #ave = round(sm/cnt,2)
                         ave =float(sm)/float(cnt)
+                        try:
+                            float(ave)
+                        except:
+                            ave=-99.0
                     else:
-                        ave = 0.0
+                        ave = -99.0
 
                     #val_list.append('%.1f' % ave)
                     #Overrride ann,spr, wi,su,fa to match
@@ -2706,8 +2710,8 @@ def Sodsumm(**kwargs):
                 else:
                     ave_low = 99.0
                     ave_high = -99.0
-                    yr_low = '****'
-                    yr_high = '****'
+                    yr_low = '0000'
+                    yr_high = '0000'
                 val_list.append('%.1f' %ave_high)
                 val_list.append(yr_high)
                 val_list.append('%.1f' %ave_low)
@@ -2738,9 +2742,9 @@ def Sodsumm(**kwargs):
                             try:
                                 val_list.append('%.1f' % round(numpy.mean(cnt_days),2))
                             except:
-                                val_list.append('***')
+                                val_list.append('-99.0')
                         else:
-                            val_list.append('***')
+                            val_list.append('-99.0')
                 results[i]['temp'].append(val_list)
 
             #2) Precip/Snow Stats
@@ -2785,12 +2789,15 @@ def Sodsumm(**kwargs):
                             #val_list.append('%.2f' % round(sum(sum_yr)/len(sum_yr),2))
                             val_list.append('%.2f' % round(numpy.mean(sum_yr),2))
                         '''
-                        #Kelly's algorithm (inetrmediate rounding)
+                        #Kelly's algorithm (intermediate rounding)
                         if cat_idx < 12:
+                            m = numpy.mean(sum_yr)
+                            if numpy.isnan(m):
+                                m=-99.0
                             if el == 'snow':
-                                val_list.append('%.1f' % round(numpy.mean(sum_yr),2))
+                                val_list.append('%.1f' % round(m,2))
                             else:
-                                val_list.append('%.2f' % round(numpy.mean(sum_yr),3))
+                                val_list.append('%.2f' % round(m,3))
                         else:
                             if cat_idx == 12:m_idx = range(1,13)
                             if cat_idx == 13:m_idx =[12,1,2]
@@ -2807,7 +2814,7 @@ def Sodsumm(**kwargs):
                                 s_ave = round(s_ave,2)
                                 val_list.append('%.2f' % s_ave)
                     except:
-                        val_list.append('****')
+                        val_list.append('-99.0')
                     if sum_yr:
                         prec_high = max(sum_yr)
                         yr_idx_high = sum_yr.index(prec_high)
@@ -2824,10 +2831,10 @@ def Sodsumm(**kwargs):
                                 yr_low = yr_list[yr_idx_low]
                     else:
                         prec_high = -99.0
-                        yr_high = '****'
+                        yr_high = '0000'
                         if el == 'pcpn':
                             prec_low = 99.0
-                            yr_low = '****'
+                            yr_low = '0000'
                     if el == 'snow':
                         val_list.append('%.1f' %round(prec_high,2))
                     else:
