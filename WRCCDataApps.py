@@ -3064,7 +3064,8 @@ def Sodpad(**kwargs):
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
-                    pcp = float(el_data[iyeart][0][ndoyt])
+                    pcp = round(float(el_data[iyeart][0][ndoyt]),2)
+                    #pcp = float(el_data[iyeart][0][ndoyt])
                     #Note that these sums continue to accumulate over all durations
                     if pcp < 98.00:
                         sumpcpn[yr]+=pcp
@@ -3086,7 +3087,7 @@ def Sodpad(**kwargs):
                         if misdys[yr] == 1:
                             continue
                         nprsnt+=1
-                        if sumpcpn[yr] > thresh:
+                        if float(sumpcpn[yr]) > thresh:
                             sumthr+=1
                     aveobs = sumobs/float(idur)
                     if nprsnt != 0:
@@ -3094,18 +3095,15 @@ def Sodpad(**kwargs):
                     results[i][doy][icount][ithr] = '%.1f' % pcthr
                 #it is possible there may be a few edge effects in december
                 if aveobs != 0:
-                    avepre = round(100.0*sumpre / aveobs,3)
+                    avepre = round(sumpre / aveobs,3)
                     #deal with rounding issue (round(2.675,2) =  2.67 since 2.675
                     #decimal fraction is closer to 2.67
-                    '''
                     if int(str(avepre)[-1]) == 5 and len(str(avepre)) >= 4:
                         try:
                             avepre = float(str(avepre)[0:-1] + str(int(str(avepre)[-1]) +1))
                         except:
                             pass
-                    '''
-                    results[i][doy][icount][19] = '%.2f' % round(avepre /100.0,2)
-                    #results[i][doy][icount][19] = avepre
+                    results[i][doy][icount][19] = '%.2f' %round(avepre,2)
                 icount+=1
     return results
 
