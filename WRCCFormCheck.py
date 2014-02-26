@@ -116,7 +116,7 @@ def check_elements(form):
             if form['grid']=='21' and form['temporal_resolution'] in ['yly','mly'] and el_strip not in ['maxt','mint','avgt','pcpn']:
                 err = '%s is not a valid PRISM element. Please choose from maxt,mint,avgt,pcpn!' %el_strip
         else:
-            if el_strip not in ['maxt','mint','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
+            if el_strip not in ['maxt','mint','avgt','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el
     return err
 

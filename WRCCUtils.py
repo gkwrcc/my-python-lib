@@ -371,13 +371,7 @@ def convert_db_dates(messy_date):
     '''
     #Check if input is datetime object, convert if necessary
     if type(messy_date) is datetime.date or type(messy_date) is datetime.datetime:
-        year = str(messy_date.year)
-        month = str(messy_date.month)
-        day = str(messy_date.day)
-        if len(month) == 1:month = '0' + month
-        if len(day) == 1:month = '0' + day
-        return year + '-' + month  + '-' + day
-
+        return datetime.datetime.strftime(messy_date,"%Y-%m-%d")
     #Check if data is already in form yyyy-mm-dd
     date_list = messy_date.split('-')
     if len(date_list) == 3 and len(date_list[0]) == 4:
@@ -391,7 +385,7 @@ def convert_db_dates(messy_date):
         return '0000-00-00'
 
     try:
-        mon = WRCCData.MONTH_NAME_TO_NUMBER[date_list[0][0:3].rstrip('.')]
+        mon = WRCCData.MONTH_NAME_TO_NUMBER[date_list[0][0:3]]
     except:
         mon = '00'
     try:
