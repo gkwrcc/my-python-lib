@@ -49,7 +49,7 @@ def convert_to_english(element, value):
     except:
         return value
     if el in ['maxt','mint','avgt','obst']:
-        v = int(round(9.0/5.0*float(value) + 32.0),1)
+        v = int(round(9.0/5.0*float(value) + 32.0,1))
     elif el in ['hdd','cdd','gdd']:
         #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
         #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
@@ -57,7 +57,7 @@ def convert_to_english(element, value):
     elif el in ['pcpn','snow','snwd','evap']:
         v = round(float(value)/25.4,2)
     elif el in ['wdmv']:
-        v = int(round(float(value)/1.60934),1)
+        v = int(round(float(value)/1.60934,1))
     else:
         v = value
     return v

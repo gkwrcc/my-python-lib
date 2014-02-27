@@ -303,6 +303,7 @@ DISPLAY_PARAMS = {
     'dates_constraints': 'Date Constraints',
     'element':'Element',
     'elements':'Elements',
+    'degree_days':'Degree Days',
     'element_selection': 'Element Selection',
     'el_type':'Climate Element Type',
     'units': 'Units',

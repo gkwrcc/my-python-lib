@@ -102,6 +102,23 @@ def check_end_date(form):
 
     return err
 
+def check_degree_days(form):
+    err = None
+    el_list = form['degree_days'].replace(' ','').split(',')
+    for el in el_list:
+        if len(el) != 5:
+            return '%s is not a valid degree day element.' %el
+        #strip degree day digits
+        el_strip = re.sub(r'(\d+)(\d+)', '', el)
+        base_temp = el[3:]
+        try:
+            int(base_temp)
+        except:
+            return '%s is not valid base temperature.' %base_temp
+        if el_strip not in ['gdd','hdd','cdd']:
+            return '%s is not a valid degree day element.' %el
+    return err
+
 def check_elements(form):
     err = None
     el_list = form['elements'].replace(' ','').split(',')
