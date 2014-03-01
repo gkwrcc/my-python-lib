@@ -104,6 +104,8 @@ def check_end_date(form):
 
 def check_degree_days(form):
     err = None
+    if not 'degree_days' in form.keys():
+        return err
     el_list = form['degree_days'].replace(' ','').split(',')
     for el in el_list:
         if len(el) != 5:

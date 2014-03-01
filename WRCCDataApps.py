@@ -2426,7 +2426,12 @@ def Sodsumm(**kwargs):
         kwargs['max_missing_days'] = 0
     elements = kwargs['elements']
     dates = kwargs['dates']
-    tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
+    if kwargs['el_type'] == 'all':tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
+    if kwargs['el_type'] == 'both':tables = ['temp', 'prsn']
+    if kwargs['el_type'] == 'prsn':tables = ['prsn']
+    if kwargs['el_type'] == 'hc':tables = ['hdd', 'cdd']
+    if kwargs['el_type'] == 'temp':tables = ['temp']
+    if kwargs['el_type'] == 'g':tables = ['gdd', 'corn']
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     time_cats = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann', 'Win', 'Spr', 'Sum', 'Aut']
     #time_cats = ['Ja', 'Fe', 'Ma', 'Ap', 'Ma', 'Jn', 'Jl', 'Au', 'Se', 'Oc', 'No', 'De']
@@ -2999,7 +3004,7 @@ def Sodpad(**kwargs):
         #Kelly: don't do leap years, too complicated
         for yr in range(num_yrs):
             for doy in range(366):
-                if doy == 59:
+                if doy == 60:
                     el_data[yr][0][doy] = 99.00
                     continue
                 val, flag = WRCCUtils.strip_data(str(el_data[yr][0][doy]))
@@ -3054,17 +3059,21 @@ def Sodpad(**kwargs):
                         iyeart+=1
                     if iyeart > range(num_yrs)[-1]:
                         continue
+                    '''
+                    if iyeart > num_yrs - 1:
+                        continue
+                    '''
                     #look for leap days and skip Feb 29 if not a leap year
                     #note that -99.00 applies just to day 60, else it's -99.99
                     dates = kwargs['dates']
                     if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.005:
                         leap[yr] = 0
                     #if iyeart == int(dates[0][0:4]) and ndoyt == 59:
-                    if iyeart == 0 and ndoyt == 59:
+                    if iyeart == 0 and ndoyt == 60:
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
-                    pcp = round(float(el_data[iyeart][0][ndoyt]),2)
+                    pcp = float(el_data[iyeart][0][ndoyt])
                     #pcp = float(el_data[iyeart][0][ndoyt])
                     #Note that these sums continue to accumulate over all durations
                     if pcp < 98.00:
@@ -3087,23 +3096,23 @@ def Sodpad(**kwargs):
                         if misdys[yr] == 1:
                             continue
                         nprsnt+=1
-                        if float(sumpcpn[yr]) > thresh:
+                        if sumpcpn[yr] > thresh:
                             sumthr+=1
-                    aveobs = sumobs/float(idur)
+                    aveobs = round(sumobs/float(idur))
                     if nprsnt != 0:
                         pcthr = 100.0 * sumthr/float(nprsnt+1)
                     results[i][doy][icount][ithr] = '%.1f' % pcthr
                 #it is possible there may be a few edge effects in december
                 if aveobs != 0:
-                    avepre = round(sumpre / aveobs,3)
+                    avepre = round(100.0*sumpre / aveobs,2)
                     #deal with rounding issue (round(2.675,2) =  2.67 since 2.675
                     #decimal fraction is closer to 2.67
-                    if int(str(avepre)[-1]) == 5 and len(str(avepre)) >= 4:
+                    if int(str(avepre)[-1]) == 5:
                         try:
                             avepre = float(str(avepre)[0:-1] + str(int(str(avepre)[-1]) +1))
                         except:
                             pass
-                    results[i][doy][icount][19] = '%.2f' %round(avepre,2)
+                    results[i][doy][icount][19] = '%.2f' % round(avepre/100.0,2)
                 icount+=1
     return results
 

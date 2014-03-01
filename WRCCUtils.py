@@ -28,16 +28,19 @@ def convert_to_metric(element, value):
         float(value)
     except:
         return value
-    if el in ['maxt','mint','avgt','obst']:
+    if el in ['maxt','mint','avgt','obst', 'yly_maxt', 'yly_mint', 'mly_maxt', 'mly_mint']:
         v = round((float(value) - 32.0)*5.0/9.0,1)
     elif el in ['hdd','cdd','gdd']:
         #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
         #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
         v = int(round(float(value)*10.0/18.0))
-    elif el in ['pcpn','snow','snwd','evap']:
+    elif el in ['pcpn','snow','snwd','evap','yly_pcpn', 'mly_pcpn']:
         v = round(float(value)*25.4,2)
     elif el in ['wdmv']:
         v = round(float(value)*1.60934,1)
+    elif el =='elev':
+        #Feet to meter
+        v = round(float(value)/3.280839895,1)
     else:
         v = value
     return v
@@ -48,16 +51,19 @@ def convert_to_english(element, value):
         float(value)
     except:
         return value
-    if el in ['maxt','mint','avgt','obst']:
+    if el in ['maxt','mint','avgt','obst','yly_maxt', 'yly_mint', 'mly_maxt', 'mly_mint']:
         v = int(round(9.0/5.0*float(value) + 32.0,1))
     elif el in ['hdd','cdd','gdd']:
         #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
         #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
         v = int(round(float(value)*18.0/10.0))
-    elif el in ['pcpn','snow','snwd','evap']:
+    elif el in ['pcpn','snow','snwd','evap','mly_pcpn', 'yly_pcpn']:
         v = round(float(value)/25.4,2)
     elif el in ['wdmv']:
         v = int(round(float(value)/1.60934,1))
+    elif el =='elev':
+        #meter to feet
+        v = round(float(value)*3.280839895,1)
     else:
         v = value
     return v
@@ -836,7 +842,13 @@ def format_grid_data(req, params):
         data_summary = prms['data_summary']
     else:
         data_summary = 'none'
-    el_list = prms['elements']
+    el_list_input = prms['elements']
+    el_list = el_list_input
+    #strip base temp of degree days:
+    for el_idx,el in enumerate(el_list):
+        el_strip, base_temp = get_el_and_base_temp(el)
+        if base_temp:
+            el_list[el_idx] = el_strip
     #Sanity check
     data = {'meta':{'lat':[[]], 'lon':[[]], 'elev':[[]]}, 'data':[]}
     if 'error' in req.keys():
@@ -893,9 +905,16 @@ def format_grid_data(req, params):
         date_range = '%s-%s' %(start_date, end_date)
         if 'location' in prms.keys():
             #Single gridpoint format
-            data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), elevs[0][0]]]
-            for val in data['data']:
-                data_out[0].append(val)
+            if prms['units'] == 'metric':
+                ll = WRCCUtils.convert_to_metric('elev', elevs[0][0])
+            else:
+                ll = elevs[0][0]
+            data_out = [[date_range, round(lons[0][0],2), round(lats[0][0],2), ll]]
+            for el_idx, val in enumerate(data['data']):
+                if prms['units'] == 'metric':
+                    data_out[0].append(WRCCUtils.convert_to_metric(el_list[el_idx], val))
+                else:
+                    data_out[0].append(val)
             return data_out
         else:
             poly = None
@@ -926,10 +945,13 @@ def format_grid_data(req, params):
                     data_out[idx].append(date_range)
                     data_out[idx].append(round(lon,2))
                     data_out[idx].append(round(lat,2))
-                    data_out[idx].append(elevs[grid_idx][lon_idx])
+                    if prms['units'] == 'metric':
+                        data_out[idx].append(WRCCUtils.convert_to_metric('elev',elevs[grid_idx][lon_idx]))
+                    else:
+                        data_out[idx].append(elevs[grid_idx][lon_idx])
 
                     for el_idx in range(len(data['data'])):
-                        if params['units'] == 'metric':
+                        if prms['units'] == 'metric':
                             data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx],data['data'][el_idx][grid_idx][lon_idx]))
                         else:
                             data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
@@ -980,16 +1002,19 @@ def format_grid_data(req, params):
                     data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                 data_out[date_idx].append(round(lons[0][0],2))
                 data_out[date_idx].append(round(lats[0][0],2))
-                data_out[date_idx].append(elevs[0][0])
+                if prms['units'] == 'metric':
+                    data_out[date_idx].append(WRCCUtils.convert_to_metric('elev',elevs[0][0]))
+                else:
+                    data_out[date_idx].append(elevs[0][0])
                 for el_idx in range(1,len(el_list) + 1):
-                    if params['units'] == 'metric':
+                    if prms['units'] == 'metric':
                         data_out[date_idx].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],str(date_vals[el_idx]).strip(' ')))
                     else:
                         data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
                     try:
                         v = float(date_vals[el_idx])
                         if abs(v + 999.0)>0.0001:
-                            if params['units'] == 'metric':
+                            if prms['units'] == 'metric':
                                 data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],v))
                             else:
                                 data_summ[el_idx-1].append(v)
@@ -1019,17 +1044,20 @@ def format_grid_data(req, params):
                             data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                         data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                         data_out[idx].append(round(lat,2))
-                        data_out[idx].append(elevs[grid_idx][lon_idx])
+                        if prms['units'] == 'metric':
+                            data_out[idx].append(WRCCUtils.convert_to_metric('elev',elevs[grid_idx][lon_idx]))
+                        else:
+                            data_out[idx].append(elevs[grid_idx][lon_idx])
 
                         for el_idx in range(1,len(el_list) + 1):
-                            if params['units'] == 'metric':
+                            if prms['units'] == 'metric':
                                 data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],date_vals[el_idx][grid_idx][lon_idx]))
                             else:
                                 data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
                             try:
                                 v = float(date_vals[el_idx][grid_idx][lon_idx])
                                 if abs(v + 999.0)>0.0001:
-                                    if params['units'] == 'metric':
+                                    if prms['units'] == 'metric':
                                         data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
                                     else:
                                         data_summ[el_idx-1].append(v)
