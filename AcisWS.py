@@ -431,8 +431,9 @@ def get_station_data(form_input, program):
     meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
     elems=elems_list)
     shape_type = None
-    #Check for por start end dates
     if 'station_id' in form_input.keys():
+        params['sids'] = form_input['station_id']
+        #Check for por start end dates
         if s_date.lower() =='por' or e_date.lower() == 'por':
             #meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
             elems_list =[]
@@ -468,8 +469,13 @@ def get_station_data(form_input, program):
                 resultsdict['errors'] = 'Metadata request fail. Start, End data for this station could not be found. Error: %s' %str(e)
                 return resultsdict
             for el_idx, dr in enumerate(meta_request['meta'][0]['valid_daterange']):
-                new_start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][0][8:10]))
-                new_end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][1][8:10]))
+                if len(dr) ==2 and len(dr[0])== 10 and len(dr[1])==10:
+                    new_start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][0][8:10]))
+                    new_end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][1][8:10]))
+                else:
+                    new_start = start
+                    new_end = end
+
                 if new_start < start:
                     start = new_start
                     idx_s = el_idx
@@ -486,9 +492,8 @@ def get_station_data(form_input, program):
                 e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
                 e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
                 e_date = '%s%s%s' %(e_yr,e_mon,e_day)
-        params['sdate']= s_date
-        params['edate'] = e_date
-        params['sids'] = form_input['station_id']
+            params['sdate']= s_date
+            params['edate'] = e_date
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
         stn_list = form_input['station_ids'].replace(' ','').split(',')
@@ -608,7 +613,11 @@ def get_station_data(form_input, program):
         except:
             pass
         try:
-            resultsdict['stn_data'][stn_idx] = data['data']
+            #FIX ME: odd formattng issue when one day request
+            if len(dates) == 1:
+                resultsdict['stn_data'][stn_idx] = [data['data']]
+            else:
+                resultsdict['stn_data'][stn_idx] = data['data']
         except:
             pass
         try:
@@ -631,7 +640,7 @@ def get_station_data(form_input, program):
         if not resultsdict['stn_data'][stn_idx]:
             resultsdict['stn_errors'][stn_idx] = 'No data found!'
         #Add dates and convert to metric if needed
-        if dates and len(dates) == len(data['data']):
+        if dates:
             for idx, date in  enumerate(dates):
                 #Units:
                 if 'units' in form_input.keys() and form_input['units'] == 'metric':
@@ -641,7 +650,6 @@ def get_station_data(form_input, program):
                 d = date.replace(' ','').replace(':','').replace('/','').replace('-','')
                 dlm = WRCCData.DATE_FORMAT[form_input['date_format']]
                 resultsdict['stn_data'][stn_idx][idx].insert(0, d[0:4] + dlm + d[4:6] + dlm + d[6:8])
-
     #final check on station data if comma separated list of stations
     if 'station_ids' in form_input.keys():
         for idx in idx_empty_list:

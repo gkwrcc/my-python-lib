@@ -7,7 +7,7 @@ Checks input form parameters
 '''
 import datetime
 import re
-import WRCCData
+import WRCCData,WRCCUtils
 
 def check_start_year(form):
     err = None
@@ -113,14 +113,37 @@ def check_degree_days(form):
         #strip degree day digits
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
         base_temp = el[3:]
+        #Check that degree days are entered in the correct units
+        if 'units' in form.keys() and form['units'] == 'metric':
+            if len(str(WRCCUtils.convert_to_english('maxt', base_temp)))>2:
+                return 'Please convert your base temperatures to celcius and round to the nearest integer. %s is not converted.' %el
+        if len(base_temp) ==1:
+            return 'Base temperature should be two digit number. Please prepend 0 if your temperature is a single digit.'
+        if len(base_temp) !=2:
+            return '%s is not valid base temperature.' %base_temp
         try:
             int(base_temp)
         except:
             return '%s is not valid base temperature.' %base_temp
         if el_strip not in ['gdd','hdd','cdd']:
             return '%s is not a valid degree day element.' %el
+
+
     return err
 
+def check_elements(form):
+    err = None
+    if not 'elements' in form.keys():
+        return 'You must select at least one climate element from the menue.'
+    try:
+        el_list = form['elements'].replace(' ','').split(',')
+    except:
+        el_list = form['elements']
+    if not el_list:
+        return 'You must select at least one climate element from the menue.'
+    return err
+
+'''
 def check_elements(form):
     err = None
     el_list = form['elements'].replace(' ','').split(',')
@@ -138,6 +161,7 @@ def check_elements(form):
             if el_strip not in ['maxt','mint','avgt','pcpn','snow','snwd','evap','wdmv','gdd','hdd','cdd','obst']:
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el
     return err
+'''
 
 def check_state(form):
     err = None

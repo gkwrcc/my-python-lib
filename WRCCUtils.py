@@ -558,6 +558,8 @@ def write_griddata_to_file(data, form, f=None, request=None):
         else:
             row = ['*DataSummary',form['data_summary']+'_'+form[form['data_summary'] + '_summary']]
         writer.writerow(row)
+        row = ['*Units',form['units']]
+        writer.writerow(row)
         if form['data_summary'] == 'spatial':
             row = ['*Date']
         elif form['data_summary'] == 'temporal':
@@ -609,11 +611,13 @@ def write_griddata_to_file(data, form, f=None, request=None):
                         ws.write(0,2,'Data Summary:')
                         ws.write(0,3,form['data_summary'])
                         ws.write(0,4,form[form['data_summary'] + '_summary'])
-                    ws.write(1, 0, 'Date')
+                    ws.write(2, 0, 'Units')
+                    ws.write(2, 1, form['units'])
+                    ws.write(3, 0, 'Date')
                     if form['data_summary'] != 'spatial':
-                        ws.write(1, 1, 'Lat')
-                        ws.write(1, 2, 'Lon')
-                        ws.write(1, 3, 'Elev')
+                        ws.write(3, 1, 'Lat')
+                        ws.write(3, 2, 'Lon')
+                        ws.write(3, 3, 'Elev')
                         for k, el in enumerate(el_list):ws.write(1, k+4, el)
                     else:
                         for k, el in enumerate(el_list):ws.write(1, k+1, el)
@@ -621,9 +625,9 @@ def write_griddata_to_file(data, form, f=None, request=None):
                     flag = 0
                 try:
                     try:
-                        ws.write(date_idx+2, j, float(val))
+                        ws.write(date_idx+4, j, float(val))
                     except:
-                        ws.write(date_idx+2, j, str(val))#row, column, label
+                        ws.write(date_idx+4, j, str(val))#row, column, label
                 except Exception, e:
                     response = 'Excel write error:' + str(e)
                     break
@@ -639,9 +643,8 @@ def write_griddata_to_file(data, form, f=None, request=None):
             wb.save(response)
     return response
 
-
-def write_station_data_to_file(resultsdict, delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
-    #def write_station_data_to_file(data, dates, station_names, station_ids, elements,delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
+def write_station_data_to_file(resultsdict, form, f=None, request=None):
+#def write_station_data_to_file(resultsdict, delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
     '''
     Writes station data to a file.
 
@@ -667,157 +670,163 @@ def write_station_data_to_file(resultsdict, delimiter, file_extension, request=N
     via the CSC webpages
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
     #set file name
-    if not output_file_name or output_file_name == 'DataRequest' or output_file_name == '':
-        file_name = 'DataRequest_'+ time_stamp
+    if 'output_file_name' in form.keys():
+        file_name = form['output_file_name']
     else:
-        file_name = output_file_name
+        file_name = 'DataRequest_'+ time_stamp
     #sanity check:
     if not f and not request:
-        response = 'Error! Need either a file or a reqest object!'
+        return 'Error! Need either a file or a reqest object!'
     elif f and request:
-        response = 'Error! Choose one of file f or request object'
-    else:
-        if file_extension in ['.dat', '.txt']:
-            import csv
-            if request:
-                response = HttpResponse(mimetype='text/csv')
-                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
-                writer = csv.writer(response, delimiter=delimiter )
-            else: #file f given
-                try:
-                    csvfile = open(f, 'w+')
-                    writer = csv.writer(csvfile, delimiter=delimiter )
-                    response = None
-                except Exception, e:
-                    #Can' open user given file, create emergency writer object
-                    writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delimiter,quoting=csv.QUOTE_NONE)
-                    response = 'Error!' + str(e)
-            for stn, dat in enumerate(resultsdict['stn_data']):
-                #NOTE: row writer does not like delimiter characters in string,
-                #need to set space char to be used in header string
-                stn_name = str(resultsdict['stn_names'][stn])
-                header_seperator = ':'
-                if delimiter == ' ':
-                    stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
-                if delimiter== ':':
-                    header_seperator = ' '
-                row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator+stn_name]
-                writer.writerow(row)
-                row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator+str(resultsdict['stn_elev'][stn])]
-                writer.writerow(row)
-                row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
-                writer.writerow(row)
-                row = ['*date']
-                for el in resultsdict['elements']:
-                    if show_flags == 'F' and show_observation_time == 'F':
-                        row.append(str(el))
-                    elif show_flags == 'T' and show_observation_time == 'F':
-                        row.append(str(el));row.append('flag')
-                    elif show_flags == 'F' and show_observation_time == 'T':
-                        row.append(str(el));row.append('ObsTime')
-                    else:
-                        row.append(str(el));row.append('flag');row.append('ObsTime')
-                writer.writerow(row)
+        return 'Error! Choose one of file f or request object'
 
-                for j, vals in enumerate(dat):
-                    row = []
-                    #date
-                    row.append(vals[0])
-                    for val in vals[1:]:
-                        if show_flags == 'F' and show_observation_time == 'F':
-                            row.append(str(val[0]))
-                        elif show_flags == 'T' and show_observation_time == 'F':
-                            row.append(str(val[0]))
-                            row.append(str(val[1]))
-                        elif show_flags == 'F' and show_observation_time == 'T':
-                            row.append(str(val[0]))
-                            row.append(str(val[2]))
-                        else:
-                            row.append(str(val[0]))
-                            row.append(str(val[1]))
-                            row.append(str(val[2]))
-                    writer.writerow(row)
-        elif file_extension == '.json':
-            with open(f, 'w+') as jsonf:
-                jsonf.write(json.dumps(resultsdict['stn_data']))
+    if file_extension in ['.dat', '.txt']:
+        delim = form['delimiter']
+        import csv
+        if request:
+            response = HttpResponse(mimetype='text/csv')
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name,file_extension)
+            writer = csv.writer(response, delimiter=delim )
+        else: #file f given
+            try:
+                csvfile = open(f, 'w+')
+                writer = csv.writer(csvfile, delimiter=delim )
                 response = None
-        elif file_extension == '.xls': #Excel
-            from xlwt import Workbook
-            wb = Workbook()
-            for stn, dat in enumerate(resultsdict['stn_data']):
-                #ws = wb.add_sheet('Station_%s_%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0], str(stn)))
-                ws = wb.add_sheet('%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0]))
-                #Header
-                ws.write(0,0,'Stn Name');ws.write(0,1,'Stn ID');ws.write(0,2,'State');ws.write(0,3,'Lat');ws.write(0,4,'Lon');ws.write(0,5,'Elev');
-                ws.write(1,0,str(resultsdict['stn_names'][stn]))
-                ws.write(1,1,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
-                ws.write(1,2,str(resultsdict['stn_state'][stn]))
-                ws.write(1,3,str(resultsdict['stn_lat'][stn]))
-                ws.write(1,4,str(resultsdict['stn_lon'][stn]))
-                ws.write(1,5,str(resultsdict['stn_elev'][stn]))
-                ws.write(2,0,'DataFlags')
-                ws.write(2,1,'M=Missing')
-                ws.write(2,2,'T=Trace')
-                ws.write(2,3,'S=Subsequent')
-                ws.write(2,4,'A=Accumulated')
-                ws.write(3, 0, 'Date')
-                idx = 0
-                for k, el in enumerate(resultsdict['elements']):
+            except Exception, e:
+                #Can' open user given file, create emergency writer object
+                writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim,quoting=csv.QUOTE_NONE)
+                response = 'Error!' + str(e)
+        for stn, dat in enumerate(resultsdict['stn_data']):
+            #NOTE: row writer does not like delimiter characters in string,
+            #need to set space char to be used in header string
+            stn_name = str(resultsdict['stn_names'][stn])
+            header_seperator = ':'
+            if delim == ' ':
+                stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
+            if delim== ':':
+                header_seperator = ' '
+            row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator+stn_name]
+            writer.writerow(row)
+            row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator+str(resultsdict['stn_elev'][stn])]
+            writer.writerow(row)
+            row = ['*Units'+ header_seperator,form['units']]
+            writer.writerow(row)
+            row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
+            writer.writerow(row)
+            row = ['*date']
+            for el in resultsdict['elements']:
+                if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
+                    row.append(str(el))
+                elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
+                    row.append(str(el));row.append('flag')
+                elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
+                    row.append(str(el));row.append('ObsTime')
+                else:
+                    row.append(str(el));row.append('flag');row.append('ObsTime')
+            writer.writerow(row)
+
+            for j, vals in enumerate(dat):
+                row = []
+                #date
+                row.append(vals[0])
+                for val in vals[1:]:
+                    if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
+                        row.append(str(val[0]))
+                    elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
+                        row.append(str(val[0]))
+                        row.append(str(val[1]))
+                    elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
+                        row.append(str(val[0]))
+                        row.append(str(val[2]))
+                    else:
+                        row.append(str(val[0]))
+                        row.append(str(val[1]))
+                        row.append(str(val[2]))
+                writer.writerow(row)
+    elif file_extension == '.json':
+        with open(f, 'w+') as jsonf:
+            jsonf.write(json.dumps(resultsdict['stn_data']))
+            response = None
+    elif file_extension == '.xls': #Excel
+        from xlwt import Workbook
+        wb = Workbook()
+        for stn, dat in enumerate(resultsdict['stn_data']):
+            #ws = wb.add_sheet('Station_%s_%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0], str(stn)))
+            ws = wb.add_sheet('%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0]))
+            #Header
+            ws.write(0,0,'Stn Name');ws.write(0,1,'Stn ID');ws.write(0,2,'State');ws.write(0,3,'Lat');ws.write(0,4,'Lon');ws.write(0,5,'Elev');
+            ws.write(1,0,str(resultsdict['stn_names'][stn]))
+            ws.write(1,1,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
+            ws.write(1,2,str(resultsdict['stn_state'][stn]))
+            ws.write(1,3,str(resultsdict['stn_lat'][stn]))
+            ws.write(1,4,str(resultsdict['stn_lon'][stn]))
+            ws.write(1,5,str(resultsdict['stn_elev'][stn]))
+            ws.write(3,0,'Units')
+            ws.write(3,1,form['units'])
+            ws.write(4,0,'DataFlags')
+            ws.write(4,1,'M=Missing')
+            ws.write(4,2,'T=Trace')
+            ws.write(4,3,'S=Subsequent')
+            ws.write(4,4,'A=Accumulated')
+            ws.write(5, 0, 'Date')
+            idx = 0
+            for k, el in enumerate(resultsdict['elements']):
+                idx+=1
+                if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
+                    ws.write(5, k+1, el)
+                elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
+                    ws.write(5, idx, el)
+                    ws.write(5, idx+1,'flag')
                     idx+=1
-                    if show_flags == 'F' and show_observation_time == 'F':
-                        ws.write(3, k+1, el)
-                    elif show_flags == 'T' and show_observation_time == 'F':
-                        ws.write(3, idx, el)
-                        ws.write(3, idx+1,'flag')
+                elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
+                    ws.write(5, idx, el)
+                    ws.write(5, idx+1,'obs time')
+                    idx+=1
+                else:
+                    ws.write(5, idx, el)
+                    ws.write(5, idx+1,'flag')
+                    ws.write(5, idx+2,'obs time')
+                    idx+=2
+            #Data
+            for j, vals in enumerate(dat):
+                idx = 0
+                ws.write(j+6,0,vals[0])
+                for l,val in enumerate(vals[1:]):
+                    idx+=1
+                    if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
+                        try:
+                            ws.write(j+6, idx, float(val[0]))
+                        except:
+                            ws.write(j+6, idx, val[0])
+                    elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
+                        ws.write(j+6, idx, val[0]) #row, column, label
+                        ws.write(j+6, idx+1, val[1])
                         idx+=1
-                    elif show_flags == 'F' and show_observation_time == 'T':
-                        ws.write(3, idx, el)
-                        ws.write(3, idx+1,'obs time')
+                    elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
+                        ws.write(j+6, idx, val[0]) #row, column, label
+                        ws.write(j+6, idx+1, int(val[2]))
                         idx+=1
                     else:
-                        ws.write(3, idx, el)
-                        ws.write(3, idx+1,'flag')
-                        ws.write(3, idx+2,'obs time')
+                        try:
+                            ws.write(j+6, idx, float(val[0])) #row, column, label
+                        except:
+                            ws.write(j+6, idx, val[0])
+                        ws.write(j+6, idx+1, val[1])
+                        ws.write(j+4, idx+2, int(val[2]))
                         idx+=2
-                #Data
-                for j, vals in enumerate(dat):
-                    idx = 0
-                    ws.write(j+4,0,vals[0])
-                    for l,val in enumerate(vals[1:]):
-                        idx+=1
-                        if show_flags == 'F' and show_observation_time == 'F':
-                            try:
-                                ws.write(j+4, idx, float(val[0]))
-                            except:
-                                ws.write(j+4, idx, val[0])
-                        elif show_flags == 'T' and show_observation_time == 'F':
-                            ws.write(j+4, idx, val[0]) #row, column, label
-                            ws.write(j+4, idx+1, val[1])
-                            idx+=1
-                        elif show_flags == 'F' and show_observation_time == 'T':
-                            ws.write(j+4, idx, val[0]) #row, column, label
-                            ws.write(j+4, idx+1, int(val[2]))
-                            idx+=1
-                        else:
-                            try:
-                                ws.write(j+4, idx, float(val[0])) #row, column, label
-                            except:
-                                ws.write(j+4, idx, val[0])
-                            ws.write(j+4, idx+1, val[1])
-                            ws.write(j+4, idx+2, int(val[2]))
-                            idx+=2
-            if f:
-                try:
-                    wb.save(f)
-                    response = None
-                except:
-                    response = 'Error saving excel work boook to file %s' % f
-            else: # request
-                response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-                response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name, file_extension)
-                wb.save(response)
-        return response
+        if f:
+            try:
+                wb.save(f)
+                response = None
+            except:
+                response = 'Error saving excel work boook to file %s' % f
+        else: # request
+            response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
+            response['Content-Disposition'] = 'attachment;filename=%s%s' % (file_name, file_extension)
+            wb.save(response)
+    return response
 
 def format_grid_data(req, params):
     '''

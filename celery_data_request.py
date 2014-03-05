@@ -279,10 +279,13 @@ for idx, req_params_file in enumerate(params_list):
     data = group(celery_data_job(params for params in req_params_list)
     for i in range(len(req_params_list)):
         concatenate_results(results, data(i).get, request_type):
+    #NOTE:not tested after script change 03/02/14!!
     if 'select_grid_by' in req_params.keys():
-        save_error = WRCCUtils.write_griddata_to_file(results, elements,delimiter, file_extension, f=results_file)
+        #save_error = WRCCUtils.write_griddata_to_file(results, elements,delimiter, file_extension, f=results_file)
+        save_error = write_station_data_to_file(results, req_params, f=results_file)
     if 'select_station_by' in req_params.keys():
-        save_error = WRCCUtils.write_station_data_to_file(results['stn_data'], results['dates'],results['stn_names'], results['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
+        save_error = write_station_data_to_file(results, req_params, f=results_file)
+        #save_error = WRCCUtils.write_station_data_to_file(results['stn_data'], results['dates'],results['stn_names'], results['stn_ids'], elements,delimiter, file_extension,f=results_file, show_flags=params['show_flags'], show_observation_time=params['show_observation_time'])
 
 
 #Write e-mails to users if needed:

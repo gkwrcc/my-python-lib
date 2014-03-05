@@ -156,7 +156,7 @@ def state_aves_grid(state, month, elements):
     return year_list, state_aves
 
 
-def monthly_aves(request, el_list):
+def monthly_aves(request, form):
     '''
     CSC hsitoric station data app
     computes monthly aves over multiple years for multiple elements chosen by user
@@ -168,6 +168,10 @@ def monthly_aves(request, el_list):
     #request['data'] = [[year1, [el1(366entries)], [el2(366entries)], ...],
     #                   [year2, [el1(366entries)], [el2(366entries)], ...],...
     #                   [lastyear, [el1(366entries)], [el2(366entries)], ...]]
+    if isinstance(form['elements'], list):
+        el_list = form['elements']
+    else:
+        el_list = form['elements'].replace(' ','').split(',')
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(list)
@@ -248,7 +252,12 @@ def monthly_aves(request, el_list):
                         pass
             if yr_aves:
                 #results[el].append(numpy.mean(yr_aves))
-                results[el].append(round(numpy.mean(yr_aves),2))
+                mean = round(numpy.mean(yr_aves),2)
+                if 'units' in form.keys() and form['units'] == 'metric':
+                    el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el)
+                    results[el].append(WRCCUtils.convert_to_metric(el_strip, mean))
+                else:
+                    results[el].append(mean)
             else:
                 results[el].append(None)
     return dict(results)

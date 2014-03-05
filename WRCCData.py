@@ -56,38 +56,38 @@ ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F/C
               '44': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':44},
               '45': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
               '-44': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':44},
-              '91': {'name': 'mly_maxt', 'name_long':'Maximum Monthly Temperature (F/C)', 'vX':91},
-              '92': {'name': 'mly_mint', 'name_long':'Minimum Monthly Temperature (F/C)', 'vX':92},
-              '99': {'name':'mly_avgt', 'name_long': 'Average Monthly Temperature (F/C)', 'vX':99},
-              '94': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation (in/mm)', 'vX':94},
-              '95': {'name': 'yly_maxt', 'name_long':'Maximum Yearly Temperature (F/C)', 'vX':95},
-              '96': {'name': 'yly_mint', 'name_long':'Minimum Yearly Temperature (F/C)', 'vX':96},
-              '100': {'name':'yly_avgt', 'name_long': 'Average Yearly Temperature (F/C)', 'vX':100},
-              '98': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation (in/mm)', 'vX':98}
+              '91': {'name': 'mly_maxt', 'name_long':'Maximum Monthly Temperature', 'vX':91},
+              '92': {'name': 'mly_mint', 'name_long':'Minimum Monthly Temperature', 'vX':92},
+              '99': {'name':'mly_avgt', 'name_long': 'Average Monthly Temperature', 'vX':99},
+              '94': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation', 'vX':94},
+              '95': {'name': 'yly_maxt', 'name_long':'Maximum Yearly Temperature', 'vX':95},
+              '96': {'name': 'yly_mint', 'name_long':'Minimum Yearly Temperature', 'vX':96},
+              '100': {'name':'yly_avgt', 'name_long': 'Average Yearly Temperature', 'vX':100},
+              '98': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation', 'vX':98}
               }
 
 ACIS_ELEMENTS_DICT = {
-              'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F/C)', 'vX':1},
-              'mint':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F/C)', 'vX':2},
-              'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature (F/C)', 'vX':43},
-              'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range (F/C)', 'vX':None},
-              'obst':{'name':'obst', 'name_long': 'Observation Time Temperature (F/C)', 'vX':3},
-              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation (in/mm)', 'vX':4},
-              'snow': {'name': 'snow', 'name_long':'Snowfall (in/mm)', 'vX':10},
-              'snwd': {'name': 'snwd', 'name_long':'Snow Depth (in/mm)', 'vX':11},
+              'maxt':{'name':'maxt', 'name_long': 'Maximum Daily Temperature', 'vX':1},
+              'mint':{'name':'mint', 'name_long': 'Minimum Daily Temperature', 'vX':2},
+              'avgt': {'name':'avgt', 'name_long': 'Mean Daily Temperature', 'vX':43},
+              'dtr': {'name':'dtr', 'name_long': 'Daily Temperature Range', 'vX':None},
+              'obst':{'name':'obst', 'name_long': 'Observation Time Temperature', 'vX':3},
+              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation', 'vX':4},
+              'snow': {'name': 'snow', 'name_long':'Snowfall', 'vX':10},
+              'snwd': {'name': 'snwd', 'name_long':'Snow Depth', 'vX':11},
               'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':44},
               'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
               'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':44},
-              'evap': {'name': 'evap', 'name_long':'Evaporation (in/mm)', 'vX':7},
-              'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement (mi/mm)', 'vX':12},
-              'mly_maxt':{'name':'mly_maxt', 'name_long': 'Maximum Monthly Temperature (F/C)', 'vX':91},
-              'mly_mint':{'name':'mly_mint', 'name_long': 'Minimum Monthly Temperature (F/C)', 'vX':92},
-              'mly_avgt': {'name':'mly_avgt', 'name_long': 'Mean Monthly Temperature (F/C)', 'vX':99},
-              'mly_pcpn': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation (in/mm)', 'vX':94},
-              'yly_maxt':{'name':'yly_maxt', 'name_long': 'Maximum Yearly Temperature (F/C)', 'vX':91},
-              'yly_mint':{'name':'yly_mint', 'name_long': 'Minimum Yearly Temperature (F/C)', 'vX':92},
-              'yly_avgt': {'name':'yly_avgt', 'name_long': 'Mean Yearly Temperature (F/C)', 'vX':99},
-              'yly_pcpn': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation (in/mm)', 'vX':98}
+              'evap': {'name': 'evap', 'name_long':'Evaporation', 'vX':7},
+              'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement', 'vX':12},
+              'mly_maxt':{'name':'mly_maxt', 'name_long': 'Maximum Monthly Temperature', 'vX':91},
+              'mly_mint':{'name':'mly_mint', 'name_long': 'Minimum Monthly Temperature', 'vX':92},
+              'mly_avgt': {'name':'mly_avgt', 'name_long': 'Mean Monthly Temperature', 'vX':99},
+              'mly_pcpn': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation', 'vX':94},
+              'yly_maxt':{'name':'yly_maxt', 'name_long': 'Maximum Yearly Temperature', 'vX':91},
+              'yly_mint':{'name':'yly_mint', 'name_long': 'Minimum Yearly Temperature', 'vX':92},
+              'yly_avgt': {'name':'yly_avgt', 'name_long': 'Mean Yearly Temperature', 'vX':99},
+              'yly_pcpn': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation', 'vX':98}
 }
 
 ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
@@ -96,6 +96,52 @@ ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum
                       ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days'], \
                       ['hdd','Heating Degree Days'], ['gdd', 'Growing Degree Days'], \
                       ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
+
+
+UNITS_METRIC = {
+    'maxt':'C',
+    'mint':'C',
+    'avgt':'C',
+    'dtr': 'C',
+    'obst':'C',
+    'pcpn': 'mm',
+    'snow': 'mm',
+    'snwd': 'mm',
+    'cdd': 'C',
+    'hdd': 'C',
+    'gdd':'C',
+    'evap': 'mm',
+    'wdmv': 'km',
+    'elev':'m'
+}
+
+UNITS_ENGLISH = {
+    'maxt':'F',
+    'mint':'F',
+    'avgt':'F',
+    'dtr': 'F',
+    'obst':'F',
+    'pcpn': 'In',
+    'snow': 'In',
+    'snwd': 'In',
+    'cdd': 'F',
+    'hdd': 'F',
+    'gdd':'F',
+    'evap': 'In',
+    'wdmv': 'Mi',
+    'elev':'ft'
+}
+
+UNITS_LONG={
+    'C':'Degree Celsius',
+    'F':'Degree Fahrenheit',
+    'In':'Inches',
+    'mm':'Millimiter',
+    'Mi':'Miles',
+    'km':'Kilometer',
+    'ft':'Feet',
+    'm':'Meter'
+}
 
 MONTH_NAMES_LONG = ['January', 'February', 'March', 'April', 'May', 'June',\
                'July', 'August', 'September', 'October', 'November', 'December']
@@ -303,6 +349,7 @@ DISPLAY_PARAMS = {
     'dates_constraints': 'Date Constraints',
     'element':'Element',
     'elements':'Elements',
+    'elements_string': 'Elements String',
     'degree_days':'Degree Days',
     'element_selection': 'Element Selection',
     'el_type':'Climate Element Type',
