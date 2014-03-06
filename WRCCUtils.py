@@ -301,17 +301,20 @@ def point_in_circle(x,y,circle):
     '''
     R = 6378.1 #Radius of the Earth in km
     #Find distance between point and center of circle
-    dlat = math.radians((y - circle[1]))
-    dlon = math.radians((x - circle[0]))
-    lat1 = math.radians(y)
-    lat2 = math.radians(circle[1])
-    #Haversine Formula
-    a = math.sin(dlat/2)**2 + math.sin(dlon/2)**2 * math.cos(lat1)*math.cos(lat2)
-    c = 2*math.atan2(math.sqrt(a),math.sqrt(1-a))
-    dist = R*c
-    if dist <= circle[2] / 1000.0:
-        return True
-    else:
+    try:
+        dlat = math.radians((y - circle[1]))
+        dlon = math.radians((x - circle[0]))
+        lat1 = math.radians(y)
+        lat2 = math.radians(circle[1])
+        #Haversine Formula
+        a = math.sin(dlat/2)**2 + math.sin(dlon/2)**2 * math.cos(lat1)*math.cos(lat2)
+        c = 2*math.atan2(math.sqrt(a),math.sqrt(1-a))
+        dist = R*c
+        if dist <= circle[2] / 1000.0:
+            return True
+        else:
+            return False
+    except:
         return False
 
 def point_in_poly(x,y,poly):
@@ -323,35 +326,46 @@ def point_in_poly(x,y,poly):
     '''
     n = len(poly)
     inside = False
-
-    p1x,p1y = poly[0]
-    for i in range(n+1):
-        p2x,p2y = poly[i % n]
-        if y > min(p1y,p2y):
-            if y <= max(p1y,p2y):
-                if x <= max(p1x,p2x):
-                    if p1y != p2y:
-                        xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
-                    if p1x == p2x or x <= xints:
-                        inside = not inside
-        p1x,p1y = p2x,p2y
-
+    try:
+        p1x,p1y = poly[0]
+        for i in range(n+1):
+            p2x,p2y = poly[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        if p1x == p2x or x <= xints:
+                            inside = not inside
+            p1x,p1y = p2x,p2y
+    except:
+        pass
     return inside
 
 def set_poly_and_PointIn(prms):
     poly = None;PointIn=None
     if 'shape' in prms.keys():
-        if len(prms['shape']) == 3:#circle
-            poly = str(prms['shape'])
+        shape = prms['shape']
+        if isinstance(shape, basestring):
+            shape = shape.replace(' ','').split(',')
+        if not isinstance(shape, list):
+            shape = list(shape)
+        shape = [float(sh) for sh in shape]
+        if len(shape) == 3:#circle
+            poly = shape
             pointIn = getattr(WRCCUtils,'point_in_circle')
+        elif len(shape)== 4:#bbox
+            poly = [(sh[0],sh[1]),(sh[0],sh[3]),(sh[2],sh[3]),(sh[2],sh[1])]
+            PointIn = getattr(WRCCUtils,'point_in_poly')
         else:
-            sh = prms['shape'].split(',')
-            sh = [float(s) for s in sh]
             poly = [(sh[2*idx],sh[2*idx+1]) for idx in range(len(sh)/2)]
             PointIn = getattr(WRCCUtils,'point_in_poly')
     else:
         if 'basin' in prms.keys():
             sh = AcisWS.find_geojson_of_area('basin', prms['basin'])
+        if 'location' in prms.keys():
+            s = prms['location'].replace(' ','').split(',')
+            sh = [(s[0],s[1])]
         if 'county_warning_area' in prms.keys():
             sh = AcisWS.find_geojson_of_area('cwa', prms['county_warning_area'])
         if 'climate_division' in prms.keys():
@@ -853,6 +867,7 @@ def format_grid_data(req, params):
         data_summary = 'none'
     el_list_input = prms['elements']
     el_list = el_list_input
+    poly, pointIn = set_poly_and_PointIn(prms)
     #strip base temp of degree days:
     for el_idx,el in enumerate(el_list):
         el_strip, base_temp = get_el_and_base_temp(el)
@@ -926,9 +941,7 @@ def format_grid_data(req, params):
                     data_out[0].append(val)
             return data_out
         else:
-            poly = None
             #check for irregular shapes and define poly if so
-            poly, PointIn = set_poly_and_PointIn(prms)
             lat_num = 0
             for lat_idx, lat_grid in enumerate(data['meta']['lat']):
                 lat_num+=len(lat_grid)
@@ -981,7 +994,6 @@ def format_grid_data(req, params):
             data_out = [[] for i in range(len(data['data']))]
         else:
             #check for irregular shapes and define poly if so
-            poly, PointIn = set_poly_and_PointIn(prms)
             #set output data_out
             lat_num = 0
             for lat_idx, lat_grid in enumerate(data['meta']['lat']):

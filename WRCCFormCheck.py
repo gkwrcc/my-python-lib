@@ -49,20 +49,26 @@ def check_end_year(form):
 
 def check_start_date(form):
     err = None
-    date = form['start_date'].replace('-','').replace('/','')
-    e_date = form['end_date'].replace('-','').replace('/','')
+    date = form['start_date'].replace('-','').replace('/','').replace(':','')
+    e_date = form['end_date'].replace('-','').replace('/','').replace(':','')
     if date.lower() == 'por' and 'station_id' in form.keys():
         return err
     if len(date)!=8:
         if date.lower() == 'por':
             return '%s is not a valid option for a multi-station request.' %form['start_date']
         else:
-            return 'Date should be of form yyyymmdd. You entered %s' %date
+            return '%s is not a valid date.' %form['start_date']
     try:
         int(date)
     except:
-        return 'Date should be an eight digit entry. You entered %s' %date
-    sd = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
+        return '%s is not a valid date.' %form['start_date']
+    #Check for leap year issue
+    if not WRCCUtils.is_leap_year(date[0:4]) and date[4:6] == '02' and date[6:8] == '29':
+        return '%s is not a leap year. Change start date to February 28.' %date[0:4]
+    try:
+        sd = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
+    except:
+        return err
     try:
         ed = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
     except:
@@ -76,24 +82,30 @@ def check_start_date(form):
 
 def check_end_date(form):
     err = None
-    s_date = form['start_date'].replace('-','').replace('/','')
-    date = form['end_date'].replace('-','').replace('/','')
+    s_date = form['start_date'].replace('-','').replace('/','').replace(':','')
+    date = form['end_date'].replace('-','').replace('/','').replace(':','')
     if date.lower() == 'por' and 'station_id' in form.keys():
         return err
     if len(date)!=8:
         if date.lower() == 'por':
             return '%s is not a valid option for a multi-station request.' %form['end_date']
         else:
-            return 'Date should be of form yyyymmdd. You entered %s' %date
+            return '%s is not a valid date.' %form['end_date']
     try:
         int(date)
     except:
         return 'Date should be an eight digit entry. You entered %s' %date
+    #Check for leap year issue
+    if not WRCCUtils.is_leap_year(date[0:4]) and date[4:6] == '02' and date[6:8] == '29':
+        return '%s is not a leap year. Change end date to February 28.' %date[0:4]
     try:
         sd = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
     except:
         return err
-    ed = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
+    try:
+        ed = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
+    except:
+        return err
     try:
         if ed < sd:
             return 'Start Date is later then End Year.'
