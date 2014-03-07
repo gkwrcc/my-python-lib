@@ -528,6 +528,8 @@ def write_griddata_to_file(data, form, f=None, request=None):
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
+    elev_unit = 'ft'
+    if form['units'] == 'metric':elev_unit = 'm'
     if isinstance(form['elements'],list):
         el_list = form['elements']
     else:
@@ -579,8 +581,14 @@ def write_griddata_to_file(data, form, f=None, request=None):
         elif form['data_summary'] == 'temporal':
             row = ['*DateRange', 'Lat', 'Lon', 'Elev']
         else:
-            row = ['*Date', 'Lat', 'Lon', 'Elev']
-        for el in el_list:row.append('%s' % str(el))
+            row = ['*Date', 'Lat', 'Lon', 'Elev(' + elev_unit + ')' ]
+        for el in el_list:
+            el_strip, base_temp = get_el_and_base_temp(el)
+            if form['units'] == 'metric':
+                el_unit = WRCCData.UNITS_METRIC[el_strip]
+            else:
+                el_unit = WRCCData.UNITS_ENGLISH[el_strip]
+            row.append('%s(%s)' %(str(el),el_unit))
         writer.writerow(row)
         for date_idx, date_vals in enumerate(data):
             row = []
@@ -631,10 +639,22 @@ def write_griddata_to_file(data, form, f=None, request=None):
                     if form['data_summary'] != 'spatial':
                         ws.write(3, 1, 'Lat')
                         ws.write(3, 2, 'Lon')
-                        ws.write(3, 3, 'Elev')
-                        for k, el in enumerate(el_list):ws.write(1, k+4, el)
+                        ws.write(3, 3, 'Elev' + '(' + elev_unit + ')')
+                        for k, el in enumerate(el_list):
+                            el_strip, base_temp = get_el_and_base_temp(el)
+                            if form['units'] == 'metric':
+                                el_unit = WRCCData.UNITS_METRIC[el_strip]
+                            else:
+                                el_unit = WRCCData.UNITS_ENGLISH[el_strip]
+                            ws.write(3, k+4, el + '('+ el_unit + ')')
                     else:
-                        for k, el in enumerate(el_list):ws.write(1, k+1, el)
+                        for k, el in enumerate(el_list):
+                            el_strip, base_temp = get_el_and_base_temp(el)
+                            if form['units'] == 'metric':
+                                el_unit = WRCCData.UNITS_METRIC[el_strip]
+                            else:
+                                el_unit = WRCCData.UNITS_ENGLISH[el_strip]
+                            ws.write(3, k+4, el + '('+ el_unit + ')')
                     row_number = 1
                     flag = 0
                 try:
@@ -685,6 +705,8 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
+    elev_unit = 'ft'
+    if form['units'] =='metric':elev_unit = 'm'
     #set file name
     if 'output_file_name' in form.keys():
         file_name = form['output_file_name']
@@ -723,7 +745,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
                 header_seperator = ' '
             row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator+stn_name]
             writer.writerow(row)
-            row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation'+ header_seperator+str(resultsdict['stn_elev'][stn])]
+            row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation(' + elev_unit + ')' + header_seperator+str(resultsdict['stn_elev'][stn])]
             writer.writerow(row)
             row = ['*Units'+ header_seperator,form['units']]
             writer.writerow(row)
@@ -731,14 +753,19 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             writer.writerow(row)
             row = ['*date']
             for el in resultsdict['elements']:
-                if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                    row.append(str(el))
-                elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
-                    row.append(str(el));row.append('flag')
-                elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                    row.append(str(el));row.append('ObsTime')
+                el_strip,base_temp = get_el_and_base_temp(el)
+                if form['units'] == 'metric':
+                    el_unit = WRCCData.UNITS_METRIC[el_strip]
                 else:
-                    row.append(str(el));row.append('flag');row.append('ObsTime')
+                    el_unit = WRCCData.UNITS_ENGLISH[el_strip]
+                if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
+                    row.append(str(el) + '(' + el_unit + ')')
+                elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
+                    row.append(str(el) + '(' + el_unit + ')');row.append('flag')
+                elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
+                    row.append(str(el) + '(' + el_unit + ')');row.append('ObsTime')
+                else:
+                    row.append(str(el) + '(' + el_unit + ')');row.append('flag');row.append('ObsTime')
             writer.writerow(row)
 
             for j, vals in enumerate(dat):
@@ -787,19 +814,24 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             ws.write(5, 0, 'Date')
             idx = 0
             for k, el in enumerate(resultsdict['elements']):
+                el_strip,base_temp = get_el_and_base_temp(el)
+                if form['units'] == 'metric':
+                    el_unit = WRCCData.UNITS_METRIC[el_strip]
+                else:
+                    el_unit = WRCCData.UNITS_ENGLISH[el_strip]
                 idx+=1
                 if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                    ws.write(5, k+1, el)
+                    ws.write(5, k+1, el + '(' + el_unit + ')')
                 elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
-                    ws.write(5, idx, el)
+                    ws.write(5, idx, el + '(' + el_unit + ')')
                     ws.write(5, idx+1,'flag')
                     idx+=1
                 elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                    ws.write(5, idx, el)
+                    ws.write(5, idx, el + '(' + el_unit + ')')
                     ws.write(5, idx+1,'obs time')
                     idx+=1
                 else:
-                    ws.write(5, idx, el)
+                    ws.write(5, idx, el + '(' + el_unit + ')')
                     ws.write(5, idx+1,'flag')
                     ws.write(5, idx+2,'obs time')
                     idx+=2
