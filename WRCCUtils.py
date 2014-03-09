@@ -353,12 +353,12 @@ def set_poly_and_PointIn(prms):
         shape = [float(sh) for sh in shape]
         if len(shape) == 3:#circle
             poly = shape
-            pointIn = getattr(WRCCUtils,'point_in_circle')
+            PointIn = getattr(WRCCUtils,'point_in_circle')
         elif len(shape)== 4:#bbox
-            poly = [(sh[0],sh[1]),(sh[0],sh[3]),(sh[2],sh[3]),(sh[2],sh[1])]
+            poly = [(shape[0],shape[1]),(shape[0],shape[3]),(shape[2],shape[3]),(shape[2],shape[1])]
             PointIn = getattr(WRCCUtils,'point_in_poly')
         else:
-            poly = [(sh[2*idx],sh[2*idx+1]) for idx in range(len(sh)/2)]
+            poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
             PointIn = getattr(WRCCUtils,'point_in_poly')
     else:
         if 'basin' in prms.keys():
@@ -899,7 +899,7 @@ def format_grid_data(req, params):
         data_summary = 'none'
     el_list_input = prms['elements']
     el_list = el_list_input
-    poly, pointIn = set_poly_and_PointIn(prms)
+    poly, PointIn = set_poly_and_PointIn(prms)
     #strip base temp of degree days:
     for el_idx,el in enumerate(el_list):
         el_strip, base_temp = get_el_and_base_temp(el)
