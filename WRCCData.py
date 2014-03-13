@@ -290,7 +290,7 @@ AREA_DEFAULTS = {
     'states':'states',
     'sw_states':'states',
     'county':'Churchill, 32001',
-    'basin':'Dixie Valley, 16060001',
+    'basin':'Hot Creek-Railroad Valleys,16060012',
     'shape':'-115,34, -115, 35,-114,35, -114, 34',
     'point': '-111,40',
     'location':'-111,40'

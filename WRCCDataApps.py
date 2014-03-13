@@ -281,8 +281,8 @@ def Sodpiii(**kwargs):
     dates = kwargs['dates']
     start_year = int(dates[0][0:4])
     end_year = int(dates[-1][0:4])
-    start_month = int(dates[0][5:7])
-    end_month = int(dates[-1][5:7])
+    start_month = int(dates[0][4:6])
+    end_month = int(dates[-1][4:6])
     #Initialize fixed data arrays
     lisdur = [99, 99, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,15, 20, 25, 30]
     mxmis = [0 for k in range(len(lisdur))]
@@ -2381,8 +2381,10 @@ def Sodlist_new(kwargs):
                         else:
                             dat = [stn_id + dates[idx]]
                     for el_idx, vX in enumerate(vx_list):
-                        data_flag_tobs = stn_data['data'][idx][el_idx]
-                        #wrcc_data = [data_val, flag1, flag2, tobs]
+                        if len(dates) ==1:
+                            data_flag_tobs = stn_data['data'][el_idx]
+                        else:
+                            data_flag_tobs = stn_data['data'][idx][el_idx]
                         wrcc_data = WRCCUtils.format_sodlist_data(data_flag_tobs)
                         if str(vX) == '4':
                             #add hour to data
@@ -2394,9 +2396,15 @@ def Sodlist_new(kwargs):
                         #Format to Kelly's output:
                         #pcpn, snow,snwd in 100th of inches
                         if str(vX) in ['4','7']:
-                            dat.append(int(100*float(wrcc_data[0])))
+                            try:
+                                dat.append(int(100*float(wrcc_data[0])))
+                            except:
+                                dat.append(-999)
                         elif str(vX) == '10':
-                            dat.append(int(10*float(wrcc_data[0])))
+                            try:
+                                dat.append(int(10*float(wrcc_data[0])))
+                            except:
+                                dat.append(-999)
                         else:
                             dat.append(wrcc_data[0])
                         dat.append(wrcc_data[1])
@@ -3013,9 +3021,12 @@ def Sodpad(**kwargs):
         #Kelly: don't do leap years, too complicated
         for yr in range(num_yrs):
             for doy in range(366):
+                #Omitting that fixes sodpad error 02/22
+                '''
                 if doy == 60:
                     el_data[yr][0][doy] = 99.00
                     continue
+                '''
                 val, flag = WRCCUtils.strip_data(str(el_data[yr][0][doy]))
                 if flag == 'M':
                     el_data[yr][0][doy] = 99.99
@@ -3077,11 +3088,14 @@ def Sodpad(**kwargs):
                     dates = kwargs['dates']
                     if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.005:
                         leap[yr] = 0
-                    #if iyeart == int(dates[0][0:4]) and ndoyt == 59:
                     if iyeart == 0 and ndoyt == 60:
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
+                    '''
+                    if ndoyt == 60:
+                        ndoyt+=1
+                    '''
                     pcp = float(el_data[iyeart][0][ndoyt])
                     #pcp = float(el_data[iyeart][0][ndoyt])
                     #Note that these sums continue to accumulate over all durations
@@ -3105,7 +3119,7 @@ def Sodpad(**kwargs):
                         if misdys[yr] == 1:
                             continue
                         nprsnt+=1
-                        if sumpcpn[yr] > thresh:
+                        if int(1000*sumpcpn[yr]) > int(1000*thresh):
                             sumthr+=1
                     aveobs = round(sumobs/float(idur))
                     if nprsnt != 0:

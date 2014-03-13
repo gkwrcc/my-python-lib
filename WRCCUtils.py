@@ -134,6 +134,15 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
         return 'Need absolute path of directory. You entered: %s' %str(dir_location)
     else:
         dr = str(dir_location)
+    '''
+    try:
+        with open(dr + kml_file_name):
+            pass
+
+        os.remove(dr + kml_file_name)
+    except:
+        pass
+    '''
     try:
         with open(dr + kml_file_name):
             if os.stat(dr + kml_file_name).st_size==0:
@@ -142,7 +151,6 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
                 return 'Success'
     except IOError:
         pass
-
 
     #Make General call to get the geojson for the input params
     req = AcisWS.make_gen_call_by_state(WRCCData.SEARCH_AREA_FORM_TO_ACIS[str(area_type)], str(state))
@@ -195,7 +203,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
 
         kml_file.write('    <Placemark>\n')
         kml_file.write('      <name>%s</name>\n' %poly['id'])
-        kml_file.write('      <description>%s (%s)</description>\n' %(name, poly['id']))
+        kml_file.write('      <description>%s, %s</description>\n' %(name, poly['id']))
         kml_file.write('      <styleUrl>#poly%s</styleUrl>\n' %poly_idx)
         kml_file.write('      <Polygon>\n')
         kml_file.write('      <tessellate>1</tessellate>\n')
@@ -1672,7 +1680,7 @@ def format_sodlist_data(data_flag_tobs):
     output is a list with 4 objects
     [wrcc_data_val, flag_1= ACIS flag, flag_2='', str(time_obs)]
     '''
-    wrcc_data = [' ', ' ',' ', '-1']
+    wrcc_data = ['', ' ',' ', '-1']
     if not isinstance(data_flag_tobs, list):
         return wrcc_data
     if len(data_flag_tobs)!= 3:
@@ -1684,9 +1692,17 @@ def format_sodlist_data(data_flag_tobs):
         if data in ['M','S','T','',' ']:
             wrcc_data[0] = '0'
         else:
-            wrcc_data[0] = data
+            try:
+                float(data)
+                wrcc_data[0] = data
+            except:
+                pass
     elif acis_flag in ['',' ']:
-        wrcc_data[0] = data
+        try:
+            float(data)
+            wrcc_data[0] = data
+        except:
+            pass
     if acis_flag not in ['',' ']:
         wrcc_data[1] = acis_flag
     if tobs not in ['',' ','-1']:

@@ -340,11 +340,18 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
+            #sort station networks so that coop is last
+            #so that coop markesr show on map
+            stn_networks_sorted = []
+            for n in stn_networks:
+                if n !='COOP':
+                    stn_networks_sorted.append(n)
+            if 'COOP' in stn_networks:
+                stn_networks_sorted.append('COOP')
             #Generate one entry per network that the station belongs to
-            #Only pick one entry per statipn
-            for j, sid in enumerate(stn_networks):
+            for j, sid in enumerate(stn_networks_sorted):
                 stn_dict = {"name":name,"uid":uid,"sid":stn_sids[j],"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
-                "state":state_key, "marker_icon": marker_icons[j], "marker_category":stn_networks[j],\
+                "state":state_key, "marker_icon":marker_icons[j], "marker_category":stn_networks[j],\
                 "stn_networks":stn_networks,"stn_network":','.join(stn_networks),"stn_network_codes": stn_network_codes}
                 #check which elements are available at the stations[valid_daterange is not empty]
                 valid_date_range_list = stn['valid_daterange']
