@@ -38,7 +38,8 @@ def make_request(url,params) :
         response = urllib2.urlopen(req)
         return json.loads(response.read())
     except urllib2.HTTPError as error:
-        if error.code == 400 : print error.msg
+        #if error.code == 400 : print error.msg
+        pass
 
 def MultiStnData(params):
     return make_request(base_url+'MultiStnData',params)

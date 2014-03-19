@@ -584,6 +584,7 @@ COLUMN_HEADERS = {
     'Sodsumm':None
 }
 
+
 ##########
 #SODXTRMTS
 ##########
@@ -643,6 +644,15 @@ MARKER_CHOICES = (
 ########
 #SODSUMM
 ########
+SODSUMM_TABLE_NAMES = {
+    'temp':'Temperature',
+    'prsn':'Precipitation',
+    'hdd':'Heating Degree Days',
+    'cdd':'Cooling Degree Days',
+    'gdd':'Growing Degree Days',
+    'corn':'Corn Growiing Degree Days',
+}
+
 TAB_NAMES_WITH_GRAPHICS = {
 'all': ['Temp', 'Precip', 'Snow', 'Hdd', 'Cdd', 'Gdd', 'Corn'],
 'both':['Temperature', 'Precip', 'Snow'],
