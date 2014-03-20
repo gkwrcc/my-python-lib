@@ -467,6 +467,7 @@ def Sodpiii(**kwargs):
                     monl = 12
                     iyearl = iyear - 1
                 ndayl = mon_lens[monl -1]
+                #n732[0] is val of previous day
                 n732[0] = ndata[iyearl][monl-1][ndayl-1]
                 while mont < 12:
                     if iyeart > num_yrs -1:
@@ -496,6 +497,8 @@ def Sodpiii(**kwargs):
                 #Day loop:
                 break_flag = False
                 for idoy in range(366):
+                    if idoy ==60 and not WRCCUtils.is_leap_year(start_year + iyear):
+                        continue
                     summ = 0
                     sumobs = 0
                     naccum = 0
@@ -514,8 +517,11 @@ def Sodpiii(**kwargs):
                             ntrip = 0
                         iday = idoy + iplus
                         val = n732[iday]
+                        #skip Feb 29 if not leap year
+                        if iday==60 and not WRCCUtils.is_leap_year(start_year + iyear):
+                            continue
                         if abs(val - kwargs['value_missing']) < 0.001:
-                            if idoy <= 364 and ntrip == 0:
+                            if iday <= 365 and ntrip == 0:
                                 nummis+=1
                                 #Trip the switch
                                 ntrip = 1
@@ -551,16 +557,28 @@ def Sodpiii(**kwargs):
                     if el_type in ['pcpn', 'snow', 'snwd', 'maxt']:
                         if summ > xmax:
                             xmax = summ
-                            mon, day = WRCCUtils.compute_mon_day(idoy + 1)
+                            #mon, day = WRCCUtils.compute_mon_day(idoy)
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
+                                mon, day = WRCCUtils.compute_mon_day(idoy-1)
+                            else:
+                                mon, day = WRCCUtils.compute_mon_day(idoy)
                     elif el_type == 'mint':
                         if summ < xmin:
                             xmin = summ
-                            mon, day = WRCCUtils.compute_mon_day(idoy + 1)
+                            #mon, day = WRCCUtils.compute_mon_day(idoy)
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
+                                mon, day = WRCCUtils.compute_mon_day(idoy-1)
+                            else:
+                                mon, day = WRCCUtils.compute_mon_day(idoy)
                     elif el_type == 'avgt':
                         if (kwargs['mean_temperatures'] == 'a' and summ > xmax) or (kwargs['mean_temperatures'] == 'b' and summ < xmin):
                             xmax = summ
                             xmin = summ
-                            mon, day = WRCCUtils.compute_mon_day(idoy + 1)
+                            #mon, day = WRCCUtils.compute_mon_day(idoy)
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
+                                mon, day = WRCCUtils.compute_mon_day(idoy-1)
+                            else:
+                                mon, day = WRCCUtils.compute_mon_day(idoy)
 
                 #End of day loop
                 if not mon:mon = '-1'
@@ -579,7 +597,7 @@ def Sodpiii(**kwargs):
                     x = xmin
                 else:
                     x = xmax
-                annser[iyear][0][numdur - 1] = x
+                annser[iyear][0][numdur - 1] = round(x,3)
                 annser[iyear][1][numdur - 1] = xdate
                 annser[iyear][2][numdur - 1] = nummis # In Kellys this is set to mysterios "xmisno"
                 if kwargs['days'] == 'i':
@@ -628,9 +646,9 @@ def Sodpiii(**kwargs):
             else:
                 cv = 0.0
             if count > 1.5:
-                h1 = summ / count
-                h2 = summ2 / count
-                h3 = summ3 / count
+                h1 = summ / float(count)
+                h2 = summ2 / float(count)
+                h3 = summ3 / float(count)
                 xm2 = h2 - h1*h1
                 xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
                 if abs(xm2) > 0.000001:
@@ -642,12 +660,12 @@ def Sodpiii(**kwargs):
                     sk = 0.0
             else:
                 sk = 0.0
-            stats[0][numdur-1] = average
-            stats[1][numdur-1] = stdev
-            stats[2][numdur-1] = cv
-            stats[3][numdur-1] = sk
-            stats[4][numdur-1] = xminn
-            stats[5][numdur-1] = xmaxx
+            stats[0][numdur-1] = round(average,2)
+            stats[1][numdur-1] = round(stdev,2)
+            stats[2][numdur-1] = round(cv,2)
+            stats[3][numdur-1] = round(sk,2)
+            stats[4][numdur-1] = round(xminn,2)
+            stats[5][numdur-1] = round(xmaxx,2)
             stats[6][numdur-1] = count
             if kwargs['days'] == 'i':
                 tbl_idx = 0
@@ -659,12 +677,12 @@ def Sodpiii(**kwargs):
             averages[tbl_idx] = '%.2f' %average
             stdevs[tbl_idx] = '%.2f' %stdev
             skews[tbl_idx] = '%.2f' %sk
-            results_0[i][tbl_idx][num_yrs].append('%.2f' % average)
-            results_0[i][tbl_idx][num_yrs+1].append('%.2f' % stdev)
-            results_0[i][tbl_idx][num_yrs+2].append('%.2f' % cv)
-            results_0[i][tbl_idx][num_yrs+3].append('%.2f' % sk)
-            results_0[i][tbl_idx][num_yrs+4].append('%.2f' % xminn)
-            results_0[i][tbl_idx][num_yrs+5].append('%.2f' % xmaxx)
+            results_0[i][tbl_idx][num_yrs].append('%.2f' % round(average,2))
+            results_0[i][tbl_idx][num_yrs+1].append('%.2f' % round(stdev,2))
+            results_0[i][tbl_idx][num_yrs+2].append('%.2f' % round(cv,2))
+            results_0[i][tbl_idx][num_yrs+3].append('%.2f' % round(sk,2))
+            results_0[i][tbl_idx][num_yrs+4].append('%.2f' % round(xminn,2))
+            results_0[i][tbl_idx][num_yrs+5].append('%.2f' % round(xmaxx,2))
             results_0[i][tbl_idx][num_yrs+6].append('%i' % int(count))
         #End numdur while loop... Phew...
         if kwargs['mean'] == 'am':stats[0] = amean
@@ -713,7 +731,7 @@ def Sodpiii(**kwargs):
                 pnonex = rtnlis[iretrn]
                 pexc = 1.0 - pnonex
                 period = 1.0 / (pexc)
-                psd = rtndur[iretrn][idur]
+                psd = 10.0 * rtndur[iretrn][idur]
                 if idur >=2:
                     value = stats[0][idur] + stats[1][idur] * psd
                 elif idur == 0:
