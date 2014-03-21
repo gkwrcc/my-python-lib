@@ -376,6 +376,8 @@ class SODDataJob:
         if not sids:
             return None
         #If user id, find corresponding network
+        stn_id = ''
+        stn_network = ''
         if 'sid' in self.params.keys():
             stn_id = self.params['sid']
             for sid in sids:
