@@ -172,18 +172,17 @@ def sodxtrmts_wrapper(argv):
                         row+='%6s' %str(v)
                 print row
     elif output_format =='html':
-        print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
-        print 'Content-type: text/html \r\n\r\n'
-        print '<HTML>'
+        print_html_header()
         print '<HEAD><TITLE>' + statistics_dict[monthly_statistic] + ' of ' + \
         WRCCData.DISPLAY_PARAMS[element]+', Station id: ' + stn_id +'</TITLE></HEAD>'
         print '<BODY BGCOLOR="#FFFFFF">'
         print '<CENTER>'
+        print '<H1>' + SX_wrapper.station_names[0] + ', ' + SX_wrapper.station_states[0] + '</H1>'
+        print '<H2>' + statistics_dict[monthly_statistic] +  ' of '+ WRCCData.DISPLAY_PARAMS[element] + ' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[element]] +') </H2>'
+        print '<H3> (<B>' + stn_id+ '</B>) </H3>'
         if not data or not results or not results[0]:
             print '<H1>No Data found!</H1>'
-            print '<H3>Station ID: ' + stn_id+ '</H3>'
             print '<H3>Start Year: ' + user_start_year + ', End Year:' + user_end_year +'</H3>'
-            print '<H2>'+statistics_dict[monthly_statistic] + ' of ' + WRCCData.DISPLAY_PARAMS[element] + '</H2>'
             print '</CENTER>'
             print '<PRE>'
             print '</PRE>'
@@ -260,10 +259,11 @@ def sodsum_wrapper(argv):
             output format choices:
                 html --> html output for display on WRCC pages
     Example: python WRCCWrappers.py sodsum 266779 20010101 20010201 multi html
+    Example: python WRCCWrappers.py sodsum 266779 por por maxt html
     '''
     #Sanity Check
     if len(argv) != 5:
-        print 'sodsumm needs 5 input parameters: \
+        print 'sodsum needs 5 input parameters: \
                coop_station_id start_date end_date element output_format.\
                You gave: %s' %str(argv)
         sys.exit(1)
@@ -271,6 +271,9 @@ def sodsum_wrapper(argv):
     stn_id = str(argv[0])
     start_date = str(argv[1]);end_date = str(argv[2])
     element = str(argv[3])
+    #Sanity Check
+    if element not in ['snow','snwd','maxt','mint', 'obst','pcpn','multi']:
+        format_sodsum_results('html', {}, {}, {})
     output_format = str(argv[4])
     data_params = {
                 'sid':stn_id,
@@ -287,13 +290,11 @@ def sodsum_wrapper(argv):
         results = SS_wrapper.run_app(data)
     except:
         SS_wrapper = {}
-        results = []
         data = {}
-    #Format results
-    if output_format == 'html':
-        pass
-    else:
-        print results
+        results = {}
+    #Format resumts
+    format_sodsum_results(output_format, results, data, SS_wrapper)
+
 def sodsumm_wrapper(argv):
     '''
     argv -- stn_id table_name start_year end_year max_missing_days output_format
@@ -353,6 +354,7 @@ def sodsumm_wrapper(argv):
         SS_wrapper = {
             'station_ids':[stn_id],
             'station_names':['No Data'],
+            'station_states':['No State']
         }
         results = []
         data = {}
@@ -384,7 +386,7 @@ def sodsumm_wrapper(argv):
             print_sodsumm_header(table_name, start_year, end_year, stn_id, 'No Data', 'html')
             results = []
         else:
-            print_sodsumm_header(table_name, start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],'html')
+            print_sodsumm_header(table_name, start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0],'html')
         if results and results[0]:
             for mon_idx, mon_vals in enumerate(results[0][table_name][1:]):
                 print '<TR ALIGN=RIGHT>'
@@ -506,7 +508,7 @@ def soddyrec_wrapper(argv):
 ########
 #Utils
 #######
-def print_sodsumm_header(table_name, start_year, end_year, station_id, station_name, output_format):
+def print_sodsumm_header(table_name, start_year, end_year, station_id, station_name, station_state, output_format):
     if output_format == 'txt_list':
         if table_name == 'temp':
             print 'Station:(%s) %s ' %(station_id, station_name)
@@ -545,13 +547,10 @@ def print_sodsumm_header(table_name, start_year, end_year, station_id, station_n
         elif table_name == 'corn':
             print '                    Corn Growing Degree Days'
     elif output_format == 'html':
-        print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
-        print 'Content-type: text/html \r\n\r\n'
-        print '<HTML>'
-        #print '<HEAD><TITLE>' + station_name + ', ' + station_id + ' Period of Record General Climate Summary - ' + WRCCData.SODSUMM_TABLE_NAMES[table_name] + '</TITLE></HEAD>'
+        print_html_header()
         print '<TITLE> ' + station_name + ', ' + station_id + ' Period of Record General Climate Summary - ' + WRCCData.SODSUMM_TABLE_NAMES[table_name] + '</TITLE>'
         print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
-        print '<H1> ' + station_name + ' </H1>'
+        print '<H1> ' + station_name + ', ' + station_state + ' </H1>'
         print '<H3>Period of Record General Climate Summary - ' + WRCCData.SODSUMM_TABLE_NAMES[table_name] + '</H3>'
         print '<TABLE BORDER>'
         print '<TR>'
@@ -692,6 +691,103 @@ def print_sodsumm_footer(app_params):
     print '<HR>'
     print '<address>Western Regional Climate Center, <A HREF="mailto:wrcc@dri.edu">wrcc@dri.edu </A> </address>'
 
+def format_sodsum_results(output_format, results, data, wrapper):
+    if output_format == 'html':
+        print_html_header()
+        print '<TITLE>  POR - Station Metadata </TITLE>'
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<CENTER>'
+        if not results or not data or not wrapper:
+            print '<H2>   Station Metadata </H2>'
+            print '<H2>No Data found!</H2>'
+        else:
+            print '<H1>  '+ wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '</H1>'
+            print '<H2>   Station Metadata </H2>'
+            print '<BR>'
+            print '<TABLE>'
+            print '<TR><TH>Count</TH><TH> Number</TH><TH>   Station Name   </TH><TH>Lat</TH><TH> Long</TH><TH>  Elev</TH><TH>  Start</TH><TH COLSPAN=6> ObsTyp</TH><TH>  End</TH></TR>'
+            print '<TR><TD> </TD><TD> (Coop) </TD><TD>  (From ACIS listing) </TD><TD>    ddmm</TD><TD> dddmm</TD><TD> ft</TD><TD> yy mm</TD><TD> t</TD><TD>p</TD><TD>w</TD><TD>s</TD><TD>e</TD><TD>h</TD><TD> yy mm</TD></TR>'
+            print '<TR><TD>=====</TD><TD> ======</TD><TD>   =======================</TD><TD> ====</TD><TD> =====</TD><TD> ====</TD><TD>  =====</TD><TD> =</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD> =====</TD></TR>'
+            print '<TR><TD>' + wrapper.station_countys[0] + '</TD><TD>' + wrapper.station_ids[0] + '</TD><TD>' + wrapper.station_names[0] + '</TD><TD>' + str(int(100*round(float(wrapper.station_lls[0].rstrip(']').split(',')[1]),2))) + '</TD><TD>' + str(int(100*round(float(wrapper.station_lls[0].lstrip('[').split(',')[0][1:]),2))) + '</TD><TD>' + str(int(round(float(wrapper.station_elevs[0])))) + '</TD><TD>' + '99 01' + '</TD><TD>U</TD><TD>U</TD><TD>  </TD><TD>  </TD><TD>  </TD><TD> U</TD><TD> 99 99</TD></TR>'
+            print '</TABLE></CENTER>'
+            print '<HR>'
+            print '<CENTER>'
+            print '<H1> Statistics by element </H1>'
+            print '(From ACIS data archives)<BR>'
+            print 'Last updated ' + today
+            print '. Dates are format of YYYYMMDD. Numbers are total Number of observations<BR>'
+            print '<TABLE>'
+            el_header = '<TR><TH>STATION </TH><TH>START </TH><TH> END </TH>'
+            h_lines = '<TR><TH>======= </TH><TH>======== </TH><TH> ======== </TH>'
+            el_data = '<TR><TD>' + wrapper.station_ids[0] + '</TD><TD>' + results[0]['start'] + '</TD><TD>' + results[0]['end'] + '</TD>'
+            for el in data['elements']:
+                el_header+= '<TH>' + el.upper() + '</TH>'
+                h_lines+='<TH> ===== </TH>'
+                el_data+='<TD>' + str(results[0][el]) + '</TD>'
+            el_header+='</TR>'
+            h_lines+='</TR>'
+            el_data+='</TR>'
+            print el_header
+            print h_lines
+            print el_data
+            print '</TABLE><BR>'
+            print '</CENTER><BR>'
+            print ' STATION - ACIS COOP Station number<BR>'
+            print 'START - First Date in record<BR>'
+            print 'END - Last Date in record (when last compiled)<BR>'
+            print 'PCPN - Precipitation<BR>'
+            print 'SNOW - Snowfall<BR>'
+            print 'SNWD - Snow depth<BR>'
+            print 'MAXT - Daily Max. Temperature<BR>'
+            print 'MINT - Daily Min. Temperature<BR>'
+            print 'TOBS - Temperature at Observation time<BR>'
+            print 'EVAP - Evaporation<BR>'
+            print 'WDMV - Wind Movement<BR>'
+            print '<HR>'
+            print '<CENTER>'
+            print '<H1> Statistics by observation </H1>'
+            print '(From ACIS data archives) <BR>'
+            print 'Last updated ' + today
+            print '. Dates are format of YYYYMMDD. Numbers are total Number of observations<BR>'
+            print '<TABLE>'
+            print '<TR><TH> STATION </TH>'
+            print '<TH> NAME </TH>'
+            print '<TH> START </TH>'
+            print '<TH> END </TH>'
+            print '<TH> POSBL </TH>'
+            print '<TH> PRSNT </TH>'
+            print '<TH> LNGPR </TH>'
+            print '<TH> MISSG </TH>'
+            print '<TH> LNGMS </TH></TR>'
+            print '<TR><TD> ====== </TD><TD> ======================== </TD><TD> ======== </TD><TD> ======== </TD><TD> ===== </TD><TD> ===== </TD><TD> ===== </TD><TD> ===== </TD><TD> ===== </TD></TD>'
+            data = '<TR><TD>' + wrapper.station_ids[0] + '</TD><TD>'+ wrapper.station_names[0] + '</TD><TD>' + results[0]['start'] + '</TD><TD>' + results[0]['end'] + '</TD>'
+            for key in ['PSBL', 'PRSNT','LNGPR','MISSG','LNGMS']:
+                data+='<TD>' + str(results[0][key]) + '</TD>'
+            data+='</TR>'
+            print data
+            print '</TABLE>'
+            print '<BR>'
+            print '</CENTER>'
+            print 'STATION - NCDC COOP Station number<BR>'
+            print 'NAME - Most recent name in NCDC history file<BR>'
+            print 'START - First Date in record<BR>'
+            print 'END - Last Date in record (when last compiled)<BR>'
+            print 'POSBL - Possible number of observations between START and END date<BR>'
+            print 'PRSNT - Number of days present in record<BR>'
+            print 'LNGPR - Largest number of consecutive observations<BR>'
+            print 'MISSG - Total number of missing days (no observation)<BR>'
+            print 'LNGMS - Largest number of consecutive missing observations<BR>'
+            print '<BR>'
+    else:
+        print results[0]
+
+def print_html_header():
+    print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
+    print 'Content-type: text/html \r\n\r\n'
+    print '<HTML>'
+
+
+
 #########
 # M A I N
 #########
@@ -703,9 +799,3 @@ if __name__ == "__main__":
         print 'Programs: ' + str(programs)
     #execute wrapper
     globals()[program + '_wrapper'](sys.argv[2:])
-    #getattr(WRCCWrappers,program + '_wrapper')(sys.argv[2:])
-    '''
-    if program == 'sodsumm':sodsumm_wrapper(sys.argv[2:])
-    if program == 'sodxtrmts':sodxtrmts_wrapper(sys.argv[2:])
-    if program == 'soddyrec':soddyrec_wrapper(sys.argv[2:])
-    '''
