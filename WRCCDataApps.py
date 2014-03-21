@@ -3039,12 +3039,12 @@ def Sodpad(**kwargs):
         #Kelly: don't do leap years, too complicated
         for yr in range(num_yrs):
             for doy in range(366):
+
                 #Omitting that fixes sodpad error 02/22
-                '''
                 if doy == 60:
                     el_data[yr][0][doy] = 99.00
                     continue
-                '''
+
                 val, flag = WRCCUtils.strip_data(str(el_data[yr][0][doy]))
                 if flag == 'M':
                     el_data[yr][0][doy] = 99.99
@@ -3097,10 +3097,6 @@ def Sodpad(**kwargs):
                         iyeart+=1
                     if iyeart > range(num_yrs)[-1]:
                         continue
-                    '''
-                    if iyeart > num_yrs - 1:
-                        continue
-                    '''
                     #look for leap days and skip Feb 29 if not a leap year
                     #note that -99.00 applies just to day 60, else it's -99.99
                     dates = kwargs['dates']
@@ -3110,10 +3106,6 @@ def Sodpad(**kwargs):
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
-                    '''
-                    if ndoyt == 60:
-                        ndoyt+=1
-                    '''
                     pcp = float(el_data[iyeart][0][ndoyt])
                     #pcp = float(el_data[iyeart][0][ndoyt])
                     #Note that these sums continue to accumulate over all durations
@@ -3525,7 +3517,7 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     return results
 
 
-def Sodsum(data, elements, coop_station_ids, station_names):
+def Sodsum_old(data, elements, coop_station_ids, station_names):
     '''
     COUNTS THE NUMBER OF OBSERVATIONS FOR THE PERIOD OF RECORD
     OF EACH STATION IN THE SOD DATA SET. IT ALSO FINDS THE AOUNT OF
@@ -3637,6 +3629,115 @@ def Sodsum(data, elements, coop_station_ids, station_names):
 
     return results
 
+def Sodsum(**kwargs):
+    '''
+    Executes Sodsum on multiple stations
+    element in elements correspond to data values in data, i.e data[i][j] is value corresponding to elements[j]
+    Results.keys():
+        coop_station_id, stn_name, start, end, pcpn, snow, snwd, maxt, mint, tobs, evap, wdmv, wesf, posbl, prsnt, lngpr, missg, lngms
+    '''
+    results = defaultdict(dict)
+    #Loop over stations
+    for i, stn in enumerate(kwargs['coop_station_ids']):
+        results[i]['coop_station_id'] = stn
+        results[i]['station_name'] = kwargs['station_names'][i]
+        results_list = []
+        for j in kwargs['elements']:
+            results_list.append(j)
+            results[i][j] = 0
+        for j in ['PSBL','PRSNT','LNGPR', 'MISSG', 'LNGMS']:
+            results_list.append(j)
+            results[i][j] = 0
+        if not kwargs['data'][i]:
+            results[i]['no_data'] = 'No data to work with'
+        s_date = kwargs['dates'][0];e_date = kwargs['dates'][-1]
+        results[i]['start'] = s_date
+        results[i]['end'] = e_date
+        for el in kwargs['elements']:
+            results[i][el] = 0
+        #Find number of records possible:
+        #FIX ME: Acis_WS MultiStndata calls do not return dates
+        #For now, need to get start/end dates from AcissWS call and presume no gaps in data
+        jul_day_start = WRCCUtils.JulDay(int(s_date[0:4]), int(s_date[4:6]), int(s_date[6:8]))
+        jul_day_end = WRCCUtils.JulDay(int(e_date[0:4]), int(e_date[4:6]), int(e_date[6:8]))
+        results[i]['PSBL'] = str(jul_day_end - jul_day_start)
+
+        c_prsnt = 0 #for counting present observations
+        c_lngpr = 0 #for counting number of consecutive present observations
+        c_missg = 0 #for counting missing observations
+        c_lngms = 0  #for counting number of consecutive missing observations
+        #Loop over data
+        for j in range(len(kwargs['data'][i])):
+            flag_found = 0
+            if j == 0:
+                jd = jul_day_start
+                jd_old = jul_day_start -1
+            else:
+                jd = WRCCUtils.JulDay(int(kwargs['dates'][j][0:4]), int(kwargs['dates'][j][4:6]), int(kwargs['dates'][j][6:8]))
+                jd_old = WRCCUtils.JulDay(int(kwargs['dates'][j-1][0:4]), int(kwargs['dates'][j-1][4:6]), int(kwargs['dates'][j-1][6:8]))
+
+            if jd - jd_old != 1:
+                c_missg+= jd - jd_old -1
+                c_lngms+= jd - jd_old -1
+
+            #Loop over each element for date
+            for k, el in enumerate(kwargs['elements']):
+                if len(kwargs['data'][i][j])>=len(kwargs['elements']):
+                    val = str(kwargs['data'][i][j][k])
+                else:
+                    val = 'M'
+
+                if val == 'M':
+                    continue
+                else:
+                    results[i][el]+=1
+                    flag_found = 1
+
+            line_vals = [str(kwargs['data'][i][j][k]) for k in range(len(kwargs['data'][i][j]))]
+            if j == 0:
+                if all(val == 'M' for val in line_vals):
+                    c_missg+=1
+                    c_lngms+=1
+                else:
+                    c_prsnt+=1
+                    c_lngpr+=1
+                continue
+
+
+            if all(val == 'M' for val in line_vals):
+                c_missg+=1
+                if all(val == 'M' for val in line_vals):
+                    #MISSG streak is continuing
+                    c_lngms+=1
+                else:
+                    #PRSNT streak is ending here, MISSG streak is starting
+                    c_lngms=1
+                    #Update results[lngpr] if need be
+                    if c_lngpr > results[i]['LNGPR']:
+                        results[i]['LNGPR'] = c_lngpr
+                    c_lngpr = 0
+            else:
+                c_prsnt+=1
+                if all(val == 'M' for val in line_vals):
+                    #MISSG steak is endng here, PRSNT streak is starting
+                    c_lngpr=1
+                    #Update results[lngms] if need be
+                    if c_lngms > results[i]['LNGMS']:
+                        results[i]['LNGMS'] = c_lngms
+                    c_lngms = 0
+                else:
+                    #PRSNT streak continuing
+                    c_lngpr+=1
+
+        #Update results at end of run
+        results[i]['MISSG'] = c_missg
+        results[i]['PRSNT'] = c_prsnt
+        if c_lngms > results[i]['LNGMS']:
+            results[i]['LNGMS'] = c_lngms
+        if c_lngpr > results[i]['LNGPR']:
+            results[i]['LNGPR'] = c_lngpr
+
+    return results
 
 def SodsumMulti(data, dates, elements, coop_station_ids, station_names):
     '''

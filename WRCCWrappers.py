@@ -249,6 +249,51 @@ def sodxtrmts_wrapper(argv):
     else:
         print results[0]
 
+def sodsum_wrapper(argv):
+    '''
+    argv -- stn_id start_date end_date element output_format
+
+    Explaination:
+            element choices:
+                One of:
+                pcpn, snow, snwd, maxt, mint, obst, multi (all 6)
+            output format choices:
+                html --> html output for display on WRCC pages
+    Example: python WRCCWrappers.py sodsum 266779 20010101 20010201 multi html
+    '''
+    #Sanity Check
+    if len(argv) != 5:
+        print 'sodsumm needs 5 input parameters: \
+               coop_station_id start_date end_date element output_format.\
+               You gave: %s' %str(argv)
+        sys.exit(1)
+    #Define parameters
+    stn_id = str(argv[0])
+    start_date = str(argv[1]);end_date = str(argv[2])
+    element = str(argv[3])
+    output_format = str(argv[4])
+    data_params = {
+                'sid':stn_id,
+                'start_date':start_date,
+                'end_date':end_date,
+                'element':element
+                }
+    app_params = {}
+    try:
+        SS_wrapper = Wrapper('Sodsum', data_params, app_specific_params=app_params)
+        #Get data
+        data = SS_wrapper.get_data()
+        #Run app
+        results = SS_wrapper.run_app(data)
+    except:
+        SS_wrapper = {}
+        results = []
+        data = {}
+    #Format results
+    if output_format == 'html':
+        pass
+    else:
+        print results
 def sodsumm_wrapper(argv):
     '''
     argv -- stn_id table_name start_year end_year max_missing_days output_format
@@ -652,10 +697,15 @@ def print_sodsumm_footer(app_params):
 #########
 if __name__ == "__main__":
     program = sys.argv[1]
-    programs = ['sodsumm', 'sodxtrmts','soddyrec']
+    programs = ['sodsumm', 'sodxtrmts','soddyrec', 'sodsum']
     if program not in programs:
         print 'First argument to WRCCWrappers should be valid progam name.'
         print 'Programs: ' + str(programs)
+    #execute wrapper
+    globals()[program + '_wrapper'](sys.argv[2:])
+    #getattr(WRCCWrappers,program + '_wrapper')(sys.argv[2:])
+    '''
     if program == 'sodsumm':sodsumm_wrapper(sys.argv[2:])
     if program == 'sodxtrmts':sodxtrmts_wrapper(sys.argv[2:])
     if program == 'soddyrec':soddyrec_wrapper(sys.argv[2:])
+    '''

@@ -287,6 +287,7 @@ class SODDataJob:
         self.app_specific_params = app_specific_params
         self.app_name = app_name
         self.el_type_element_dict = {
+            #Sodsumm
             'all_sodsumm':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
             'all':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
             'tmp':['maxt', 'mint', 'pcpn'],
@@ -298,10 +299,14 @@ class SODDataJob:
             'dd':['hdd','cdd'],
             'hc':['maxt','mint'],
             'g':['maxt','mint'],
+            #Sodxtrmts
             'range':['maxt', 'mint'],
             'avgt':['maxt', 'mint'],
             'dtr':['maxt', 'mint'],
             'dd_raw':['maxt', 'mint'],
+            #Sodsum
+            'multi':['pcpn','snow','snwd','maxt','mint','obst'],
+            #Single Element
             'pcpn':['pcpn'],
             'snow':['snow'],
             'snwd':['snwd'],
@@ -584,11 +589,14 @@ class SODDataJob:
         '''
         #Set up data output dictonary
         error = ''
-        data = [[] for i in station_ids]
+        if self.app_name == 'Sodsum':
+            data = {}
+        else:
+            data = [[] for i in station_ids]
         for i, stn in enumerate(station_ids):
             if self.app_name == 'Soddyrec':
                 data[i] = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
-            elif self.app_name in ['Sodrun', 'Sodrunr']:
+            elif self.app_name in ['Sodrun', 'Sodrunr', 'Sodsum']:
                 data[i] = []
             else:
                 data[i] = [[] for el in elements]
