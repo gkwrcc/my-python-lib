@@ -22,6 +22,30 @@ import WRCCClasses, AcisWS, WRCCData, WRCCUtils
 ####################################
 #FUNCTIONS
 #####################################
+def get_station_ids(stn_json_file_path):
+    '''
+    finds all station ids of the
+    stations listed in the json file
+    Used at statiion locator app to set initial station ids for
+    link to data find
+    '''
+    stn_ids = ''
+    json_data = {'stations':[]}
+    try:
+        with open(stn_json_file_path, 'r') as json_f:
+            json_data = u_convert(json.loads(json_f.read()))
+    except:
+        passs
+    name_previous = ''
+    for idx,stn in enumerate(json_data['stations']):
+        if stn['name'] == name_previous:
+            continue
+        name_previous = stn['name']
+        stn_ids+=stn['sids'][0]
+        if idx < len(json_data['stations']) - 1:
+            stn_ids+=','
+    return stn_ids
+
 def convert_to_metric(element, value):
     el,base_temp = get_el_and_base_temp(element)
     try:
