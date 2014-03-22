@@ -194,9 +194,9 @@ def check_station_id(form):
 def check_station_ids(form):
     err = None
     s = form['station_ids']
-    s_list = s.replace(' ','').split(',')
-    if len(s_list) == 1:
-        err = '%s is not a comma seperated list of two or more stations.' %s
+    s_list = s.split(',')
+    if len(s_list) == 0:
+        err = '%s is not a comma separated list of two or more stations.' %s
     return err
 
 def check_location(form):
