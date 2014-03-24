@@ -68,36 +68,33 @@ def sodxtrmts_wrapper(argv):
             departure from averages:
                 T  --> True
                 F  --> False
-            output format choices:
-                list --> python list of list
-                txt_list --> output looks like Kelly's commandline output
-                html --> html output that Greg will use for wrapper
-    Example: python WRCCWrappers.py sodxtrmts 266779 2000 2012 avgt mave 5 04 F html
+    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+avgt+mave+5+01+F
     '''
     #Sanity Check
-    if len(argv) != 9:
-        print 'Error: sodxtrmts  needs 9 input parameters: \
-               stn_id start_year end_year element monthly_statistic max_missing_days \
-               start_month departures_from_averages output_format.'
-        sys.exit(1)
-
+    if len(argv) != 8:
+        format_sodxtrmts_results([], [], {'error':'Invalid Request'}, {}, {}, '0000', '0000')
     #Assign input parameters:
-    statistics_dict = {
-        'mmax':'Monthly Maximum',
-        'mmin':'Monthly Miniimum',
-        'mave':'Monthly Average',
-        'sd': 'Standard Deviation',
-        'ndays':'Number of Days',
-        'rmon':'Range during Month',
-        'msum':'Monthly Sum'
-    }
     stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
+    #Sanity check on start/end year
+    if start_year.upper() != 'POR':
+        try:
+            int(start_year)
+        except:
+            format_sodxtrmts_results([], [], {'error':'Invalid Start Year: %s' %end_year}, {}, {}, '0000', '0000')
+    if end_year.upper() != 'POR':
+        try:
+            int(end_year)
+        except:
+            format_sodxtrmts_results([], [], {'error':'Invalid End Year: %s' %start_year}, {}, {}, '0000', '0000')
     user_start_year = str(argv[1]);user_end_year = str(argv[2])
     element = str(argv[3]);monthly_statistic = str(argv[4])
-    max_missing_days = int(argv[5]); start_month = str(argv[6])
+    try:
+        max_missing_days = int(argv[5])
+    except:
+        format_sodxtrmts_results([], [], {'error':'Invalid Max Missing Days: %s' %argv[5] }, {}, {}, '0000', '0000')
+    start_month = str(argv[6])
     departures_from_averages=str(argv[7])
-    output_format = str(argv[8])
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
         valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
@@ -107,6 +104,11 @@ def sodxtrmts_wrapper(argv):
             start_year = valid_daterange[0][0:4]
         if end_year.upper() == 'POR':
             end_year = valid_daterange[1][0:4]
+    #more sanity check
+    if monthly_statistic not in ['mmax','mmin','mave','sd','ndays','rmon','msum']:
+        format_sodxtrmts_results([], [], {'error':'Invalid Analysis: %s' % monthly_statistic}, {}, {}, '0000', '0000')
+    if element not in ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'avgt', 'dtr', 'hdd', 'cdd', 'gdd']:
+        format_sodxtrmts_results([], [], {'error':'Invalid Element: %s' %element }, {}, {}, '0000', '0000')
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -132,125 +134,11 @@ def sodxtrmts_wrapper(argv):
         results = []
         fa_results = []
         data = []
-    #format results
-    if output_format =='txt_list':
-        #Header
-        print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(stn_id, WRCCData.ACIS_ELEMENTS_DICT[element]['name_long'],statistics_dict[monthly_statistic])
-        try:
-            print ' STATION : %s' %SX_wrapper.station_names[0]
-        except:
-            print ' STATION : No station name found'
-        print ' a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
-        print ' z = 26 or more days missing, A = Accumulations present '
-        print ' Long-term means based on columns; thus, the monthly row may not '
-        print '  sum (or average) to the long-term annual value.'
-        print ''
-        print ' MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS :  %s' %max_missing_days
-        print ''
-        #Data
-        if not results:
-            print 'NO DATA FOUND!'
-        elif not results[0]:
-            print 'NO DATA FOUND!'
-        else:
-            for yr_idx,yr_data in enumerate(results[0]):
-                if yr_idx == len(results[0]) - 6:
-                    print ''
-                row = ''
-                for idx,val in enumerate(yr_data):
-                    if str(val) == '-9999.00':
-                        v = '-9999'
-                    elif  str(val) == '9999.00':
-                        v = '9999'
-                    else:
-                        v = val
-                    if idx == 0:
-                        row+='%7s ' %str(v)
-                    elif idx != 0 and idx%2 ==0:
-                        row+='%s' %str(v)
-                    else:
-                        row+='%6s' %str(v)
-                print row
-    elif output_format =='html':
-        print_html_header()
-        print '<HEAD><TITLE>' + statistics_dict[monthly_statistic] + ' of ' + \
-        WRCCData.DISPLAY_PARAMS[element]+', Station id: ' + stn_id +'</TITLE></HEAD>'
-        print '<BODY BGCOLOR="#FFFFFF">'
-        print '<CENTER>'
-        print '<H1>' + SX_wrapper.station_names[0] + ', ' + SX_wrapper.station_states[0] + '</H1>'
-        print '<H2>' + statistics_dict[monthly_statistic] +  ' of '+ WRCCData.DISPLAY_PARAMS[element] + ' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[element]] +') </H2>'
-        print '<H3> (<B>' + stn_id+ '</B>) </H3>'
-        if not data or not results or not results[0]:
-            print '<H1>No Data found!</H1>'
-            print '<H3>Start Year: ' + user_start_year + ', End Year:' + user_end_year +'</H3>'
-            print '</CENTER>'
-            print '<PRE>'
-            print '</PRE>'
-            print '</BODY>'
-            print '</HTML>'
-        else:
-            print '</CENTER>'
-            print '<CENTER>'
-            print '<CAPTION ALIGN=LEFT><CENTER>'
-            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
-            print '<BR>'
-            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
-            print '<BR>'
-            print 'z = 26 or more days missing, A = Accumulations present'
-            print '<BR>'
-            print 'Long-term means based on columns; thus, the monthly row may not'
-            print '<BR>'
-            print 'sum (or average) to the long-term annual value.'
-            print '<BR>'
-            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(max_missing_days)
-            print '<BR>'
-            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
-            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
-            print '<BR>'
-            if not data or not results or not results[0]:
-                print 'NO DATA FOUND!'
-                print '</CENTER>'
-                print '<PRE></PRE>'
-            else:
-                print '<TABLE BORDER=0 CELLSPACING=2 CELLPADDING=0>'
-                header = '<TR><TD>YEAR(S)</TD>'
-                for mon in WRCCData.NUMBER_TO_MONTH_NAME.keys():
-                    header+='<TD ALIGN=CENTER COLSPAN=2>' + WRCCData.NUMBER_TO_MONTH_NAME[mon].upper() + '</TD>'
-                header+='<TD ALIGN=CENTER COLSPAN=2>ANN</TD></TR>'
-                print header
-                for yr_idx,yr_data in enumerate(results[0]):
-                    if yr_idx == len(results[0]) - 6:
-                        print '<TR> <TD ALIGN=CENTER COLSPAN=26> Period of Record Statistics  </TD> </TR>'
-                    row = '<TR>'
-                    for idx,val in enumerate(yr_data):
-                        if str(val) == '-9999.00':
-                            v = '-9999'
-                        elif  str(val) == '9999.00':
-                            v = '9999'
-                        else:
-                            v = val
-                        if idx == 0:
-                            row+='<TD ALIGN=CENTER WIDTH=8%>'
-                        elif idx % 2 == 0:
-                            row+='<TD ALIGN=LEFT WIDTH=1%>'
-                        else:
-                            row+='<TD ALIGN=RIGHT WIDTH=6%>'
-
-                        row+=v + '</TD>'
-                    row+='</TR>'
-                    print row
-                print '</TABLE>'
-                print '</CENTER>'
-                print '<PRE>'
-                print '</PRE>'
-                print '</BODY>'
-                print '</HTML>'
-    else:
-        print results[0]
+    format_sodxtrmts_results(results, data, data_params, app_params, SX_wrapper, user_start_year, user_end_year)
 
 def sodsum_wrapper(argv):
     '''
-    argv -- stn_id start_date end_date element output_format
+    argv -- stn_id start_date end_date element
 
     Explaination:
             element choices:
@@ -258,23 +146,35 @@ def sodsum_wrapper(argv):
                 pcpn, snow, snwd, maxt, mint, obst, multi (all 6)
             output format choices:
                 html --> html output for display on WRCC pages
-    Example: python WRCCWrappers.py sodsum 266779 20010101 20010201 multi html
-    Example: python WRCCWrappers.py sodsum 266779 por por maxt html
+    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+por+multi
     '''
     #Sanity Check
-    if len(argv) != 5:
-        print 'sodsum needs 5 input parameters: \
-               coop_station_id start_date end_date element output_format.\
-               You gave: %s' %str(argv)
-        sys.exit(1)
+    if len(argv) != 4:
+        format_sodsum_results({}, {}, {'error':'Invalid Request'},{})
     #Define parameters
     stn_id = str(argv[0])
     start_date = str(argv[1]);end_date = str(argv[2])
+    #Sanity Check on dates
+    if start_date.upper() != 'POR':
+        if len(start_date)!=8:
+            format_sodsum_results({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+        else:
+            try:
+                int(start_date)
+            except:
+                format_sodsum_results({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+    if end_date.upper() != 'POR':
+        if len(end_date)!=8:
+            format_sodsum_results({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
+        else:
+            try:
+                int(end_date)
+            except:
+                format_sodsum_results({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
     element = str(argv[3])
-    #Sanity Check
+    #Sanity Check on element
     if element not in ['snow','snwd','maxt','mint', 'obst','pcpn','multi']:
-        format_sodsum_results('html', {}, {}, {})
-    output_format = str(argv[4])
+        format_sodsum_results({}, {}, {'error':'Invalid Element: %s' %element}, {})
     data_params = {
                 'sid':stn_id,
                 'start_date':start_date,
@@ -293,11 +193,11 @@ def sodsum_wrapper(argv):
         data = {}
         results = {}
     #Format resumts
-    format_sodsum_results(output_format, results, data, SS_wrapper)
+    format_sodsum_results(results, data, data_params,SS_wrapper)
 
 def sodsumm_wrapper(argv):
     '''
-    argv -- stn_id table_name start_year end_year max_missing_days output_format
+    argv -- stn_id table_name start_year end_year max_missing_days
 
     Explaination:
             table_name choices:
@@ -305,14 +205,12 @@ def sodsumm_wrapper(argv):
             output format choices:
                 list --> python list of list
                 txt_list --> output looks like Kelly's commandline output
-    Example: python WRCCWrappers.py sodsumm 266779 temp 2000 2012 5 txt_list
+    Example (commandline): python WRCCWrappers.py sodsumm 266779 temp 2000 2012 5
+    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
     '''
-    #Sanity Check
-    if len(argv) != 6:
-        print 'sodsumm needs 6 input parameters: \
-               coop_station_id table_name start_year end_year max_missing_days output_format.\
-               You gave: %s' %str(argv)
-        sys.exit(1)
+    #Sanity Check on input parameter number
+    if len(argv) != 5:
+        format_sodsumm_results([],'',{'error':'Invalid Request'}, '0000', '0000', '', '','')
     #Assign input parameters:
     stn_id = str(argv[0]);table_name = str(argv[1])
     if table_name in ['hdd','cdd']:
@@ -322,6 +220,17 @@ def sodsumm_wrapper(argv):
     else:
         tbls =  table_name
     start_year = str(argv[2]);end_year = str(argv[3])
+    #Sanity check on start/end year
+    if start_year.upper() != 'POR':
+        try:
+            int(start_year)
+        except:
+            format_sodsumm_results([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
+    if end_year.upper() != 'POR':
+        try:
+            int(end_year)
+        except:
+            format_sodsumm_results([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
         valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
@@ -331,8 +240,13 @@ def sodsumm_wrapper(argv):
             start_year = valid_daterange[0][0:4]
         if end_year.upper() == 'POR':
             end_year = valid_daterange[1][0:4]
-    max_missing_days = int(argv[4])
-    output_format = str(argv[5])
+    try:
+        max_missing_days = int(argv[4])
+    except:
+        format_sodsumm_results([],'',{'error':'Invalid Max Missing Days: %s' %argv[4] }, '0000', '0000', '', '','')
+    #More Sanity checks
+    if table_name not in ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']:
+        format_sodsumm_results([],'',{'error':'Invalid Table Name: %s' %table_name }, '0000', '0000','','','')
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -359,45 +273,13 @@ def sodsumm_wrapper(argv):
         results = []
         data = {}
     #Format results
-    if output_format == 'txt_list':
-        if not data or ('error' in data.keys() and data['error']):
-            print_sodsumm_header(table_name, start_year, end_year, stn_id, 'No Data', 'txt_list')
-            results = []
-        else:
-            print_sodsumm_header(table_name, start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0], 'txt_list')
-        if results and results[0]:
-            for mon_idx, mon_vals in enumerate(results[0][table_name]):
-                if table_name in ['temp', 'prsn'] and mon_idx == len(results[0][table_name])-5:
-                    print ''
-                row = ''
-                row_end = ''
-                for v_idx, val in enumerate(mon_vals):
-                    if v_idx in [5,7] and table_name == 'temp':
-                        row+='%9s' %str(val)
-                    elif v_idx in [6,7] and table_name == 'prsn':
-                        row+='%8s' %str(val)
-                    elif v_idx in [8,9,10,11] and table_name == 'prsn':
-                        row_end+='%6s' %str(val)
-                    else:
-                        row+='%6s' %str(val)
-                print row + row_end
-    elif output_format == 'html':
-        if not data or ('error' in data.keys() and data['error']):
-            print_sodsumm_header(table_name, start_year, end_year, stn_id, 'No Data', 'html')
-            results = []
-        else:
-            print_sodsumm_header(table_name, start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0],'html')
-        if results and results[0]:
-            for mon_idx, mon_vals in enumerate(results[0][table_name][1:]):
-                print '<TR ALIGN=RIGHT>'
-                for v_idx, val in enumerate(mon_vals):
-                    print '<TD>' + str(val) + '</TD>'
-                print '</TR>'
-        print '</TABLE>'
-        print_sodsumm_footer(app_params)
-
+    if not data or ('error' in data.keys() and data['error']) or not results:
+        format_sodsumm_results([],table_name, {'error': 'No Data found!'}, start_year, end_year, stn_id, 'No Data found for Station ID: ' + stn_id,'')
+        #results = []
     else:
-        print results[0][table_name]
+        format_sodsumm_results(results,table_name, data_params,start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0])
+    print_sodsumm_footer(app_params)
+
 
 def soddyrec_wrapper(argv):
     '''
@@ -508,46 +390,68 @@ def soddyrec_wrapper(argv):
 ########
 #Utils
 #######
-def print_sodsumm_header(table_name, start_year, end_year, station_id, station_name, station_state, output_format):
-    if output_format == 'txt_list':
-        if table_name == 'temp':
-            print 'Station:(%s) %s ' %(station_id, station_name)
-            print 'From Year=%s To Year=%s                                   #Day-Max #Day-Min' %(str(start_year), str(end_year))
-            print '       Averages         Daily Extremes         Mean Extremes   >=   =<   =<  =<'
-            print '-------------------------------------------------------------------------------'
-        elif table_name == 'prsn':
-            print 'Station:(%s) %s         From Year=%s To Year=%s' %(station_id, station_name,str(start_year), str(end_year))
-            print 'Missing data not yet determined'
-            print '       Total Precipitation       Precipitation  Total Snowfall  #Days Precip >='
-            print '-------------------------------------------------------------------------------'
-        elif table_name == 'hdd':
-            print ' For degree day calculations:'
-            print ' Output is rounded, unlike NCDC values, which round input.'
-            print ''
-            print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
-            print ''
-            print '                Degree Days to Selected Base Temperatures (F)'
-            print '                          Heating Degree Days'
-        elif table_name == 'cdd':
-            print ' For degree day calculations:'
-            print ' Output is rounded, unlike NCDC values, which round input.'
-            print ''
-            print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
-            print ''
-            print '                Degree Days to Selected Base Temperatures (F)'
-            print '                          Cooling Degree Days'
-        elif table_name == 'gdd':
-            print ' For degree day calculations:'
-            print ' Output is rounded, unlike NCDC values, which round input.'
-            print ''
-            print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
-            print ''
-            print '                Degree Days to Selected Base Temperatures (F)'
-            print '                          Growing Degree Days'
-        elif table_name == 'corn':
-            print '                    Corn Growing Degree Days'
-    elif output_format == 'html':
-        print_html_header()
+def print_sodumm_txt(table_name, results, start_year, end_year, station_id, station_name, station_state):
+    if table_name == 'temp':
+        print 'Station:(%s) %s ' %(station_id, station_name)
+        print 'From Year=%s To Year=%s                                   #Day-Max #Day-Min' %(str(start_year), str(end_year))
+        print '       Averages         Daily Extremes         Mean Extremes   >=   =<   =<  =<'
+        print '-------------------------------------------------------------------------------'
+    elif table_name == 'prsn':
+        print 'Station:(%s) %s         From Year=%s To Year=%s' %(station_id, station_name,str(start_year), str(end_year))
+        print 'Missing data not yet determined'
+        print '       Total Precipitation       Precipitation  Total Snowfall  #Days Precip >='
+        print '-------------------------------------------------------------------------------'
+    elif table_name == 'hdd':
+        print ' For degree day calculations:'
+        print ' Output is rounded, unlike NCDC values, which round input.'
+        print ''
+        print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
+        print ''
+        print '                Degree Days to Selected Base Temperatures (F)'
+        print '                          Heating Degree Days'
+    elif table_name == 'cdd':
+        print ' For degree day calculations:'
+        print ' Output is rounded, unlike NCDC values, which round input.'
+        print ''
+        print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
+        print ''
+        print '                Degree Days to Selected Base Temperatures (F)'
+        print '                          Cooling Degree Days'
+    elif table_name == 'gdd':
+        print ' For degree day calculations:'
+        print ' Output is rounded, unlike NCDC values, which round input.'
+        print ''
+        print 'Station:(%s) %s         Missing data not yet determined' %(station_id, station_name)
+        print ''
+        print '                Degree Days to Selected Base Temperatures (F)'
+        print '                          Growing Degree Days'
+    elif table_name == 'corn':
+        print '                    Corn Growing Degree Days'
+    if results and results[0]:
+        for mon_idx, mon_vals in enumerate(results[0][table_name]):
+            if table_name in ['temp', 'prsn'] and mon_idx == len(results[0][table_name])-5:
+                print ''
+            row = ''
+            row_end = ''
+            for v_idx, val in enumerate(mon_vals):
+                if v_idx in [5,7] and table_name == 'temp':
+                    row+='%9s' %str(val)
+                elif v_idx in [6,7] and table_name == 'prsn':
+                    row+='%8s' %str(val)
+                elif v_idx in [8,9,10,11] and table_name == 'prsn':
+                    row_end+='%6s' %str(val)
+                else:
+                    row+='%6s' %str(val)
+            print row + row_end
+
+def format_sodsumm_results(results, table_name, data_params, start_year, end_year, station_id, station_name, station_state):
+    print_html_header()
+    if 'error' in data_params.keys():
+        print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
+        print '<H1>' + data_params['error'] + '</H1>'
+        print '</BODY>'
+        print '</HTML>'
+    else:
         print '<TITLE> ' + station_name + ', ' + station_id + ' Period of Record General Climate Summary - ' + WRCCData.SODSUMM_TABLE_NAMES[table_name] + '</TITLE>'
         print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
         print '<H1> ' + station_name + ', ' + station_state + ' </H1>'
@@ -670,12 +574,19 @@ def print_sodsumm_header(table_name, start_year, end_year, station_id, station_n
             print '</TR>'
         else:
             pass
+        if results and results[0]:
+            for mon_idx, mon_vals in enumerate(results[0][table_name][1:]):
+                print '<TR ALIGN=RIGHT>'
+                for v_idx, val in enumerate(mon_vals):
+                    print '<TD>' + str(val) + '</TD>'
+                print '</TR>'
+        print '</TABLE>'
 
 def print_sodsumm_footer(app_params):
     print 'Table updated on ' + today + '<BR>'
     print 'For monthly and annual means, thresholds, and sums:'
     print '<BR>'
-    print 'Months with' + str(app_params['max_missing_days']) + 'or more missing   days are not considered'
+    print 'Months with ' + str(app_params['max_missing_days']) + ' or more missing   days are not considered'
     print '<BR>'
     print 'Years  with 1 or more missing months are not considered'
     print '<BR>'
@@ -691,12 +602,146 @@ def print_sodsumm_footer(app_params):
     print '<HR>'
     print '<address>Western Regional Climate Center, <A HREF="mailto:wrcc@dri.edu">wrcc@dri.edu </A> </address>'
 
-def format_sodsum_results(output_format, results, data, wrapper):
-    if output_format == 'html':
+def format_sodxtrmts_results_txt(results, data, data_params, app_params, wrapper, user_start_year, user_end_year):
+    #Header
+    print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(data_params['sid'], WRCCData.ACIS_ELEMENTS_DICT[element]['name_long'],WRCCData.SXTR_ANALYSIS_CHOICES[app_params['monthly_statistic']])
+    try:
+        print ' STATION : %s' %wrapper.station_names[0]
+    except:
+        print ' STATION : No station name found'
+    print ' a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
+    print ' z = 26 or more days missing, A = Accumulations present '
+    print ' Long-term means based on columns; thus, the monthly row may not '
+    print '  sum (or average) to the long-term annual value.'
+    print ''
+    print ' MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS :  %s' %app_params['max_missing_days']
+    print ''
+    #Data
+    if not results:
+        print 'NO DATA FOUND!'
+    elif not results[0]:
+        print 'NO DATA FOUND!'
+    else:
+        for yr_idx,yr_data in enumerate(results[0]):
+            if yr_idx == len(results[0]) - 6:
+                print ''
+            row = ''
+            for idx,val in enumerate(yr_data):
+                if str(val) == '-9999.00':
+                    v = '-9999'
+                elif  str(val) == '9999.00':
+                    v = '9999'
+                else:
+                    v = val
+                if idx == 0:
+                    row+='%7s ' %str(v)
+                elif idx != 0 and idx%2 ==0:
+                    row+='%s' %str(v)
+                else:
+                    row+='%6s' %str(v)
+            print row
+
+def format_sodxtrmts_results(results, data, data_params, app_params, wrapper, user_start_year, user_end_year):
+    if 'error' in data_params.keys():
         print_html_header()
-        print '<TITLE>  POR - Station Metadata </TITLE>'
+        print '<HEAD><TITLE>' + data_params['error'] + '</TITLE></HEAD>'
         print '<BODY BGCOLOR="#FFFFFF">'
         print '<CENTER>'
+        print '<H1>' + data_params['error'] + '</H1>'
+        print '</CENTER>'
+        print '<PRE>'
+        print '</PRE>'
+        print '</BODY>'
+        print '</HTML>'
+    else:
+        print_html_header()
+        print '<HEAD><TITLE>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] + ' of ' + \
+        WRCCData.DISPLAY_PARAMS[data_params['element']] +', Station id: ' + data_params['sid'] +'</TITLE></HEAD>'
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<CENTER>'
+        if  wrapper.station_names and wrapper.station_states:
+            print '<H1>' + wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '</H1>'
+        else:
+            print '<H1> No Station Name</H1>'
+        print '<H2>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] +  ' of '+ WRCCData.DISPLAY_PARAMS[data_params['element']] + ' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[data_params['element']]] +') </H2>'
+        print '<H3> (<B>' + data_params['sid'] + '</B>) </H3>'
+        if not data or not results or not results[0]:
+            print '<H1>No Data found!</H1>'
+            print '<H3>Start Year: ' + user_start_year + ', End Year:' + user_end_year +'</H3>'
+            print '</CENTER>'
+            print '<PRE>'
+            print '</PRE>'
+            print '</BODY>'
+            print '</HTML>'
+        else:
+            print '</CENTER>'
+            print '<CENTER>'
+            print '<CAPTION ALIGN=LEFT><CENTER>'
+            print 'File last updated on '+ WRCCData.NUMBER_TO_MONTH_NAME[today[4:6]] + ' ' + today[6:8] + ', ' + today[0:4]
+            print '<BR>'
+            print 'a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,'
+            print '<BR>'
+            print 'z = 26 or more days missing, A = Accumulations present'
+            print '<BR>'
+            print 'Long-term means based on columns; thus, the monthly row may not'
+            print '<BR>'
+            print 'sum (or average) to the long-term annual value.'
+            print '<BR>'
+            print 'MAXIMUM ALLOWABLE NUMBER OF MISSING DAYS : ' +  str(app_params['max_missing_days'])
+            print '<BR>'
+            print 'Individual Months not used for annual or monthly statistics if more than 5 days are missing. <BR>'
+            print 'Individual Years not used for annual statistics if any month in that year has more than 5 days missing.</CENTER>'
+            print '<BR>'
+            if not data or not results or not results[0]:
+                print 'NO DATA FOUND!'
+                print '</CENTER>'
+                print '<PRE></PRE>'
+            else:
+                print '<TABLE BORDER=0 CELLSPACING=2 CELLPADDING=0>'
+                header = '<TR><TD>YEAR(S)</TD>'
+                for mon in WRCCData.NUMBER_TO_MONTH_NAME.keys():
+                    header+='<TD ALIGN=CENTER COLSPAN=2>' + WRCCData.NUMBER_TO_MONTH_NAME[mon].upper() + '</TD>'
+                header+='<TD ALIGN=CENTER COLSPAN=2>ANN</TD></TR>'
+                print header
+                for yr_idx,yr_data in enumerate(results[0]):
+                    if yr_idx == len(results[0]) - 6:
+                        print '<TR> <TD ALIGN=CENTER COLSPAN=26> Period of Record Statistics  </TD> </TR>'
+                    row = '<TR>'
+                    for idx,val in enumerate(yr_data):
+                        if str(val) == '-9999.00':
+                            v = '-9999'
+                        elif  str(val) == '9999.00':
+                            v = '9999'
+                        else:
+                            v = val
+                        if idx == 0:
+                            row+='<TD ALIGN=CENTER WIDTH=8%>'
+                        elif idx % 2 == 0:
+                            row+='<TD ALIGN=LEFT WIDTH=1%>'
+                        else:
+                            row+='<TD ALIGN=RIGHT WIDTH=6%>'
+
+                        row+=v + '</TD>'
+                    row+='</TR>'
+                    print row
+                print '</TABLE>'
+                print '</CENTER>'
+                print '<PRE>'
+                print '</PRE>'
+                print '</BODY>'
+                print '</HTML>'
+
+def format_sodsum_results(results, data, data_params,wrapper):
+    print_html_header()
+    print '<TITLE>  POR - Station Metadata </TITLE>'
+    print '<BODY BGCOLOR="#FFFFFF">'
+    print '<CENTER>'
+    if 'error' in data_params.keys():
+        print '<H1>' + data_params['error'] + '</H1>'
+        print '</CENTER>'
+        print '</BODY>'
+        print '</HTML>'
+    else:
         if not results or not data or not wrapper:
             print '<H2>   Station Metadata </H2>'
             print '<H2>No Data found!</H2>'
@@ -778,8 +823,6 @@ def format_sodsum_results(output_format, results, data, wrapper):
             print 'MISSG - Total number of missing days (no observation)<BR>'
             print 'LNGMS - Largest number of consecutive missing observations<BR>'
             print '<BR>'
-    else:
-        print results[0]
 
 def print_html_header():
     print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'

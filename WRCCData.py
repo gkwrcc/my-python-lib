@@ -373,6 +373,7 @@ DISPLAY_PARAMS = {
     'yly_pcpn': 'Yearly Precipitation',
     'snow': 'Snowfall',
     'snwd': 'Snow Depth',
+    'dtr': 'Daily Temperature Range',
     'gdd': 'Growing Degree Days',
     'hdd': 'Heating Degree Days',
     'cdd': 'Cooling Degree Days',
@@ -614,6 +615,15 @@ SXTR_ANALYSIS_CHOICES = (
     ('rmon', 'Range during Month'),
     ('msum', 'Monthly Sum'),
 )
+SXTR_ANALYSIS_CHOICES_DICT = {
+    'mmax': 'Monthly Maximum',
+    'mmin': 'Monthly Minimum',
+    'mave': 'Monthly Average',
+    'sd': 'Standard Deviation',
+    'ndays': 'Number of Days',
+    'rmon': 'Range during Month',
+    'msum': 'Monthly Sum',
+}
 
 
 
