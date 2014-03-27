@@ -337,7 +337,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
                 lon = str(stn['ll'][0])
             else:
                 continue
-            name = str(stn['name']).replace("\'"," ") if 'name' in stn.keys() else 'Name not listed'
+            name = str(stn['name']).replace("\'"," ").replace('#','') if 'name' in stn.keys() else 'Name not listed'
             uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
             elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
             state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'

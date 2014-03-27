@@ -35,7 +35,7 @@ def get_station_ids(stn_json_file_path):
         with open(stn_json_file_path, 'r') as json_f:
             json_data = u_convert(json.loads(json_f.read()))
     except:
-        passs
+        pass
     name_previous = ''
     for idx,stn in enumerate(json_data['stations']):
         if stn['name'] == name_previous:
