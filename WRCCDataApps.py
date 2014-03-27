@@ -3041,7 +3041,7 @@ def Sodpad(**kwargs):
             for doy in range(366):
 
                 #Omitting that fixes sodpad error 02/22
-                if doy == 60:
+                if doy == 59 and not WRCCUtils.is_leap_year(int(kwargs['dates'][0][0:4]) + yr):
                     el_data[yr][0][doy] = 99.00
                     continue
 
@@ -3093,7 +3093,7 @@ def Sodpad(**kwargs):
                     ndoyt = doy + idur - 1
                     iyeart = yr
                     if ndoyt > 365:
-                        ndoyt-=365
+                        ndoyt-=366
                         iyeart+=1
                     if iyeart > range(num_yrs)[-1]:
                         continue
@@ -3102,19 +3102,17 @@ def Sodpad(**kwargs):
                     dates = kwargs['dates']
                     if abs(float(el_data[iyeart][0][ndoyt]) - 99.00) < 0.005:
                         leap[yr] = 0
-                    if iyeart == 0 and ndoyt == 60:
+                    if iyeart == 0 and ndoyt == 59:
                         leapda = 1
                     if leap[yr] == 0 and leapda == 1:
                         ndoyt+=1
                     pcp = float(el_data[iyeart][0][ndoyt])
-                    #pcp = float(el_data[iyeart][0][ndoyt])
                     #Note that these sums continue to accumulate over all durations
                     if pcp < 98.00:
                         sumpcpn[yr]+=pcp
                         sumpre+=pcp
                         sumobs+=1
                         misdys[yr] = 0
-
                 if lenper[icount] != idur:
                     continue
 
