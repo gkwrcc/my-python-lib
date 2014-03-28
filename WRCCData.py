@@ -177,14 +177,23 @@ MONTH_NAME_TO_NUMBER= {
 
 NUMBER_TO_MONTH_NAME = {
     '01':'Jan',
+    '1':'Jan',
     '02':'Feb',
+    '2':'Feb',
     '03':'Mar',
+    '3':'Mar',
     '04':'Apr',
+    '4':'Apr',
     '05':'May',
+    '5':'May',
     '06':'Jun',
+    '6':'Jun',
     '07':'Jul',
+    '7':'Jul',
     '08':'Aug',
+    '8':'Aug',
     '09':'Sep',
+    '9':'Sep',
     '10':'Oct',
     '11':'Nov',
     '12':'Dec'

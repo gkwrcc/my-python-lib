@@ -50,9 +50,10 @@ class Wrapper:
 ################################################
 def sodxtrmts_wrapper(argv):
     '''
-    NOTE: Runs without frequency analysis
+    NOTES: Runs without frequency analysis,
+           ndays analysis not implemented here
     argv -- stn_id start_year end_year element monthly_statistic
-            max_missing_days start_month departure_from_averages output_format
+            max_missing_days start_month departure_from_averages
     Explaination:
             element choices:
                 pcpn, snow, snwd, maxt, mint, avgt, dtr, hdd, cdd, gdd
@@ -61,7 +62,6 @@ def sodxtrmts_wrapper(argv):
                 mmin --> Monthly Minimum
                 mave --> Monthly Avergage
                 sd   --> Standard Deviation
-                ndays--> Number of Days
                 rmon --> Range during Month
                 msum --> Monthly Sum
             start_month: 01 - 12
@@ -72,7 +72,7 @@ def sodxtrmts_wrapper(argv):
     '''
     #Sanity Check
     if len(argv) != 8:
-        format_sodxtrmts_results([], [], {'error':'Invalid Request'}, {}, {}, '0000', '0000')
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Request'}, {}, {}, '0000', '0000')
     #Assign input parameters:
     stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
@@ -80,35 +80,41 @@ def sodxtrmts_wrapper(argv):
     if start_year.upper() != 'POR':
         try:
             int(start_year)
+            if len(start_year) != 4:
+                format_sodxtrmts_results_web([], [], {'error':'Invalid Start Year: %s' %start_year}, {}, {}, '0000', '0000')
         except:
-            format_sodxtrmts_results([], [], {'error':'Invalid Start Year: %s' %end_year}, {}, {}, '0000', '0000')
+            format_sodxtrmts_results_web([], [], {'error':'Invalid Start Year: %s' %start_year}, {}, {}, '0000', '0000')
     if end_year.upper() != 'POR':
         try:
             int(end_year)
+            if len(end_year) !=4:
+                format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %end_year}, {}, {}, '0000', '0000')
         except:
-            format_sodxtrmts_results([], [], {'error':'Invalid End Year: %s' %start_year}, {}, {}, '0000', '0000')
+            format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %endt_year}, {}, {}, '0000', '0000')
     user_start_year = str(argv[1]);user_end_year = str(argv[2])
     element = str(argv[3]);monthly_statistic = str(argv[4])
     try:
         max_missing_days = int(argv[5])
     except:
-        format_sodxtrmts_results([], [], {'error':'Invalid Max Missing Days: %s' %argv[5] }, {}, {}, '0000', '0000')
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Max Missing Days: %s' %argv[5] }, {}, {}, '0000', '0000')
     start_month = str(argv[6])
+    if len(start_month) == 1:
+        start_montrh = '0' +start_month
     departures_from_averages=str(argv[7])
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
-        valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
-        if not valid_daterange or valid_daterange == ['','']:
-            valid_daterange = ['0000','0000']
+        valid_daterange = por_to_valid_daterange(stn_id)
         if start_year.upper() == 'POR':
             start_year = valid_daterange[0][0:4]
         if end_year.upper() == 'POR':
             end_year = valid_daterange[1][0:4]
     #more sanity check
-    if monthly_statistic not in ['mmax','mmin','mave','sd','ndays','rmon','msum']:
-        format_sodxtrmts_results([], [], {'error':'Invalid Analysis: %s' % monthly_statistic}, {}, {}, '0000', '0000')
+    if monthly_statistic not in ['mmax','mmin','mave','sd','rmon','msum']:
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Analysis: %s' % monthly_statistic}, {}, {}, '0000', '0000')
     if element not in ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'avgt', 'dtr', 'hdd', 'cdd', 'gdd']:
-        format_sodxtrmts_results([], [], {'error':'Invalid Element: %s' %element }, {}, {}, '0000', '0000')
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Element: %s' %element }, {}, {}, '0000', '0000')
+    if start_month not in ['01','02','03','04','05','06','07','08','09','10','11','12']:
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Start Month: %s' %start_month }, {}, {}, '0000', '0000')
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -134,7 +140,7 @@ def sodxtrmts_wrapper(argv):
         results = []
         fa_results = []
         data = []
-    format_sodxtrmts_results(results, data, data_params, app_params, SX_wrapper, user_start_year, user_end_year)
+    format_sodxtrmts_results_web(results, data, data_params, app_params, SX_wrapper, user_start_year, user_end_year)
 
 def sodsum_wrapper(argv):
     '''
@@ -150,31 +156,31 @@ def sodsum_wrapper(argv):
     '''
     #Sanity Check
     if len(argv) != 4:
-        format_sodsum_results({}, {}, {'error':'Invalid Request'},{})
+        format_sodsum_results_web({}, {}, {'error':'Invalid Request'},{})
     #Define parameters
     stn_id = str(argv[0])
-    start_date = str(argv[1]);end_date = str(argv[2])
+    start_date = format_date(str(argv[1]));end_date = format_date(str(argv[2]))
     #Sanity Check on dates
     if start_date.upper() != 'POR':
         if len(start_date)!=8:
-            format_sodsum_results({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+            format_sodsum_results_web({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
         else:
             try:
                 int(start_date)
             except:
-                format_sodsum_results({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+                format_sodsum_results_web({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
     if end_date.upper() != 'POR':
         if len(end_date)!=8:
-            format_sodsum_results({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
+            format_sodsum_results_web({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
         else:
             try:
                 int(end_date)
             except:
-                format_sodsum_results({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
+                format_sodsum_results_web({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
     element = str(argv[3])
     #Sanity Check on element
     if element not in ['snow','snwd','maxt','mint', 'obst','pcpn','multi']:
-        format_sodsum_results({}, {}, {'error':'Invalid Element: %s' %element}, {})
+        format_sodsum_results_web({}, {}, {'error':'Invalid Element: %s' %element}, {})
     data_params = {
                 'sid':stn_id,
                 'start_date':start_date,
@@ -193,7 +199,7 @@ def sodsum_wrapper(argv):
         data = {}
         results = {}
     #Format resumts
-    format_sodsum_results(results, data, data_params,SS_wrapper)
+    format_sodsum_results_web(results, data, data_params,SS_wrapper)
 
 def sodsumm_wrapper(argv):
     '''
@@ -202,15 +208,12 @@ def sodsumm_wrapper(argv):
     Explaination:
             table_name choices:
                 temp, prsn, hdd, cdd, gdd, corn
-            output format choices:
-                list --> python list of list
-                txt_list --> output looks like Kelly's commandline output
     Example (commandline): python WRCCWrappers.py sodsumm 266779 temp 2000 2012 5
     Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
     '''
     #Sanity Check on input parameter number
     if len(argv) != 5:
-        format_sodsumm_results([],'',{'error':'Invalid Request'}, '0000', '0000', '', '','')
+        format_sodsumm_results_web([],'',{'error':'Invalid Request'}, '0000', '0000', '', '','')
     #Assign input parameters:
     stn_id = str(argv[0]);table_name = str(argv[1])
     if table_name in ['hdd','cdd']:
@@ -224,18 +227,20 @@ def sodsumm_wrapper(argv):
     if start_year.upper() != 'POR':
         try:
             int(start_year)
+            if len(start_year)!=4:
+                format_sodsumm_results_web([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
         except:
-            format_sodsumm_results([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
+            format_sodsumm_results_web([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
     if end_year.upper() != 'POR':
         try:
             int(end_year)
+            if len(end_year)!=4:
+                format_sodsumm_results_web([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
         except:
-            format_sodsumm_results([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
+            format_sodsumm_results_web([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
-        valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
-        if valid_daterange == ['',''] or not valid_daterange:
-            valid_daterange = ['0000','0000']
+        valid_daterange = por_to_valid_daterange(stn_id)
         if start_year.upper() == 'POR':
             start_year = valid_daterange[0][0:4]
         if end_year.upper() == 'POR':
@@ -243,10 +248,10 @@ def sodsumm_wrapper(argv):
     try:
         max_missing_days = int(argv[4])
     except:
-        format_sodsumm_results([],'',{'error':'Invalid Max Missing Days: %s' %argv[4] }, '0000', '0000', '', '','')
+        format_sodsumm_results_web([],'',{'error':'Invalid Max Missing Days: %s' %argv[4] }, '0000', '0000', '', '','')
     #More Sanity checks
     if table_name not in ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']:
-        format_sodsumm_results([],'',{'error':'Invalid Table Name: %s' %table_name }, '0000', '0000','','','')
+        format_sodsumm_results_web([],'',{'error':'Invalid Table Name: %s' %table_name }, '0000', '0000','','','')
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -274,11 +279,11 @@ def sodsumm_wrapper(argv):
         data = {}
     #Format results
     if not data or ('error' in data.keys() and data['error']) or not results:
-        format_sodsumm_results([],table_name, {'error': 'No Data found!'}, start_year, end_year, stn_id, 'No Data found for Station ID: ' + stn_id,'')
+        format_sodsumm_results_web([],table_name, {'error': 'No Data found!'}, start_year, end_year, stn_id, 'No Data found for Station ID: ' + stn_id,'')
         #results = []
     else:
-        format_sodsumm_results(results,table_name, data_params,start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0])
-    print_sodsumm_footer(app_params)
+        format_sodsumm_results_web(results,table_name, data_params,start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0])
+    print_sodsumm_footer_web(app_params)
 
 
 def soddyrec_wrapper(argv):
@@ -301,35 +306,30 @@ def soddyrec_wrapper(argv):
             output format choices:
                 list     --> python list of list
                 txt_list --> output looks like Kelly's commandline output
-    Example: python WRCCWrappers.py soddyrec 266779 all 20000101 20101231 txt_list
+    Example(command line): python WRCCWrappers.py soddyrec 266779 all 20000101 20101231
+    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231
     '''
-    def print_header(element, start_date, end_date, station_id, station_name):
-        print ' Daily Records for station %s %s' %(station_id, station_name)
-        print ''
-        if element in ['all', 'tmp','wtr', 'pcpn','maxt', 'mint']:
-            print ' For temperature and precipitation, multi-day accumulations'
-            print '   are not considered either for records or averages.'
-            print ' The year given is the year of latest occurrence.'
-        s = start_date[4:6] + '/' + start_date[6:8] + '/' + start_date[0:4]
-        e = end_date[4:6] + '/' + end_date[6:8] + '/' + end_date[0:4]
-        print ' Period requested -- Begin :  %s -- End :  %s' %(s, e)
-        print 'AVG   Multi-year unsmoothed average of the indicated quantity'
-        print 'HI    Highest value of indicated quantity for this day of year'
-        print 'LO    Lowest  value of indicated quantity for this day of year'
-        print 'YR    Latest year of occurrence of the extreme value'
-        print 'NO    Number of years with data for this day of year.'
-        print ''
-
     #Sanity Check
-    if len(argv) != 5:
-        print 'soddyrec needs 5 input parameters: \
-               stn_id element_type start_date end_date output_format.\
-               You gave: %s' %str(argv)
-        sys.exit(1)
+    if len(argv) != 4:
+        format_soddyrec_results_web([],{'error':'Invalid Request'},{})
     #Assign input parameters:
     stn_id = str(argv[0]);element = str(argv[1])
-    start_date = str(argv[2]);end_date = str(argv[3])
-    output_format = str(argv[4])
+    start_date = format_date(str(argv[2]));end_date = format_date(str(argv[3]))
+    #Sanity checks
+    #Change POR start/end year to 8 digit start/end dates
+    if start_date.upper() == 'POR' or end_date.upper() == 'POR':
+        valid_daterange = por_to_valid_daterange(stn_id)
+        if start_date.upper() == 'POR':
+            start_date = valid_daterange[0]
+        if end_date.upper() == 'POR':
+            end_date = valid_daterange[1]
+    if element not in ['all','tmp','wtr','pcpn','snow','snwd','maxt','mint','hdd','cdd']:
+        format_soddyrec_results_web([],{'error':'Invalid element: %s' %element},{})
+    if len(start_date) != 8:
+        format_soddyrec_results_web([],{'error':'Invalid start_date: %s' %start_date},{})
+    if len(end_date) != 8:
+        format_soddyrec_results_web([],{'error':'Invalid end_date: %s' %end_date},{})
+
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -337,60 +337,108 @@ def soddyrec_wrapper(argv):
                 'end_date':end_date,
                 'element':element
                 }
-    SS_wrapper = Wrapper('Soddyrec', data_params)
+    SR_wrapper = Wrapper('Soddyrec', data_params)
     #Get data
-    data = SS_wrapper.get_data()
+    data = SR_wrapper.get_data()
     #run app
-    results = SS_wrapper.run_app(data)
-    if output_format == 'txt_list':
-        #Headers
-        print_header(element, start_date, end_date, SS_wrapper.station_ids[0], SS_wrapper.station_names[0])
-        header_row = '    '
-        if element == 'all':
-            el_list = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
-        elif element == 'tmp':
-            el_list = ['maxt', 'mint', 'pcpn']
-        elif element == 'wtr':
-            el_list = ['pcpn', 'snow', 'snwd']
-        else:
-            el_list =[element]
-        table_header = '      '
-        table_header_2 = ' MO DY'
-        for el_idx, el in enumerate(el_list):
-            el_name = WRCCData.ACIS_ELEMENTS_DICT[el]['name_long']
-            start ='|';end=''
-            if len(el_name)<=27:
-                left = 27 - len(el_name)
-                if left%2 == 0:
-                    for k in range(left/2):
-                        start+='-';end+='-'
-
-                else:
-                    for k in range((left-1)/2):
-                        start+='-';end+='-'
-                    end+='-'
-            table_header+=start
-            table_header+=el_name
-            table_header+=end
-            table_header_2+='    AVG     NO   HIGH     YR'
-        print table_header
-        print table_header_2
-        #Data
-        for doy in range(366):
-            row =''
-            mon,day = WRCCUtils.compute_mon_day(doy+1)
-            row+='%3s%3s' %(mon, day)
-            for el_idx, el in enumerate(el_list):
-                for k in range(2,6):
-                    row+='%7s' %results[0][el_idx][doy][k]
-            print row
-    else:
-        print results
-
+    results = SR_wrapper.run_app(data)
+    format_soddyrec_results_web(results,data_params,SR_wrapper)
 ########
 #Utils
 #######
-def print_sodumm_txt(table_name, results, start_year, end_year, station_id, station_name, station_state):
+def format_soddyrec_results_web(results, data_params, wrapper):
+    '''
+    Generates Soddyrec web content
+    '''
+    print_html_header()
+    if 'error' in data_params.keys() or not wrapper or not results:
+        print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
+        if 'error' in data_params.keys():
+            print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
+        else:
+            print '<H1>No data found!</H1>'
+        print '</BODY>'
+        print '</HTML>'
+
+    else:
+        print '<TITLE>' +  wrapper.station_names[0] + ', ' + wrapper.station_states[0] + ' Period of Record Daily Climate Summary </TITLE>'
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<H1>' +  wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '</H1>'
+        print '<H3>Period of Record Daily Climate Summary </H3>'
+        print '<PRE>'
+        format_soddyrec_results_txt(results, wrapper,data_params)
+        print '</PRE>'
+        print '<HR>'
+        print '<address>Western Regional Climate Center, <A HREF="mailto:wrcc@dri.edu">wrcc@dri.edu </A> </address>'
+        print '</BODY>'
+        print '</HTML>'
+
+def format_soddyrec_results_txt(results, wrapper,data_params):
+    '''
+    Generates soddyrec text output that matches Kelly's commandline output
+    '''
+    print ' Daily Records for station %s %s           state: %s' %(data_params['sid'], wrapper.station_names[0], wrapper.station_states[0])
+    print ''
+    if data_params['element'] in ['all', 'tmp','wtr', 'pcpn','maxt', 'mint']:
+        print ' For temperature and precipitation, multi-day accumulations'
+        print ' are not considered either for records or averages.'
+        print ' The year given is the year of latest occurrence.'
+    s = data_params['start_date'][4:6] + '/' + data_params['start_date'][6:8] + '/' + data_params['start_date'][0:4]
+    e = data_params['end_date'][4:6] + '/' + data_params['end_date'][6:8] + '/' + data_params['end_date'][0:4]
+    print ' Period requested -- Begin :  %s -- End :  %s' %(s, e)
+    print ''
+    print 'Cooling degree threshold =   65.00  Heating degree threshold =   65.00'
+    print ''
+    print 'AVG   Multi-year unsmoothed average of the indicated quantity'
+    print 'HI    Highest value of indicated quantity for this day of year'
+    print 'LO    Lowest  value of indicated quantity for this day of year'
+    print 'YR    Latest year of occurrence of the extreme value'
+    print 'NO    Number of years with data for this day of year.'
+    print ''
+    header_row = '    '
+    if data_params['element'] == 'all':
+        el_list = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
+    elif data_params['element'] == 'tmp':
+        el_list = ['maxt', 'mint', 'pcpn']
+    elif data_params['element'] == 'wtr':
+        el_list = ['pcpn', 'snow', 'snwd']
+    else:
+        el_list =[data_params['element']]
+    table_header = '      '
+    table_header_2 = ' MO DY'
+    for el_idx, el in enumerate(el_list):
+        el_name = WRCCData.ACIS_ELEMENTS_DICT[el]['name_long']
+        start ='|';end=''
+        if len(el_name)<=27:
+            left = 27 - len(el_name)
+            if left%2 == 0:
+                for k in range(left/2):
+                    start+='-';end+='-'
+
+            else:
+                for k in range((left-1)/2):
+                    start+='-';end+='-'
+                end+='-'
+        table_header+=start
+        table_header+=el_name
+        table_header+=end
+        table_header_2+='    AVG     NO   HIGH     YR'
+    print table_header
+    print table_header_2
+    #Data
+    for doy in range(366):
+        row =''
+        mon,day = WRCCUtils.compute_mon_day(doy+1)
+        row+='%3s%3s' %(mon, day)
+        for el_idx, el in enumerate(el_list):
+            for k in range(2,6):
+                row+='%7s' %results[0][el_idx][doy][k]
+        print row
+
+def format_sodumm_results_txt(table_name, results, start_year, end_year, station_id, station_name, station_state):
+    '''
+    Generates sodsumm text output that matches Kelly's commandline output
+    '''
     if table_name == 'temp':
         print 'Station:(%s) %s ' %(station_id, station_name)
         print 'From Year=%s To Year=%s                                   #Day-Max #Day-Min' %(str(start_year), str(end_year))
@@ -444,11 +492,11 @@ def print_sodumm_txt(table_name, results, start_year, end_year, station_id, stat
                     row+='%6s' %str(val)
             print row + row_end
 
-def format_sodsumm_results(results, table_name, data_params, start_year, end_year, station_id, station_name, station_state):
+def format_sodsumm_results_web(results, table_name, data_params, start_year, end_year, station_id, station_name, station_state):
     print_html_header()
     if 'error' in data_params.keys():
         print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
-        print '<H1>' + data_params['error'] + '</H1>'
+        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
         print '</BODY>'
         print '</HTML>'
     else:
@@ -582,7 +630,10 @@ def format_sodsumm_results(results, table_name, data_params, start_year, end_yea
                 print '</TR>'
         print '</TABLE>'
 
-def print_sodsumm_footer(app_params):
+def print_sodsumm_footer_web(app_params):
+    '''
+    Sodsumm footer web content
+    '''
     print 'Table updated on ' + today + '<BR>'
     print 'For monthly and annual means, thresholds, and sums:'
     print '<BR>'
@@ -603,6 +654,9 @@ def print_sodsumm_footer(app_params):
     print '<address>Western Regional Climate Center, <A HREF="mailto:wrcc@dri.edu">wrcc@dri.edu </A> </address>'
 
 def format_sodxtrmts_results_txt(results, data, data_params, app_params, wrapper, user_start_year, user_end_year):
+    '''
+    Generates sodxtrmts text output that matches Kelly's commandline output
+    '''
     #Header
     print 'STATION NUMBER %s  ELEMENT : %s           QUANTITY :        %s' %(data_params['sid'], WRCCData.ACIS_ELEMENTS_DICT[element]['name_long'],WRCCData.SXTR_ANALYSIS_CHOICES[app_params['monthly_statistic']])
     try:
@@ -641,13 +695,16 @@ def format_sodxtrmts_results_txt(results, data, data_params, app_params, wrapper
                     row+='%6s' %str(v)
             print row
 
-def format_sodxtrmts_results(results, data, data_params, app_params, wrapper, user_start_year, user_end_year):
+def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper, user_start_year, user_end_year):
+    '''
+    Generates Sodxtrmts web content
+    '''
     if 'error' in data_params.keys():
         print_html_header()
-        print '<HEAD><TITLE>' + data_params['error'] + '</TITLE></HEAD>'
+        print '<HEAD><TITLE><FONT COLOR="RED">' + data_params['error'] + '</FONT></TITLE></HEAD>'
         print '<BODY BGCOLOR="#FFFFFF">'
         print '<CENTER>'
-        print '<H1>' + data_params['error'] + '</H1>'
+        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
         print '</CENTER>'
         print '<PRE>'
         print '</PRE>'
@@ -699,8 +756,15 @@ def format_sodxtrmts_results(results, data, data_params, app_params, wrapper, us
             else:
                 print '<TABLE BORDER=0 CELLSPACING=2 CELLPADDING=0>'
                 header = '<TR><TD>YEAR(S)</TD>'
-                for mon in WRCCData.NUMBER_TO_MONTH_NAME.keys():
-                    header+='<TD ALIGN=CENTER COLSPAN=2>' + WRCCData.NUMBER_TO_MONTH_NAME[mon].upper() + '</TD>'
+                s_month = int(app_params['start_month'])
+                month_names_list = []
+                for mon in range(s_month,13):
+                    month_names_list.append(WRCCData.NUMBER_TO_MONTH_NAME[str(mon)].upper())
+                if s_month!=1:
+                    for mon in range(1,s_month):
+                        month_names_list.append(WRCCData.NUMBER_TO_MONTH_NAME[str(mon)].upper())
+                for mon in month_names_list:
+                    header+='<TD ALIGN=CENTER COLSPAN=2>' + mon + '</TD>'
                 header+='<TD ALIGN=CENTER COLSPAN=2>ANN</TD></TR>'
                 print header
                 for yr_idx,yr_data in enumerate(results[0]):
@@ -731,13 +795,16 @@ def format_sodxtrmts_results(results, data, data_params, app_params, wrapper, us
                 print '</BODY>'
                 print '</HTML>'
 
-def format_sodsum_results(results, data, data_params,wrapper):
+def format_sodsum_results_web(results, data, data_params,wrapper):
+    '''
+    Generates sodsum text output that matches Kelly's commandline output
+    '''
     print_html_header()
     print '<TITLE>  POR - Station Metadata </TITLE>'
     print '<BODY BGCOLOR="#FFFFFF">'
     print '<CENTER>'
     if 'error' in data_params.keys():
-        print '<H1>' + data_params['error'] + '</H1>'
+        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
         print '</CENTER>'
         print '</BODY>'
         print '</HTML>'
@@ -829,7 +896,15 @@ def print_html_header():
     print 'Content-type: text/html \r\n\r\n'
     print '<HTML>'
 
+def por_to_valid_daterange(stn_id):
+    valid_daterange = WRCCUtils.find_valid_daterange(stn_id)
+    if not valid_daterange or valid_daterange == ['','']:
+        valid_daterange = ['00000000','00000000']
+    return valid_daterange
 
+def format_date(date):
+    d = date.replace('-','').replace(':','').replace('/','').replace(' ','')
+    return d
 
 #########
 # M A I N
