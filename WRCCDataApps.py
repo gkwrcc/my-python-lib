@@ -607,7 +607,7 @@ def Sodpiii(**kwargs):
                 else:
                     tbl_idx = numdur - 1
                 results_0[i][tbl_idx][iyear].append('%i' %(start_year + iyear))
-                results_0[i][tbl_idx][iyear].append('%.3f' %x)
+                results_0[i][tbl_idx][iyear].append('%.3f' %round(x,3))
                 results_0[i][tbl_idx][iyear].append('%s%s' %(mon,day))
                 results_0[i][tbl_idx][iyear].append('%i' %nummis)
             #End of year loop!
@@ -660,12 +660,12 @@ def Sodpiii(**kwargs):
                     sk = 0.0
             else:
                 sk = 0.0
-            stats[0][numdur-1] = round(average,2)
-            stats[1][numdur-1] = round(stdev,2)
-            stats[2][numdur-1] = round(cv,2)
-            stats[3][numdur-1] = round(sk,2)
-            stats[4][numdur-1] = round(xminn,2)
-            stats[5][numdur-1] = round(xmaxx,2)
+            stats[0][numdur-1] = round(average,3)
+            stats[1][numdur-1] = round(stdev,3)
+            stats[2][numdur-1] = round(cv,3)
+            stats[3][numdur-1] = round(sk,3)
+            stats[4][numdur-1] = round(xminn,3)
+            stats[5][numdur-1] = round(xmaxx,3)
             stats[6][numdur-1] = count
             if kwargs['days'] == 'i':
                 tbl_idx = 0
@@ -738,11 +738,11 @@ def Sodpiii(**kwargs):
                     value = r6to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
                 elif idur == 1:
                     value = r12to1 * (stats[0][0] + stats[1][0] * rtndur[iretrn][0])
-                results[i][tbl_idx][iretrn].append('PN = %.4f ' % pnonex)
-                results[i][tbl_idx][iretrn].append('P = %.4f ' % pexc)
-                results[i][tbl_idx][iretrn].append('T = %.4f ' % period)
-                results[i][tbl_idx][iretrn].append('PSD = %.4f ' % psd)
-                results[i][tbl_idx][iretrn].append('VALUE = %.4f ' % value)
+                results[i][tbl_idx][iretrn].append('PN = %.4f ' % round(pnonex,4))
+                results[i][tbl_idx][iretrn].append('P = %.4f ' % round(pexc,4))
+                results[i][tbl_idx][iretrn].append('T = %.4f ' % round(period,4))
+                results[i][tbl_idx][iretrn].append('PSD = %.3f ' % round(psd,3))
+                results[i][tbl_idx][iretrn].append('VALUE = %.2f ' % round(value,2))
     return results_0, results, averages, stdevs, skews
 
 def Sodxtrmts(**kwargs):

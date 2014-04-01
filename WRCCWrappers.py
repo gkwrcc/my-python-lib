@@ -73,6 +73,7 @@ def sodxtrmts_wrapper(argv):
     #Sanity Check
     if len(argv) != 8:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Request'}, {}, {}, '0000', '0000')
+        sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
@@ -80,27 +81,35 @@ def sodxtrmts_wrapper(argv):
     if start_year.upper() != 'POR':
         try:
             int(start_year)
-            if len(start_year) != 4:
-                format_sodxtrmts_results_web([], [], {'error':'Invalid Start Year: %s' %start_year}, {}, {}, '0000', '0000')
         except:
             format_sodxtrmts_results_web([], [], {'error':'Invalid Start Year: %s' %start_year}, {}, {}, '0000', '0000')
+            sys.exit(1)
+        if len(start_year) != 4:
+            format_sodxtrmts_results_web([], [], {'error':'Invalid Start Year: %s' %start_year}, {}, {}, '0000', '0000')
+            sys.exit(1)
     if end_year.upper() != 'POR':
         try:
             int(end_year)
-            if len(end_year) !=4:
-                format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %end_year}, {}, {}, '0000', '0000')
         except:
             format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %endt_year}, {}, {}, '0000', '0000')
+            sys.exit(1)
+        if len(end_year) !=4:
+            format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %end_year}, {}, {}, '0000', '0000')
+            sys.exit(1)
     user_start_year = str(argv[1]);user_end_year = str(argv[2])
     element = str(argv[3]);monthly_statistic = str(argv[4])
     try:
         max_missing_days = int(argv[5])
     except:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Max Missing Days: %s' %argv[5] }, {}, {}, '0000', '0000')
+        sys.exit(1)
     start_month = str(argv[6])
     if len(start_month) == 1:
         start_montrh = '0' +start_month
     departures_from_averages=str(argv[7])
+    if departures_from_averages not in ['T','F']:
+        format_sodxtrmts_results_web([], [], {'error':'Invalid Departures from Averages: %s' %str(argv[7])}, {}, {}, '0000', '0000')
+        sys.exit(1)
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
         valid_daterange = por_to_valid_daterange(stn_id)
@@ -111,10 +120,13 @@ def sodxtrmts_wrapper(argv):
     #more sanity check
     if monthly_statistic not in ['mmax','mmin','mave','sd','rmon','msum']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Analysis: %s' % monthly_statistic}, {}, {}, '0000', '0000')
+        sys.exit(1)
     if element not in ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'avgt', 'dtr', 'hdd', 'cdd', 'gdd']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Element: %s' %element }, {}, {}, '0000', '0000')
+        sys.exit(1)
     if start_month not in ['01','02','03','04','05','06','07','08','09','10','11','12']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Start Month: %s' %start_month }, {}, {}, '0000', '0000')
+        sys.exit(1)
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -157,6 +169,7 @@ def sodsum_wrapper(argv):
     #Sanity Check
     if len(argv) != 4:
         format_sodsum_results_web({}, {}, {'error':'Invalid Request'},{})
+        sys.exit(1)
     #Define parameters
     stn_id = str(argv[0])
     start_date = format_date(str(argv[1]));end_date = format_date(str(argv[2]))
@@ -164,23 +177,28 @@ def sodsum_wrapper(argv):
     if start_date.upper() != 'POR':
         if len(start_date)!=8:
             format_sodsum_results_web({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+            sys.exit(1)
         else:
             try:
                 int(start_date)
             except:
                 format_sodsum_results_web({}, {}, {'error':'Invalid Start Date: %s' %start_date}, {})
+                sys.exit(1)
     if end_date.upper() != 'POR':
         if len(end_date)!=8:
             format_sodsum_results_web({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
+            sys.exit(1)
         else:
             try:
                 int(end_date)
             except:
                 format_sodsum_results_web({}, {}, {'error':'Invalid End Date: %s' %end_date}, {})
+                sys.exit(1)
     element = str(argv[3])
     #Sanity Check on element
     if element not in ['snow','snwd','maxt','mint', 'obst','pcpn','multi']:
         format_sodsum_results_web({}, {}, {'error':'Invalid Element: %s' %element}, {})
+        sys.exit(1)
     data_params = {
                 'sid':stn_id,
                 'start_date':start_date,
@@ -214,6 +232,7 @@ def sodsumm_wrapper(argv):
     #Sanity Check on input parameter number
     if len(argv) != 5:
         format_sodsumm_results_web([],'',{'error':'Invalid Request'}, '0000', '0000', '', '','')
+        sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0]);table_name = str(argv[1])
     if table_name in ['hdd','cdd']:
@@ -227,17 +246,21 @@ def sodsumm_wrapper(argv):
     if start_year.upper() != 'POR':
         try:
             int(start_year)
-            if len(start_year)!=4:
-                format_sodsumm_results_web([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
         except:
             format_sodsumm_results_web([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
+            sys.exit(1)
+        if len(start_year)!=4:
+            format_sodsumm_results_web([],'',{'error':'Invalid Start Year: %s' %start_year }, '0000', '0000', '','','')
+            sys.exit(1)
     if end_year.upper() != 'POR':
         try:
             int(end_year)
-            if len(end_year)!=4:
-                format_sodsumm_results_web([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
         except:
             format_sodsumm_results_web([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
+            sys.exit(1)
+        if len(end_year)!=4:
+            format_sodsumm_results_web([],'',{'error':'Invalid End Year: %s' %end_year }, '0000', '0000', '', '','')
+            sys.exit(1)
     #Change POR start/end year to 8 digit start/end dates
     if start_year.upper() == 'POR' or end_year.upper() == 'POR':
         valid_daterange = por_to_valid_daterange(stn_id)
@@ -249,9 +272,11 @@ def sodsumm_wrapper(argv):
         max_missing_days = int(argv[4])
     except:
         format_sodsumm_results_web([],'',{'error':'Invalid Max Missing Days: %s' %argv[4] }, '0000', '0000', '', '','')
+        sys.exit(1)
     #More Sanity checks
     if table_name not in ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']:
         format_sodsumm_results_web([],'',{'error':'Invalid Table Name: %s' %table_name }, '0000', '0000','','','')
+        sys.exit(1)
     #Define parameters
     data_params = {
                 'sid':stn_id,
@@ -281,6 +306,8 @@ def sodsumm_wrapper(argv):
     if not data or ('error' in data.keys() and data['error']) or not results:
         format_sodsumm_results_web([],table_name, {'error': 'No Data found!'}, start_year, end_year, stn_id, 'No Data found for Station ID: ' + stn_id,'')
         #results = []
+
+        sys.exit(1)
     else:
         format_sodsumm_results_web(results,table_name, data_params,start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0])
     print_sodsumm_footer_web(app_params)
@@ -312,6 +339,7 @@ def soddyrec_wrapper(argv):
     #Sanity Check
     if len(argv) != 4:
         format_soddyrec_results_web([],{'error':'Invalid Request'},{})
+        sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0]);element = str(argv[1])
     start_date = format_date(str(argv[2]));end_date = format_date(str(argv[3]))
@@ -325,10 +353,13 @@ def soddyrec_wrapper(argv):
             end_date = valid_daterange[1]
     if element not in ['all','tmp','wtr','pcpn','snow','snwd','maxt','mint','hdd','cdd']:
         format_soddyrec_results_web([],{'error':'Invalid element: %s' %element},{})
+        sys.exit(1)
     if len(start_date) != 8:
         format_soddyrec_results_web([],{'error':'Invalid start_date: %s' %start_date},{})
+        sys.exit(1)
     if len(end_date) != 8:
         format_soddyrec_results_web([],{'error':'Invalid end_date: %s' %end_date},{})
+        sys.exit(1)
 
     #Define parameters
     data_params = {
