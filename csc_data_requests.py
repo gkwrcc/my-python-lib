@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 '''
-This scripts run though /tmp/data_requests directory every 5 minutes so see if new data requests by
+This script run though /tmp/data_requests directory every 5 minutes so see if new data requests by
 CSC users were made.
 Files in /tmp/data_requests are of form username_timestamp.json and contain
 parameter dictionary corresponding to the user data request.
@@ -18,18 +18,18 @@ import re
 import multiprocessing
 from multiprocessing import Queue, JoinableQueue
 from time import sleep
-import WRCCUtils, AcisWS
+import my_acis_settings, WRCCUtils, AcisWS
 import logging
 
-#hard codes:
+#Settings
 nprocs = 4 #number of data requests to be executed in parallel
-ftp_server = 'pubfiles.dri.edu'
-mail_server = 'owa.dri.edu'
-from_address = 'csc-project@dri.edu'
-base_dir = '/tmp/data_requests/'
-pub_dir = '/pub/csc/test/'
-now = datetime.datetime.now()
+ftp_server = my_acis_settings.DRI_FTP_SERVER
+mail_server = my_acis_settings.DRI_MAIL_SERVER
+from_address = my_acis_settings.CSC_FROM_ADDRESS
+base_dir = my_acis_settings.DATA_REQUEST_BASE_DIR
+pub_dir = my_acis_settings.DRI_PUB_DIR
 
+now = datetime.datetime.now()
 x_mins_ago = now - datetime.timedelta(minutes=5) #cron job checking for param files runs every 5 minutes
 time_out = 3600 #1hr
 #time_out = 10800 #time out = 3hrs = 10800 seconds

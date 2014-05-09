@@ -37,7 +37,19 @@ class Wrapper:
         DJ = WRCCClasses.SODDataJob(self.app_name,self.params)
         #self.station_ids, self.station_names = DJ.get_station_ids_names()
         data = DJ.get_data()
-        self.station_names, self.station_states, self.station_ids, self.station_networks, self.station_lls, self.station_elevs,self.station_uids, self.station_climdivs, self.station_countys = DJ.get_station_meta()
+        meta_dict = DJ.get_station_meta()
+        self.station_names = meta_dict['names']
+        self.station_states = meta_dict['states']
+        self.station_ids = meta_dict['ids']
+        self.station_networks = meta_dict['networks']
+        self.station_lls = meta_dict['lls']
+        self.station_elevs = meta_dict['elevs']
+        self.station_uids = meta_dict['uids']
+        self.station_climdivs = meta_dict['climdivs']
+        self.station_countys = meta_dict['countys']
+        if 'valid_dateranges' in meta_dict.keys():
+            self.station_valid_dateranges = meta_dict['valid_dateranges']
+        #self.station_names, self.station_states, self.station_ids, self.station_networks, self.station_lls, self.station_elevs,self.station_uids, self.station_climdivs, self.station_countys = DJ.get_station_meta()
         return data
 
     def run_app(self, data):
@@ -52,11 +64,12 @@ def sodxtrmts_wrapper(argv):
     '''
     NOTES: Runs without frequency analysis,
            ndays analysis not implemented here
-    argv -- stn_id start_year end_year element monthly_statistic
+    argv -- stn_id start_year end_year element base_temperature monthly_statistic
             max_missing_days start_month departure_from_averages
     Explaination:
             element choices:
                 pcpn, snow, snwd, maxt, mint, avgt, dtr, hdd, cdd, gdd
+            base_temperature: for hdd, cdd, gdd
             monthly_statistic choices:
                 mmax --> Monthly Maximum
                 mmin --> Monthly Minimum
@@ -68,16 +81,36 @@ def sodxtrmts_wrapper(argv):
             departure from averages:
                 T  --> True
                 F  --> False
-    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+avgt+mave+5+01+F
+
+    Example (web) with base_temp:
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+hdd+60+mave+5+01+F
+    Example (web) with base_temp:
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+maxt+none+mave+5+01+F
     '''
     #Sanity Check
-    if len(argv) != 8:
+    if len(argv)!= 9:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Request'}, {}, {}, '0000', '0000')
         sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0])
     start_year = str(argv[1]);end_year = str(argv[2])
-    #Sanity check on start/end year
+    element = str(argv[3]);
+    base_temp=str(argv[4])
+    monthly_statistic = str(argv[5])
+    max_missing_days = argv[6]
+    start_month = str(argv[7])
+    departures_from_averages=str(argv[8])
+    ##
+    #Sanity checks on input parameters
+    ##
+    #Station ID check, if not alpha numeric, people coming from old pages and
+    #we need to redirect them
+    try:
+        int(stn_id)
+    except:
+        format_sodxtrmts_results_web([], [], {'redirect':''}, {}, {}, '0000', '0000')
+        sys.exit(1)
+    #start/end year checks
     if start_year.upper() != 'POR':
         try:
             int(start_year)
@@ -97,16 +130,14 @@ def sodxtrmts_wrapper(argv):
             format_sodxtrmts_results_web([], [], {'error':'Invalid End Year: %s' %end_year}, {}, {}, '0000', '0000')
             sys.exit(1)
     user_start_year = str(argv[1]);user_end_year = str(argv[2])
-    element = str(argv[3]);monthly_statistic = str(argv[4])
+    #More sanity checks
     try:
-        max_missing_days = int(argv[5])
+        max_missing_days = int(max_missing_days)
     except:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Max Missing Days: %s' %argv[5] }, {}, {}, '0000', '0000')
         sys.exit(1)
-    start_month = str(argv[6])
     if len(start_month) == 1:
         start_montrh = '0' +start_month
-    departures_from_averages=str(argv[7])
     if departures_from_averages not in ['T','F']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Departures from Averages: %s' %str(argv[7])}, {}, {}, '0000', '0000')
         sys.exit(1)
@@ -121,21 +152,32 @@ def sodxtrmts_wrapper(argv):
     if monthly_statistic not in ['mmax','mmin','mave','sd','rmon','msum']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Analysis: %s' % monthly_statistic}, {}, {}, '0000', '0000')
         sys.exit(1)
-    if element not in ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'avgt', 'dtr', 'hdd', 'cdd', 'gdd']:
+    if element not in ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'avgt', 'dtr', 'hdd', 'cdd', 'gdd','evap','wdmv']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Element: %s' %element }, {}, {}, '0000', '0000')
         sys.exit(1)
+    try:
+        int(base_temp)
+    except:
+        if base_temp!='none':
+            format_sodxtrmts_results_web([], [], {'error':'Invalid Base Temperature: %s' %base_temp}, {}, {}, '0000', '0000')
+            sys.exit(1)
+        else:
+            base_temp = '65'
     if start_month not in ['01','02','03','04','05','06','07','08','09','10','11','12']:
         format_sodxtrmts_results_web([], [], {'error':'Invalid Start Month: %s' %start_month }, {}, {}, '0000', '0000')
         sys.exit(1)
+    #End sanity checks
     #Define parameters
     data_params = {
                 'sid':stn_id,
                 'start_date':start_year,
                 'end_date':end_year,
-                'element':element
+                'element':element,
+                'base_temperature':base_temp
                 }
     app_params = {
                 'el_type':element,
+                'base_temperature':base_temp,
                 'max_missing_days':max_missing_days,
                 'start_month':start_month,
                 'monthly_statistic': monthly_statistic,
@@ -173,6 +215,13 @@ def sodsum_wrapper(argv):
     #Define parameters
     stn_id = str(argv[0])
     start_date = format_date(str(argv[1]));end_date = format_date(str(argv[2]))
+    #Station ID check, if not alpha numeric, people coming from old pages and
+    #we need to redirect them
+    try:
+        int(stn_id)
+    except:
+        format_sodsum_results_web({}, {}, {'redirect':''}, {})
+        sys.exit(1)
     #Sanity Check on dates
     if start_date.upper() != 'POR':
         if len(start_date)!=8:
@@ -216,8 +265,13 @@ def sodsum_wrapper(argv):
         SS_wrapper = {}
         data = {}
         results = {}
-    #Format resumts
-    format_sodsum_results_web(results, data, data_params,SS_wrapper)
+    #Format results
+    vd = WRCCUtils.find_valid_daterange(stn_id, start_date='por', end_date='por', el_list=['maxt','pcpn','snow','evap','wdmv'], max_or_min='max')
+    if vd and len(vd)==2:
+        station_dates = vd
+    else:
+        station_dates = ['99999901','99999999']
+    format_sodsum_results_web(results, data, data_params,SS_wrapper, station_dates=station_dates)
 
 def sodsumm_wrapper(argv):
     '''
@@ -242,6 +296,13 @@ def sodsumm_wrapper(argv):
     else:
         tbls =  table_name
     start_year = str(argv[2]);end_year = str(argv[3])
+    #Station ID check, if not alpha numeric, people coming from old pages and
+    #we need to redirect them
+    try:
+        int(stn_id)
+    except:
+        format_sodsumm_results_web([],'',{'redirect':''}, '0000', '0000', '', '','')
+        sys.exit(1)
     #Sanity check on start/end year
     if start_year.upper() != 'POR':
         try:
@@ -333,8 +394,9 @@ def soddyrec_wrapper(argv):
             output format choices:
                 list     --> python list of list
                 txt_list --> output looks like Kelly's commandline output
-    Example(command line): python WRCCWrappers.py soddyrec 266779 all 20000101 20101231
-    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231
+    Examples (web):
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por
     '''
     #Sanity Check
     if len(argv) != 4:
@@ -344,6 +406,13 @@ def soddyrec_wrapper(argv):
     stn_id = str(argv[0]);element = str(argv[1])
     start_date = format_date(str(argv[2]));end_date = format_date(str(argv[3]))
     #Sanity checks
+    #Station ID check, if not alpha numeric, people coming from old pages and
+    #we need to redirect them
+    try:
+        int(stn_id)
+    except:
+        format_soddyrec_results_web([],{'redirect':''},{})
+        sys.exit(1)
     #Change POR start/end year to 8 digit start/end dates
     if start_date.upper() == 'POR' or end_date.upper() == 'POR':
         valid_daterange = por_to_valid_daterange(stn_id)
@@ -382,15 +451,16 @@ def format_soddyrec_results_web(results, data_params, wrapper):
     Generates Soddyrec web content
     '''
     print_html_header()
-    if 'error' in data_params.keys() or not wrapper or not results:
-        print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
-        if 'error' in data_params.keys():
-            print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
-        else:
-            print '<H1>No data found!</H1>'
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif 'error' in data_params.keys():
+        print_error(data_params['error'])
+    elif not wrapper or not results:
+        print '<CENTER>'
+        print '<H1><FONT COLOR="RED">No data found!</FONT></H1>'
+        print '</CENTER>'
         print '</BODY>'
         print '</HTML>'
-
     else:
         print '<TITLE>' +  wrapper.station_names[0] + ', ' + wrapper.station_states[0] + ' Period of Record Daily Climate Summary </TITLE>'
         print '<BODY BGCOLOR="#FFFFFF">'
@@ -525,11 +595,10 @@ def format_sodumm_results_txt(table_name, results, start_year, end_year, station
 
 def format_sodsumm_results_web(results, table_name, data_params, start_year, end_year, station_id, station_name, station_state):
     print_html_header()
-    if 'error' in data_params.keys():
-        print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
-        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
-        print '</BODY>'
-        print '</HTML>'
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif 'error' in data_params.keys():
+        print_error(data_params['error'])
     else:
         print '<TITLE> ' + station_name + ', ' + station_id + ' Period of Record General Climate Summary - ' + WRCCData.SODSUMM_TABLE_NAMES[table_name] + '</TITLE>'
         print '<BODY BGCOLOR="#FFFFFF"><CENTER>'
@@ -730,19 +799,12 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
     '''
     Generates Sodxtrmts web content
     '''
-    if 'error' in data_params.keys():
-        print_html_header()
-        print '<HEAD><TITLE><FONT COLOR="RED">' + data_params['error'] + '</FONT></TITLE></HEAD>'
-        print '<BODY BGCOLOR="#FFFFFF">'
-        print '<CENTER>'
-        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
-        print '</CENTER>'
-        print '<PRE>'
-        print '</PRE>'
-        print '</BODY>'
-        print '</HTML>'
+    print_html_header()
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif'error' in data_params.keys() and data_params['error'] != 'Redirect':
+        print_error(data_params['error'])
     else:
-        print_html_header()
         print '<HEAD><TITLE>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] + ' of ' + \
         WRCCData.DISPLAY_PARAMS[data_params['element']] +', Station id: ' + data_params['sid'] +'</TITLE></HEAD>'
         print '<BODY BGCOLOR="#FFFFFF">'
@@ -753,6 +815,8 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
             print '<H1> No Station Name</H1>'
         print '<H2>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] +  ' of '+ WRCCData.DISPLAY_PARAMS[data_params['element']] + ' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[data_params['element']]] +') </H2>'
         print '<H3> (<B>' + data_params['sid'] + '</B>) </H3>'
+        if data_params['element'] in ['hdd', 'cdd', 'gdd']:
+            print '<H4>   Base Temperature = ' + str(data_params['base_temperature'])+' F</H4>'
         if not data or not results or not results[0]:
             print '<H1>No Data found!</H1>'
             print '<H3>Start Year: ' + user_start_year + ', End Year:' + user_end_year +'</H3>'
@@ -826,19 +890,42 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
                 print '</BODY>'
                 print '</HTML>'
 
-def format_sodsum_results_web(results, data, data_params,wrapper):
+def format_sodsum_results_web(results, data, data_params,wrapper,station_dates=None):
     '''
     Generates sodsum text output that matches Kelly's commandline output
     '''
+    if station_dates:
+        station_start = '%s %s' %(station_dates[0][2:4], station_dates[0][6:8])
+        station_end = '%s %s' %(station_dates[1][2:4], station_dates[1][6:8])
+    else:
+        station_start = '99 01'
+        station_end = '99 99'
+    #Convert lat/lon to ddmmss
+    try:
+        lon = wrapper.station_lls[0][0]
+        lat  = wrapper.station_lls[0][1]
+    except:
+        lon = '-999.99'
+        lat = '99.99'
+    for idx, l in enumerate([lat,lon]):
+        dd = int(abs(float(l)))
+        d_60 = abs((abs(float(l)) - dd))*60
+        mm = int(d_60)
+        ss = int(abs((mm - d_60))*60)
+        if len(str(ss)) == 1:ss = '0' + str(ss)
+        if len(str(mm))==1:mm = '0' + str(mm)
+        if idx ==0:
+            lat_ddmmss = '%s%s%s' %(str(dd),str(mm),str(ss))
+        if idx ==1:
+            lon_ddmmss = '%s%s%s' %(str(dd),str(mm),str(ss))
     print_html_header()
     print '<TITLE>  POR - Station Metadata </TITLE>'
     print '<BODY BGCOLOR="#FFFFFF">'
     print '<CENTER>'
-    if 'error' in data_params.keys():
-        print '<H1><FONT COLOR="RED">' + data_params['error'] + '</FONT></H1>'
-        print '</CENTER>'
-        print '</BODY>'
-        print '</HTML>'
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif 'error' in data_params.keys():
+        print_error(data_params['error'])
     else:
         if not results or not data or not wrapper:
             print '<H2>   Station Metadata </H2>'
@@ -848,10 +935,10 @@ def format_sodsum_results_web(results, data, data_params,wrapper):
             print '<H2>   Station Metadata </H2>'
             print '<BR>'
             print '<TABLE>'
-            print '<TR><TH>Count</TH><TH> Number</TH><TH>   Station Name   </TH><TH>Lat</TH><TH> Long</TH><TH>  Elev</TH><TH>  Start</TH><TH COLSPAN=6> ObsTyp</TH><TH>  End</TH></TR>'
-            print '<TR><TD> </TD><TD> (Coop) </TD><TD>  (From ACIS listing) </TD><TD>    ddmm</TD><TD> dddmm</TD><TD> ft</TD><TD> yy mm</TD><TD> t</TD><TD>p</TD><TD>w</TD><TD>s</TD><TD>e</TD><TD>h</TD><TD> yy mm</TD></TR>'
-            print '<TR><TD>=====</TD><TD> ======</TD><TD>   =======================</TD><TD> ====</TD><TD> =====</TD><TD> ====</TD><TD>  =====</TD><TD> =</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD>=</TD><TD> =====</TD></TR>'
-            print '<TR><TD>' + wrapper.station_countys[0] + '</TD><TD>' + wrapper.station_ids[0] + '</TD><TD>' + wrapper.station_names[0] + '</TD><TD>' + str(int(100*round(float(wrapper.station_lls[0].rstrip(']').split(',')[1]),2))) + '</TD><TD>' + str(int(100*round(float(wrapper.station_lls[0].lstrip('[').split(',')[0][1:]),2))) + '</TD><TD>' + str(int(round(float(wrapper.station_elevs[0])))) + '</TD><TD>' + '99 01' + '</TD><TD>U</TD><TD>U</TD><TD>  </TD><TD>  </TD><TD>  </TD><TD> U</TD><TD> 99 99</TD></TR>'
+            print '<TR><TH>Count</TH><TH> Number</TH><TH>   Station Name   </TH><TH>Lat</TH><TH> Long</TH><TH>  Elev</TH><TH>  Start</TH><TH>  End</TH></TR>'
+            print '<TR><TD> </TD><TD> (Coop) </TD><TD>  (From ACIS listing) </TD><TD>    ddmmss</TD><TD> dddmmss</TD><TD> ft</TD><TD> yy mm</TD><TD> yy mm</TD></TR>'
+            print '<TR><TD>=====</TD><TD> ======</TD><TD>   =======================</TD><TD> ======</TD><TD> ======</TD><TD> ====</TD><TD>  =====</TD><TD> =====</TD></TR>'
+            print '<TR><TD>' + wrapper.station_countys[0] + '</TD><TD>' + wrapper.station_ids[0] + '</TD><TD>' + wrapper.station_names[0] + '</TD><TD>' + lat_ddmmss + '</TD><TD>' + lon_ddmmss + '</TD><TD>' + str(int(round(float(wrapper.station_elevs[0])))) + '</TD><TD>' + station_start + '</TD><TD>' + station_end + '</TD></TR>'
             print '</TABLE></CENTER>'
             print '<HR>'
             print '<CENTER>'
@@ -926,6 +1013,32 @@ def print_html_header():
     print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
     print 'Content-type: text/html \r\n\r\n'
     print '<HTML>'
+
+def print_error(error):
+    print '<HEAD><TITLE>' + error + '</TITLE></HEAD>'
+    print '<BODY BGCOLOR="#FFFFFF">'
+    print '<CENTER>'
+    print '<H1><FONT COLOR="RED">' + error + '</FONT></H1>'
+    print '</CENTER>'
+    print '<PRE>'
+    print '</PRE>'
+    print '</BODY>'
+    print '</HTML>'
+
+def print_redirect():
+    print '<HEAD><TITLE><FONT COLOR="RED">Redirect</FONT></TITLE></HEAD>'
+    print '<BODY BGCOLOR="#FFFFFF">'
+    print '<CENTER>'
+    print '<H1><FONT COLOR="RED">Page Redirect</FONT></H1>'
+    print 'These pages are no longer updated.<BR>'
+    print 'The new webpages are located here: <BR>'
+    print '<a href="http://www.wrcc.dri.edu/">WRCC Home Page</a><BR>'
+    print '<a href="http://www.wrcc.dri.edu/climatedata/climsum/">State selection page for COOP stations</a>'
+    print '</CENTER>'
+    print '<PRE>'
+    print '</PRE>'
+    print '</BODY>'
+    print '</HTML>'
 
 def por_to_valid_daterange(stn_id):
     valid_daterange = WRCCUtils.find_valid_daterange(stn_id)

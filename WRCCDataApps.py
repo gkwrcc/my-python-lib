@@ -2,20 +2,20 @@
 
 '''
 Module WRCCDataApps
+Contains all of Kely's SOD programs rewritten in Python
+as well as several applications used in my_acis/scenic
 '''
 from collections import defaultdict
-import WRCCUtils, AcisWS, WRCCData
 import numpy
 import sys, os, datetime
 import fileinput
 from scipy import stats
 from math import ceil
 import sets
-#from django.conf import settings
-#import my_acis.settings as settings
-#LIB_PREFIX = settings.LIB_PREFIX
 
-LIB_PREFIX = "/www/apps/csc/my-python-lib/"
+#Local modules
+import my_acis_settings,WRCCUtils, AcisWS, WRCCData
+
 
 #############################
 #CSC DATA PORTAL APPLICATIONS
@@ -314,7 +314,7 @@ def Sodpiii(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input([LIB_PREFIX + 'piii.dat.2']):
+    for line in fileinput.input([my_acis_settings.LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -389,7 +389,6 @@ def Sodpiii(**kwargs):
                     continue
                 if yr == num_yrs - 1 and mon +1 > end_month:
                     continue
-
                 if mon == 1  and not WRCCUtils.is_leap_year(start_year + yr):
                     mon_len = 28
                 else:
@@ -397,7 +396,7 @@ def Sodpiii(**kwargs):
 
                 for day in range(mon_len):
                     #find the right data
-                    doy = WRCCUtils.compute_doy(str(mon + 1), str(day + 1))
+                    doy = WRCCUtils.compute_doy_leap(str(mon + 1), str(day + 1))
                     if kwargs['el_type'] == 'avgt':
                         dat_x = el_data[yr][0][doy -1]
                         dat_n = el_data[yr][1][doy -1]
@@ -452,9 +451,10 @@ def Sodpiii(**kwargs):
                     #if ndur >= 7:break
             maxmis = mxmis[numdur -1]
             #Year loop
-            n732 = [kwargs['value_missing'] for k in range(733)]
+            #732 = [kwargs['value_missing'] for k in range(733)] #changed 05/01/14
             #Year loop
             for iyear in range(num_yrs):
+                n732 = [kwargs['value_missing'] for k in range(733)]
                 mont = start_month - 1
                 iyeart = iyear
                 mcount = 0
@@ -469,17 +469,25 @@ def Sodpiii(**kwargs):
                 ndayl = mon_lens[monl -1]
                 #n732[0] is val of previous day
                 n732[0] = ndata[iyearl][monl-1][ndayl-1]
-                while mont < 12:
+                #while mont < 12: #changed 05/01/14
+                while idycnt < 733:
+                    '''
                     if iyeart > num_yrs -1:
                         break
                     elif iyeart == num_yrs -1:
                         if mont > end_month:break
+                    '''
                     mont+=1
                     if mont == 13:mont = 1
                     mcount+=1
                     if mcount == 25:break
                     if mont == 1 and mcount != 1:
                         iyeart+=1
+                    #Moved to here 05/01/14
+                    if iyeart > num_yrs -1:
+                        break
+                    elif iyeart == num_yrs -1:
+                        if mont > end_month:break
                     if mont == 2 and not WRCCUtils.is_leap_year(start_year + iyeart):
                         length = 28
                     else:
@@ -496,8 +504,8 @@ def Sodpiii(**kwargs):
                 nummis = 0
                 #Day loop:
                 break_flag = False
-                for idoy in range(366):
-                    if idoy ==60 and not WRCCUtils.is_leap_year(start_year + iyear):
+                for idoy in range(1,367):
+                    if idoy == 60 and not WRCCUtils.is_leap_year(start_year + iyear):
                         continue
                     summ = 0
                     sumobs = 0
@@ -507,7 +515,7 @@ def Sodpiii(**kwargs):
                     for iplus in range(ndur): #NOTE: Kellys also goes from 0  to ndur -1
                         if iplus == 0:
                             #Skip periods that begin with previous accumulation
-                            if abs(n732[idoy] - kwargs['value_subsequent']) < 0.001:
+                            if abs(n732[idoy - 1] - kwargs['value_subsequent']) < 0.001:
                                 nummis+=1
                                 break_flag = True
                                 break
@@ -525,6 +533,10 @@ def Sodpiii(**kwargs):
                                 nummis+=1
                                 #Trip the switch
                                 ntrip = 1
+                            #Added by me to match Kelly's missing days in last year
+                            if iday > 365 and iyear == num_yrs - 1:
+                                nummis+=1
+                            #End added by me
                             if nummis > maxmis:
                                 break
                         elif abs(val - kwargs['value_subsequent']) < 0.001:
@@ -558,15 +570,15 @@ def Sodpiii(**kwargs):
                         if summ > xmax:
                             xmax = summ
                             #mon, day = WRCCUtils.compute_mon_day(idoy)
-                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
-                                mon, day = WRCCUtils.compute_mon_day(idoy-1)
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear - 1):
+                                mon, day = WRCCUtils.compute_mon_day(idoy+1)
                             else:
                                 mon, day = WRCCUtils.compute_mon_day(idoy)
                     elif el_type == 'mint':
                         if summ < xmin:
                             xmin = summ
                             #mon, day = WRCCUtils.compute_mon_day(idoy)
-                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear -1):
                                 mon, day = WRCCUtils.compute_mon_day(idoy-1)
                             else:
                                 mon, day = WRCCUtils.compute_mon_day(idoy)
@@ -575,11 +587,10 @@ def Sodpiii(**kwargs):
                             xmax = summ
                             xmin = summ
                             #mon, day = WRCCUtils.compute_mon_day(idoy)
-                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear):
+                            if idoy > 60 and WRCCUtils.is_leap_year(start_year + iyear - 1):
                                 mon, day = WRCCUtils.compute_mon_day(idoy-1)
                             else:
                                 mon, day = WRCCUtils.compute_mon_day(idoy)
-
                 #End of day loop
                 if not mon:mon = '-1'
                 if not day:day = '-1'
@@ -597,7 +608,8 @@ def Sodpiii(**kwargs):
                     x = xmin
                 else:
                     x = xmax
-                annser[iyear][0][numdur - 1] = round(x,3)
+                #annser[iyear][0][numdur - 1] = round(x,3)
+                annser[iyear][0][numdur - 1] = x
                 annser[iyear][1][numdur - 1] = xdate
                 annser[iyear][2][numdur - 1] = nummis # In Kellys this is set to mysterios "xmisno"
                 if kwargs['days'] == 'i':
@@ -621,6 +633,7 @@ def Sodpiii(**kwargs):
             #Year loop
             for nyear in range(num_yrs):
                 value = annser[nyear][0][numdur - 1]
+                #value = round(annser[nyear][0][numdur - 1],2)
                 if value >= -9998.0:
                     summ+=value
                     summ2+=value*value
@@ -660,12 +673,21 @@ def Sodpiii(**kwargs):
                     sk = 0.0
             else:
                 sk = 0.0
+            '''
             stats[0][numdur-1] = round(average,3)
             stats[1][numdur-1] = round(stdev,3)
             stats[2][numdur-1] = round(cv,3)
             stats[3][numdur-1] = round(sk,3)
             stats[4][numdur-1] = round(xminn,3)
             stats[5][numdur-1] = round(xmaxx,3)
+            stats[6][numdur-1] = count
+            '''
+            stats[0][numdur-1] = average
+            stats[1][numdur-1] = stdev
+            stats[2][numdur-1] = cv
+            stats[3][numdur-1] = sk
+            stats[4][numdur-1] = xminn
+            stats[5][numdur-1] = xmaxx
             stats[6][numdur-1] = count
             if kwargs['days'] == 'i':
                 tbl_idx = 0
@@ -674,9 +696,9 @@ def Sodpiii(**kwargs):
             else:
                 tbl_idx = numdur - 1
 
-            averages[tbl_idx] = '%.2f' %average
-            stdevs[tbl_idx] = '%.2f' %stdev
-            skews[tbl_idx] = '%.2f' %sk
+            averages[tbl_idx] = '%.2f' %round(average,2)
+            stdevs[tbl_idx] = '%.2f' %round(stdev,2)
+            skews[tbl_idx] = '%.2f' %round(sk,2)
             results_0[i][tbl_idx][num_yrs].append('%.2f' % round(average,2))
             results_0[i][tbl_idx][num_yrs+1].append('%.2f' % round(stdev,2))
             results_0[i][tbl_idx][num_yrs+2].append('%.2f' % round(cv,2))
@@ -686,7 +708,7 @@ def Sodpiii(**kwargs):
             results_0[i][tbl_idx][num_yrs+6].append('%i' % int(count))
         #End numdur while loop... Phew...
         if kwargs['mean'] == 'am':stats[0] = amean
-        annpcp = 50.0 #from LIB_PREFIX + arealstats.dat
+        annpcp = 50.0 #from my_acis_settings.LIB_PREFIX + arealstats.dat
         if kwargs['pct_average'] == 'apct':
             for idur in range(16):stats[1][idur] = apctan[idur]*annpcp
 
@@ -695,7 +717,7 @@ def Sodpiii(**kwargs):
 
         if kwargs['cv'] == 'acv':
             for idur in range(16):stats[1][idur] = acv[idur] * stats[0][idur]
-        #Ration of 6 and 12 hr to one day (from LIB_PREFIX + arealstats.dat)
+        #Ration of 6 and 12 hr to one day (from my_acis_settings.LIB_PREFIX + arealstats.dat)
         r6to1 = 0.5
         r12to1 = 0.75
 
@@ -783,7 +805,7 @@ def Sodxtrmts(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input([LIB_PREFIX + 'piii.dat.2']):
+    for line in fileinput.input([my_acis_settings.LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -834,6 +856,10 @@ def Sodxtrmts(**kwargs):
         if 'frequency_analysis_type' in kwargs.keys():
             fa_results[i] = [['%s %s' % (str(kwargs['frequency_analysis_type']), probss[k])] for k in range(len(probss))]
         for yr in range(num_yrs):
+            today = datetime.date.today()
+            if yr == num_yrs -1 and int(today.year)==int(start_year) + yr:
+                if int(kwargs['start_month'].lstrip('0')) != 1 and int(today.month) < int(kwargs['start_month'].lstrip('0')):
+                    break
             year = start_year + yr
             if kwargs['start_month'] != '01':
                 results[i][yr] = [str(year)+ '-'+str(year+1)[2:4]]
@@ -1228,6 +1254,11 @@ def Sodxtrmts(**kwargs):
         #End month loop
         #Record results for each year
         for yr in range(num_yrs):
+            #Omit last year if it will only give empty results
+            today = datetime.date.today()
+            if yr == num_yrs -1 and int(today.year)==int(start_year) + yr:
+                if int(kwargs['start_month'].lstrip('0')) != 1 and int(today.month) < int(kwargs['start_month'].lstrip('0')):
+                    break
             for monind in range(13):
                 if monind < 12:
                     mon = monind + int(kwargs['start_month'].lstrip('0')) - 1
@@ -1235,7 +1266,6 @@ def Sodxtrmts(**kwargs):
                         mon-=12
                 else:
                     mon = monind
-
                 intgr = int(table_2[yr][mon])
                 if intgr > 26:intgr = 26
                 #Special for accumulations or subsequents

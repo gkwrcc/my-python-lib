@@ -15,17 +15,11 @@ import sys
 from collections import defaultdict
 #############################################################################
 #WRCC specific modules
-import WRCCUtils, WRCCClasses, WRCCData
+import my_acis_settings, WRCCUtils, WRCCClasses, WRCCData
 ##############################################################################
 # import modules required by Acis
 import urllib2
 import json
-##############################################################################
-# set Acis data server
-#base_url = 'http://data.rcc-acis.org/'
-base_url = 'http://data.wrcc.rcc-acis.org/'
-## For Prism Data
-test_url = 'http://data.test.rcc-acis.org/'
 ##############################################################################
 
 #Acis WebServices functions
@@ -42,28 +36,28 @@ def make_request(url,params) :
         pass
 
 def MultiStnData(params):
-    return make_request(base_url+'MultiStnData',params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'MultiStnData',params)
 
 def StnData(params):
-    return make_request(base_url+'StnData',params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'StnData',params)
 
 def StnMeta(params):
-    return make_request(base_url+'StnMeta',params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'StnMeta',params)
 
 def GridData(params):
-    return make_request(base_url+'GridData',params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'GridData',params)
 
 def PrismData(params):
-    return make_request(test_url+'GridData',params)
+    return make_request(my_acis_settings.PRISM_TEST_URL+'GridData',params)
 
 def GridCalc(params):
-    return make_request(base_url+'GridCalc',params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'GridCalc',params)
 
 def General(request_type, params):
     '''
     request_type in [basin, climdiv,cwa,state, county]
     '''
-    return make_request(base_url+'General' + '/' + request_type, params)
+    return make_request(my_acis_settings.ACIS_BASE_URL+'General' + '/' + request_type, params)
 
 
 ###################################
@@ -142,14 +136,21 @@ def find_bbox_of_area(search_area, val):
     else:
         return req['meta'][0]['bbox']
 
-def get_meta_data(search_area, val):
+def get_meta_data(search_area, val,vX_list=None):
         '''
         Find meta data for  search_area = val
+        If vX_list is given, find valid_dateranges for these elements
         '''
+        meta_opts = 'name,state,sids,ll,elev,uid,county,climdiv'
         meta_params = {
                         search_area: val,
-                        'meta':'name,state,sids,ll,elev,uid,county,climdiv'
+                        'meta':meta_opts
                       }
+        if vX_list:
+            elems = []
+            for vX in vX_list:
+                elems.append({'vX':vX})
+            meta_params['elems'] = elems
         request = StnMeta(meta_params)
         if 'error' in request.keys() or not 'meta' in request.keys() or not request:
             return {}
@@ -432,6 +433,12 @@ def get_station_data(form_input, program):
             base_temp = int(el[3:])
         except:
             base_temp = None
+        '''
+        if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp))
+        else:
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']))
+        '''
         if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
             elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
         else:
@@ -501,8 +508,8 @@ def get_station_data(form_input, program):
                 e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
                 e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
                 e_date = '%s%s%s' %(e_yr,e_mon,e_day)
-            params['sdate']= s_date
-            params['edate'] = e_date
+            params['sdate']= str(s_date)
+            params['edate'] = str(e_date)
     elif 'station_ids' in form_input.keys():
         params['sids'] = form_input['station_ids']
         stn_list = form_input['station_ids'].replace(' ','').split(',')
@@ -529,6 +536,7 @@ def get_station_data(form_input, program):
         params['sids'] =''
 
     #Data request
+    '''
     try:
         request = MultiStnData(params)
     except Exception, e:
@@ -536,6 +544,8 @@ def get_station_data(form_input, program):
         for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
             resultsdict[key] = []
         return resultsdict
+    '''
+    request = MultiStnData(params)
     try:
         request['data']
         if not request['data']:

@@ -17,6 +17,7 @@ from math import sqrt
 import colorsys
 
 from django.http import HttpResponse, HttpResponseRedirect
+from xlwt import Workbook
 
 import WRCCClasses, AcisWS, WRCCData, WRCCUtils
 ####################################
@@ -423,7 +424,12 @@ def convert_db_dates(messy_date):
     '''
     #Check if input is datetime object, convert if necessary
     if type(messy_date) is datetime.date or type(messy_date) is datetime.datetime:
-        return datetime.datetime.strftime(messy_date,"%Y-%m-%d")
+        y = str(messy_date.year);m = str(messy_date.month);d=str(messy_date.day)
+        if len(y) != 4:y='9999'
+        if len(m) == 1:m='0'+m
+        if len(d)==1:d='0'+d
+        return y+'-'+m+'-'+d
+        #return datetime.datetime.strftime(messy_date,"%Y-%m-%d")
     #Check if data is already in form yyyy-mm-dd
     date_list = messy_date.split('-')
     if len(date_list) == 3 and len(date_list[0]) == 4:
@@ -637,7 +643,6 @@ def write_griddata_to_file(data, form, f=None, request=None):
             json.dump(data, jsonf)
             response = None
     else: #Excel
-        from xlwt import Workbook
         wb = Workbook()
         #Note row number limit is 65536 in some excel versions
         row_number = 0
@@ -823,7 +828,6 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             jsonf.write(json.dumps(resultsdict['stn_data']))
             response = None
     elif file_extension == '.xls': #Excel
-        from xlwt import Workbook
         wb = Workbook()
         for stn, dat in enumerate(resultsdict['stn_data']):
             #ws = wb.add_sheet('Station_%s_%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0], str(stn)))
@@ -1638,7 +1642,7 @@ def find_start_end_dates(form_input):
 
 def get_element_list(form_input, program):
     '''
-    Finds element list for program data query
+    Finds element list for SOD program data query
 
     Keyword arguments:
     form_input -- webpage user form fields
@@ -2121,6 +2125,7 @@ def Pintp3(prnoex, piii, piiili, npiili,skew):
     psdout = t * (a2 - a1) + a1
     #psdout =  (1.0 - t)*(1.0 - u)*y1 + t*(1.0 - u)*y2 + t*u*y3 + (1.0 - t)*u*y4
     return psdout
+
 def Capiii(xdata, numdat, piii, piiili,npiili, pnlist,numpn):
     '''
     Subroutine adapted from old Fortran program, mixture of cases thus results.

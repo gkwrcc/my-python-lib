@@ -2,8 +2,8 @@
 
 '''
 Module WRCCData
-
-Contains useful dicts and lists
+Contains useful dicts and lists used in my_acis
+django project
 CAPS names imply use in django forms
 '''
 from collections import defaultdict
@@ -15,13 +15,13 @@ from collections import OrderedDict
 ###################################
 ###################################
 
-FIPS_STATE_KEYS = {'al':'01','az':'02','ca':'04','co':'05', 'hi':'51', 'id':'10','mt':'24', 'nv':'26', \
-             'nm':'29','pi':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
+FIPS_STATE_KEYS = {'al':'01','az':'02','ca':'04','co':'05','ct':'06','hi':'51', 'id':'10','mt':'24', 'nv':'26', \
+             'nm':'29','pa':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
              'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
              'la':'16','me':'17','md':'18','ma':'19', 'mi':'20', 'mn':'21','ms':'22', 'mo':'23', \
              'ne':'25','nh':'27','nj':'28','ny':'30', 'nc':'31', 'nd':'32','oh':'33', 'ok':'34', \
-             'pa':'36','ri':'37','sc':'38','sd':'39', 'tn':'40', 'ct':'43','va':'44', 'wv':'46', \
-             'wi':'47','vi':'67','pr':'66','wr':'96', 'ml':'97', 'ws':'98','ak':'50'}
+             'pa':'36','ri':'37','sc':'38','sd':'39', 'tn':'40', 'vt':'43','va':'44', 'wv':'46', \
+             'wi':'47','wy':'48','vi':'67','pr':'66','wr':'96', 'ml':'97', 'ws':'98','ak':'50'}
 
 STATE_CHOICES = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', \
                 'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', \
@@ -29,21 +29,65 @@ STATE_CHOICES = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA
                 'NY', 'OH', 'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', \
                 'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
 
-NETWORK_CODES = {'1': 'WBAN', '2':'COOP', '3':'FAA', '4':'WMO', '5':'ICAO', '6':'GHCN', '7':'NWSLI', \
-'8':'RCC', '9':'ThreadEx', '10':'CoCoRaHS', '11':'Misc'}
-NETWORK_ICONS = {'1': 'yellow-dot', '2': 'blue-dot', '3': 'green-dot','4':'purple-dot', '5': 'ltblue-dot', \
-'6': 'orange-dot', '7': 'pink-dot', '8': 'yellow', '9':'green', '10':'purple', '11': 'red'}
-#NETWORK_ICONS = {'1': 'yellow', '2': 'blue', '3': 'green','4':'purple', '5': 'gray', \
-#'6': 'orange', '7': 'white', '8': 'black', '9':'brown', '10':'red', '11': 'shadow'}
-#1YELLOW, 2BLUE, 3BROWN, 4OLIVE, 5GREEN, 6GRAY, 7TURQOIS, 8BLACK, 9TEAL, 10WHITE Multi:Red, Misc:Fuchsia
-KELLY_NETWORK_CODES = {'1': 'COOP', '2':'GHCN', '3':'ICAO', '4':'NWSLI', '5':'FAA', '6':'WMO', '7':'WBAN', \
-'8':'CoCoRaHS', '9':'RCC', '10':'Threadex', '11':'Misc'}
-KELLY_NETWORK_ICONS = {'1': 'blue-dot', '2': 'orange-dot', '3': 'ltblue-dot','4':'pink-dot', '5': 'green-dot', \
-'6': 'purple-dot', '7': 'yellow-dot', '8': 'purple', '9':'yellow', '10':'green', '11': 'red'}
+NETWORK_CODES = {
+                '1': 'WBAN',
+                '2':'COOP',
+                '3':'FAA',
+                '4':'WMO',
+                '5':'ICAO',
+                '6':'GHCN',
+                '7':'NWSLI',
+                '8':'RCC',
+                '9':'ThreadEx',
+                '10':'CoCoRaHS',
+                '11':'Misc'
+                }
+NETWORK_ICONS = {
+            '1': 'yellow-dot',
+            '2': 'blue-dot',
+            '3': 'green-dot',
+            '4':'purple-dot',
+            '5': 'ltblue-dot',
+            '6': 'orange-dot',
+            '7': 'pink-dot',
+            '8': 'yellow',
+            '9':'green',
+            '10':'purple',
+            '11': 'red'
+            }
+
+KELLY_NETWORK_CODES = {
+            '1': 'COOP',
+            '2':'GHCN',
+            '3':'ICAO',
+            '4':'NWSLI',
+            '5':'FAA',
+            '6':'WMO',
+            '7':'WBAN',
+            '8':'CoCoRaHS',
+            '9':'RCC',
+            '10':'Threadex',
+            '11':'Misc'
+            }
+
+KELLY_NETWORK_ICONS = {
+            '1': 'blue-dot',
+            '2': 'orange-dot',
+            '3': 'ltblue-dot',
+            '4':'pink-dot',
+            '5': 'green-dot',
+            '6': 'purple-dot',
+            '7': 'yellow-dot',
+            '8': 'purple',
+            '9':'yellow',
+            '10':'green',
+            '11': 'red'
+            }
 
 
 ACIS_ELEMENTS = defaultdict(dict)
-ACIS_ELEMENTS ={'1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F/C)', 'vX':1},
+ACIS_ELEMENTS ={
+              '1':{'name':'maxt', 'name_long': 'Maximum Daily Temperature (F/C)', 'vX':1},
               '2':{'name':'mint', 'name_long': 'Minimum Daily Temperature (F/C)', 'vX':2},
               '43': {'name':'avgt', 'name_long': 'Average Daily Temperature (F/C)', 'vX':43},
               '3':{'name':'obst', 'name_long': 'Observation Time Temperature (F/C)', 'vX':3},

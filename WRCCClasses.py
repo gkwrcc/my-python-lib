@@ -1,8 +1,7 @@
 #!/usr/bin/python
 '''
 module WRCCClasses.py
-
-Defines classes used in my_acis project
+Defines classes used in the my_acis project
 '''
 
 ##############################################################################
@@ -19,12 +18,11 @@ from xlwt import Workbook
 from django.http import HttpResponse
 
 #WRCC modules
-import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
-
-MEDIA_URL = '/www/apps/csc/dj-projects/my_acis/media/'
+import my_acis_settings, AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
 
-class DownloadDataJob:
+
+class DownloadDataJob(object):
     '''
     Download data to excel, .dat or .txt
 
@@ -269,7 +267,7 @@ class DownloadDataJob:
         return response
 
 
-class SODDataJob:
+class SODDataJob(object):
     '''
     SOD Data class.
 
@@ -471,12 +469,15 @@ class SODDataJob:
             'uids':[],
             'networks':[],
             'climdivs':[],
-            'countys':[]
+            'countys':[],
+            'valid_daterange':[]
         }
-        keys = ['state', 'll', 'elev', 'uid', 'climdiv', 'county']
         area, val = self.set_area_params()
         if area and val:
-            request =  AcisWS.get_meta_data(area, val)
+            if self.app_name == 'Sodsum':
+                request = AcisWS.get_meta_data(area, val,vX_list=[1,4,7,10,12])
+            else:
+                request =  AcisWS.get_meta_data(area, val)
         else:
             request = {}
         if request:
@@ -489,8 +490,15 @@ class SODDataJob:
                 meta_dict['ids'].append(stn_id)
                 meta_dict['networks'].append(stn_network)
                 meta_dict['names'].append(str(stn['name']).replace("\'"," "))
+                if stn['ll'] and len(stn['ll']) == 2:
+                    meta_dict['lls'].append(stn['ll'])
+                else:
+                    meta_dict['lls'].append([-999.99,99.99])
+                if 'valid_daterange' in stn.keys():
+                    meta_dict['valid_dateranges'] = stn['valid_daterange']
                 #find other meta data info
                 #NOTE: ACIS quirk: sometimes other meta data attributes don't show up
+                keys = ['state', 'elev', 'uid', 'climdiv', 'county']
                 for key in keys:
                     meta_dict_key = key + 's'
                     if key in stn.keys():
@@ -498,7 +506,8 @@ class SODDataJob:
                     else:
                         meta_dict[meta_dict_key].append(' ')
         self.station_ids = meta_dict['ids']
-        return meta_dict['names'], meta_dict['states'], meta_dict['ids'], meta_dict['networks'], meta_dict['lls'], meta_dict['elevs'], meta_dict['uids'], meta_dict['climdivs'], meta_dict['countys']
+        return meta_dict
+        #return meta_dict['names'], meta_dict['states'], meta_dict['ids'], meta_dict['networks'], meta_dict['lls'], meta_dict['elevs'], meta_dict['uids'], meta_dict['climdivs'], meta_dict['countys']
 
     def get_dates_list(self):
         '''
@@ -565,8 +574,11 @@ class SODDataJob:
             #We have to add three types of summaries for each element of Soddyrec
             if self.app_name == 'Soddyrec':
                 for smry in self.soddyrec_smry_opts:
-                    el_dict_new['smry'] = smry
-                    elems.append(el_dict_new)
+                    e_d = {}
+                    for key, val in el_dict_new.iteritems():
+                        e_d[key] = val
+                    e_d['smry'] = smry
+                    elems.append(e_d)
             else:
                 elems.append(el_dict_new)
         #FIX ME: should need to treat Sodsumm separately
@@ -659,7 +671,7 @@ class SODDataJob:
         resultsdict['data'], resultsdict['error'] = self.format_data(request, station_ids, elements)
         return resultsdict
 
-class SODApplication:
+class SODApplication(object):
     '''
     SOD Application Class.
 
@@ -702,7 +714,7 @@ class SODApplication:
             results = Application(**app_params)
             return results
 
-class SodGraphicsJob:
+class SodGraphicsJob(object):
     '''
     SOD Graphics Class.
 
@@ -720,7 +732,7 @@ class SodGraphicsJob:
         self.data = data
         self.app_specific_params = app_specific_params
 
-class StnDataJob:
+class StnDataJob(object):
     '''
     Class to retrieve data via Acis Webservice
     acis_data_call is one of StnMeta, StnData, MultiStnData, GridData, General
@@ -819,7 +831,7 @@ class GridFigure(object) :
         return levels
 
     def get_grid(self) :
-        with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+        with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
             encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
         empty_img = {'data':encoded_string, 'range':[0.0, 0.0], 'levels':[0,1,2,3,4,5,6,7,8],\
         'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -976,12 +988,15 @@ class GridFigure(object) :
 
 
 class GridDiffFigure(GridFigure) :
+    '''
+    ACIS Grid anomaly map
+    '''
     title = 'Difference from Last Year'
     def get_grid(self):
         try:
             result = AcisWS.GridCalc(self.params)
             if not result or 'error' in result.keys():
-                with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+                with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
                 self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
                 'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -990,7 +1005,7 @@ class GridDiffFigure(GridFigure) :
             else:
                 self.results = results
         except ValueError:
-            with open('%simg/empty.png' %MEDIA_URL, 'rb') as image_file:
+            with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -998,3 +1013,13 @@ class GridDiffFigure(GridFigure) :
             'error':'bad request, check parameters %s' %str(self.params)}
 
         return self.results
+
+class DataRequest(object):
+    '''
+    This class handles large data request freom SCENIC.
+    Components:
+
+    Keyword arguments:
+    '''
+    def __init__(self, params):
+        pass
