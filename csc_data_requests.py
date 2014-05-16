@@ -18,16 +18,18 @@ import re
 import multiprocessing
 from multiprocessing import Queue, JoinableQueue
 from time import sleep
-import my_acis_settings, WRCCUtils, AcisWS
+import WRCCUtils, AcisWS
 import logging
+
+from django.conf import settings
 
 #Settings
 nprocs = 4 #number of data requests to be executed in parallel
-ftp_server = my_acis_settings.DRI_FTP_SERVER
-mail_server = my_acis_settings.DRI_MAIL_SERVER
-from_address = my_acis_settings.CSC_FROM_ADDRESS
-base_dir = my_acis_settings.DATA_REQUEST_BASE_DIR
-pub_dir = my_acis_settings.DRI_PUB_DIR
+ftp_server = settings.DRI_FTP_SERVER
+mail_server = settings.DRI_MAIL_SERVER
+from_address = settings.CSC_FROM_ADDRESS
+base_dir = settings.DATA_REQUEST_BASE_DIR
+pub_dir = settings.DRI_PUB_DIR
 
 now = datetime.datetime.now()
 x_mins_ago = now - datetime.timedelta(minutes=5) #cron job checking for param files runs every 5 minutes

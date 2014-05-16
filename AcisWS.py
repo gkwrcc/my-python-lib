@@ -15,12 +15,14 @@ import sys
 from collections import defaultdict
 #############################################################################
 #WRCC specific modules
-import my_acis_settings, WRCCUtils, WRCCClasses, WRCCData
+import WRCCUtils, WRCCClasses, WRCCData
 ##############################################################################
 # import modules required by Acis
 import urllib2
 import json
 ##############################################################################
+#settings file
+from django.conf import settings
 
 #Acis WebServices functions
 ###########################
@@ -36,28 +38,28 @@ def make_request(url,params) :
         pass
 
 def MultiStnData(params):
-    return make_request(my_acis_settings.ACIS_BASE_URL+'MultiStnData',params)
+    return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
 
 def StnData(params):
-    return make_request(my_acis_settings.ACIS_BASE_URL+'StnData',params)
+    return make_request(settings.ACIS_BASE_URL+'StnData',params)
 
 def StnMeta(params):
-    return make_request(my_acis_settings.ACIS_BASE_URL+'StnMeta',params)
+    return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
 
 def GridData(params):
-    return make_request(my_acis_settings.ACIS_BASE_URL+'GridData',params)
+    return make_request(settings.ACIS_BASE_URL+'GridData',params)
 
 def PrismData(params):
-    return make_request(my_acis_settings.PRISM_TEST_URL+'GridData',params)
+    return make_request(settings.PRISM_TEST_URL+'GridData',params)
 
 def GridCalc(params):
-    return make_request(my_acis_settings.ACIS_BASE_URL+'GridCalc',params)
+    return make_request(settings.ACIS_BASE_URL+'GridCalc',params)
 
 def General(request_type, params):
     '''
     request_type in [basin, climdiv,cwa,state, county]
     '''
-    return make_request(my_acis_settings.ACIS_BASE_URL+'General' + '/' + request_type, params)
+    return make_request(settings.ACIS_BASE_URL+'General' + '/' + request_type, params)
 
 
 ###################################
@@ -419,7 +421,7 @@ def get_station_data(form_input, program):
     '''
     #Set up parameters for data request
     resultsdict = defaultdict(list)
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     #Sanity check for valid date input:
     if (s_date.lower() == 'por' or e_date.lower() == 'por') and ('station_id' not in form_input.keys()):
         resultsdict['error'] = 'Parameter error. Start/End date ="por" not supported for multi station call.'
@@ -692,7 +694,7 @@ def get_grid_data(form_input, program):
     '''
     #datalist[date_idx] = [[date1,lat1, lon1, elev1, el1_val1, el2_val1, ...],
     #[date2, lat2, ...], ...]
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     #grid data calls do not except list of elements, need to be string of comma separated values
     el_list = WRCCUtils.get_element_list(form_input, program)
     if 'data_summary' in form_input.keys() and form_input['data_summary'] == 'temporal':
@@ -807,7 +809,7 @@ def get_sod_data(form_input, program):
     program -- specifies program that is making the request.
     '''
 
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     '''
     if program in ['Sodpiii']:
         #get an extra year of data previos and after s_date, e_date
@@ -994,7 +996,7 @@ def get_sodsum_data(form_input):
     if not form_input['element'] or not form_input['coop_station_ids']:
         print 'element and coop_station_id options required!'
         sys.exit(0)
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     coop_station_ids = form_input['coop_station_ids'] #list of stn ids (converted to list in form)
     #sort coop ids in ascending order, strip left zeros first, sort and reattach zeros
     coop_station_ids = WRCCUtils.strip_n_sort(coop_station_ids)
@@ -1044,7 +1046,7 @@ def get_sodlist_data(form_input, program):
     form_input -- parameter file for data request obtained from user of WRCC SOD pages
     program -- specifies program that is making the request.
     '''
-    s_date, e_date = WRCCUtils.find_start_end_dates(form_input)
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     coop_station_id = form_input['coop_station_id']
     if program in ['sodlist', 'sodcnv']:
         if 'include_tobs_evap' in form_input.keys():

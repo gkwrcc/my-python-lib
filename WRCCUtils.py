@@ -23,6 +23,313 @@ import WRCCClasses, AcisWS, WRCCData, WRCCUtils
 ####################################
 #FUNCTIONS
 #####################################
+##########################
+#DATE/TIME FUNCTIONS
+##########################
+def date_to_eight(date,se=None):
+    '''
+    Converts dates of form
+    yyyy
+    yyyy-mm, yyyy:mm, yyyy/mm
+    yyyy-mm-dd, yyyy/mm/dd, yyyy:mm:dd
+
+    to yyyymmdd
+
+    se =='start' --> start_date
+    se == 'end' --> end_date
+    '''
+    mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
+    d8 = date.replace('-','').replace('/','').replace(':','').replace(' ','')
+    if se == 'start':
+        mmdd = '0101';dd = '01'
+    elif se == 'end':
+        mmdd = '1231'
+        if len(d8) == 6:
+            if d8[4:6] == '02' and WRCCUtils.is_leap_year(d8[0:4]):
+                mon_len = '29'
+            else:
+                mon_len = mon_lens[int(d8[4:6]) - 1]
+            dd = mon_len
+    if len(d8) == 4:d8+=mmdd
+    if len(d8) == 6:d8+=dd
+    return d8
+
+
+
+
+def date_to_datetime(date_str):
+    '''
+    Function to convert acis date_str of forms
+    yyyy-mm-dd
+    yyyy/mm/dd
+    yyyy:mm:dd
+    yyyymmdd
+    to datetime. The datetime object is returned
+    '''
+    eight_date = date_str.replace('-','').replace('/','').replace(':','')
+    if len(eight_date) != 8:
+        return None
+    dt = datetime.datetime(int(eight_date[0:4]),int(eight_date[4:6]), int(eight_date[6:8]))
+    return dt
+
+def get_start_date(time_unit, end_date, number):
+    '''
+    Given a time unit (days, months or years),
+    an end date and the number of days/months/years to
+    go back, this routine calculates the start date.
+    Leap years are taken into consideratiion. start date is given as
+    string of length 8, eg: "20000115", the resulting end date is of same format
+    '''
+    x = int(number)
+    yr = int(end_date[0:4])
+    mon = int(end_date[4:6])
+    day = int(end_date[6:8])
+    if time_unit == 'years':
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x*365)
+    elif time_unit == 'months':
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=(x*365)/12)
+    else:
+        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x)
+    yr_start = str(start.year)
+    mon_start = str(start.month)
+    day_start = str(start.day)
+    if len(mon_start) == 1:mon_start = '0%s' % mon_start
+    if len(day_start) == 1:day_start = '0%s' % day_start
+    start_date = '%s%s%s' %(yr_start, mon_start,day_start)
+    return start_date
+
+def start_end_date_to_eight(form_input):
+    '''
+    Converts form_input['start_date'] and form_input['end_date']
+    to 8 digit start, end dates of format yyyymmdd.
+    '''
+    mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
+    if 'start_date' not in form_input.keys():
+        s_date = 'por'
+    elif form_input['start_date'].lower() == 'por':
+        s_date = 'por'
+    else:
+        s_date = date_to_eight(str(form_input['start_date']),se='start')
+        if len(s_date)!=8:
+            s_date = None
+    if 'end_date' not in form_input.keys():
+        e_date = 'por'
+    elif form_input['end_date'].lower() == 'por':
+        e_date = 'por'
+    else:
+        e_date = date_to_eight(str(form_input['end_date']),se='end')
+        if len(e_date)!=8:
+            e_date = None
+    return s_date, e_date
+
+##############
+#Day of Year
+##############
+def compute_doy(mon,day):
+    '''
+    Routine to compute day of year ignoring leap years
+    '''
+    mon_len = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    nmon = int(str(mon).lstrip('0'))
+    nday = int(str(day).lstrip('0'))
+    if nmon == 1:
+        ndoy = nday
+    else:
+        ndoy = sum(mon_len[0:nmon - 1]) + nday
+    return ndoy
+
+def compute_doy_leap(mon, day):
+    '''
+    Routine to compute day of leap years
+    '''
+    mon_len = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    nmon = int(str(mon).lstrip('0'))
+    nday = int(str(day).lstrip('0'))
+    if nmon == 1:
+        ndoy = nday
+    else:
+        ndoy = sum(mon_len[0:nmon - 1]) + nday
+    return ndoy
+
+def compute_mon_day(doy):
+    '''
+    Reverse of compute_doy but counting every feb as having 29 days
+    '''
+    ndoy = int(doy)
+    mon = 0
+    day = 0
+    if ndoy >366 or ndoy < 1:
+        return None,None
+    mon_day_sum = [31,60,91,121,152,182,213,244,274,305,335,366]
+    for i in range(12):
+        if i == 0:
+            if ndoy <=31:
+                mon = 1
+                day = ndoy
+                break
+        else:
+            if mon_day_sum[i-1] < ndoy and ndoy <= mon_day_sum[i]:
+                mon = i+1
+                day = ndoy - mon_day_sum[i-1]
+                break
+            else:
+                continue
+
+    return mon,day
+
+#############
+#Leap Years
+#############
+def is_leap_year(year):
+    '''
+    Check if year is leap year.
+    '''
+    yr = int(year)
+    if yr % 100 != 0 and yr % 4 == 0:
+        return True
+    elif yr % 100 == 0 and yr % 400 == 0:
+        return True
+    else:
+        return False
+
+def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, max_or_min='max'):
+    '''
+    This function makes a StnMeta call to find either the
+    maximum or minimum valid daterange for a
+    station with station ID sid and elements in the list of climate elements el_list.
+
+    Keyword arguments:
+    sid  -- station ID
+    el_list -- list of elements required.
+               If el-list==None, we query for the 8 base elements
+               [maxt,mint,pcpn,snow,snwd, hdd,cdd,gdd]
+
+    Each element has its own valid daterange.
+    If max_or_min == max, the largest daterange is returned.
+    If max_or_min == min, the smallest daterange is returned.
+    '''
+    #Format start/end date into 8 digit strings
+    s_date = date_to_eight(start_date)
+    e_date = date_to_eight(end_date)
+    if s_date.lower() != 'por' and e_date.lower() != 'por':
+        return [s_date, e_date]
+
+    if el_list is None:
+        #el_tuple = 'maxt,mint,pcpn,snow,snwd,hdd,gdd,cdd'
+        el_tuple = '1,2,4,10,11,45'
+    else:
+        el_tuple =''
+        for idx, el in enumerate(el_list):
+            el_tuple+=str(WRCCData.ACIS_ELEMENTS_DICT[el]['vX'])
+            if idx < len(el_list) - 1:
+                el_tuple+=','
+
+        #el_tuple = ','.join(el_list)
+    meta_params = {'sids':sid, 'elems':el_tuple, 'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'}
+    try:
+        request = AcisWS.StnMeta(meta_params)
+    except:
+        return []
+    if 'error' in request.keys() or not 'meta' in request.keys():
+        return []
+
+    #Find valid daterange
+    #format first test date
+    el_idx = 0
+    vd_start = None;vd_end = None
+    idx_start = 0
+    if not request['meta']:
+        return []
+    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange']):
+        if s_date.lower() != 'por':
+            vd_start = date_to_datetime(s_date)
+        else:
+            if request['meta'][0]['valid_daterange'][el_idx]:
+                vd_start = date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][0])
+        if e_date.lower() != 'por':
+            vd_end = date_to_datetime(e_date)
+        else:
+            if request['meta'][0]['valid_daterange'][el_idx]:
+                vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
+        if vd_start is not None and vd_end is not None and vd_start <= vd_end:
+            idx_start = el_idx + 1
+            break
+    if vd_start is None or vd_end is None:
+        return ['','']
+    vd_start_date = ''
+    vd_end_date = ''
+    #loop over valid dateranges for each elements and find max or min valid daterange
+    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange'][idx_start:]):
+        vd_start_test = None;vd_end_test = None
+        if s_date.lower() == 'por':
+            if el_vdr:
+                vd_start_test = date_to_datetime(el_vdr[0])
+        if e_date.lower() == 'por':
+            if el_vdr:
+                vd_end_test = date_to_datetime(el_vdr[1])
+        if max_or_min == 'min':
+            if vd_start_test is not None and vd_start_test > vd_start and vd_start_test <= vd_end:
+                vd_start = vd_start_test
+            if vd_end_test is not None and vd_end_test < vd_end and vd_end_test >= vd_start:
+                vd_end = vd_end_test
+        elif max_or_min == 'max':
+            if vd_start_test is not None and vd_start_test < vd_start and vd_start_test <= vd_end:
+                vd_start = vd_start_test
+            if vd_end_test is not None and vd_end_test > vd_end and vd_end_test >= vd_start:
+                vd_end = vd_end_test
+    #convert back to date string
+    if s_date.lower() == 'por':
+        yr_start = str(vd_start.year);mon_start=str(vd_start.month);day_start = str(vd_start.day)
+    else:
+        yr_start = s_date[0:4];mon_start = s_date[4:6];day_start = s_date[6:8]
+    if e_date.lower() == 'por':
+        yr_end = str(vd_end.year);mon_end=str(vd_end.month);day_end = str(vd_end.day)
+    else:
+        yr_end = e_date[0:4];mon_end = e_date[4:6];day_end = e_date[6:8]
+
+    if len(mon_start) ==1:mon_start='0' + mon_start
+    if len(day_start) ==1:day_start='0' + day_start
+    if len(mon_end) ==1:mon_end='0' + mon_end
+    if len(day_end) ==1:day_end='0' + day_end
+    vd_start_date = '%s%s%s' %(yr_start, mon_start, day_start)
+    vd_end_date = '%s%s%s' %(yr_end, mon_end, day_end)
+    return [vd_start_date, vd_end_date]
+
+def get_dates(s_date, e_date, app_name):
+    '''
+    This function is in place because Acis_WS's MultiStnCall does not return dates
+    it takes as arguments a start date and an end date (format yyyymmdd)
+    and returns the list of dates [s_date, ..., e_date] assuming that there are no gaps in the data
+    '''
+    if not s_date or not e_date:
+        dates = []
+    elif s_date.lower() == 'por' or e_date.lower() == 'por':
+        dates = []
+    else:
+        dates = []
+        #convert to datetimes
+        start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
+        end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
+        for n in range(int ((end_date - start_date).days +1)):
+            next_date = start_date + datetime.timedelta(n)
+            n_year = str(next_date.year)
+            n_month = str(next_date.month)
+            n_day = str(next_date.day)
+            if len(n_month) == 1:n_month='0%s' % n_month
+            if len(n_day) == 1:n_day='0%s' % n_day
+            acis_next_date = '%s%s%s' %(n_year,n_month,n_day)
+            dates.append(acis_next_date)
+            #dates.append(str(time.strftime('%Y%m%d', next_date.timetuple())))
+            #note, these apps are grouped by year and return a 366 day year even for non-leap years
+            if app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
+                if dates[-1][4:8] == '0228' and not is_leap_year(int(dates[-1][0:4])):
+                    dates.append(dates[-1][0:4]+'0229')
+    return dates
+
+
+##########################
+#SPECIAL FUNCTIONS
+##########################
 def get_station_ids(stn_json_file_path):
     '''
     finds all station ids of the
@@ -1273,32 +1580,6 @@ def get_el_and_base_temp(el):
     return element, base_temp
 
 
-def get_start_date(time_unit, end_date, number):
-    '''
-    Given a time unit (days, months or years),
-    an end date and the number of days/months/years to
-    go back, this routine calculates the start date.
-    Leap years are taken into consideratiion. start date is given as
-    string of length 8, eg: "20000115", the resulting end date is of same format
-    '''
-    x = int(number)
-    yr = int(end_date[0:4])
-    mon = int(end_date[4:6])
-    day = int(end_date[6:8])
-    if time_unit == 'years':
-        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x*365)
-    elif time_unit == 'months':
-        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=(x*365)/12)
-    else:
-        start = datetime.datetime(yr,mon,day) - datetime.timedelta(days=x)
-    yr_start = str(start.year)
-    mon_start = str(start.month)
-    day_start = str(start.day)
-    if len(mon_start) == 1:mon_start = '0%s' % mon_start
-    if len(day_start) == 1:day_start = '0%s' % day_start
-    start_date = '%s%s%s' %(yr_start, mon_start,day_start)
-    return start_date
-
 def format_stn_meta(meta_dict):
     '''
     This routine deals with meta data issues:
@@ -1364,187 +1645,6 @@ def strip_data(val):
 
     return strp_val, flag
 
-def compute_doy(mon,day):
-    '''
-    Routine to compute day of year ignoring leap years
-    '''
-    mon_len = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    nmon = int(str(mon).lstrip('0'))
-    nday = int(str(day).lstrip('0'))
-    if nmon == 1:
-        ndoy = nday
-    else:
-        ndoy = sum(mon_len[0:nmon - 1]) + nday
-    return ndoy
-
-def compute_doy_leap(mon, day):
-    '''
-    Routine to compute day of leap years
-    '''
-    mon_len = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    nmon = int(str(mon).lstrip('0'))
-    nday = int(str(day).lstrip('0'))
-    if nmon == 1:
-        ndoy = nday
-    else:
-        ndoy = sum(mon_len[0:nmon - 1]) + nday
-    return ndoy
-
-def compute_mon_day(doy):
-    '''
-    Reverse of compute_doy but counting every feb as having 29 days
-    '''
-    ndoy = int(doy)
-    mon = 0
-    day = 0
-    if ndoy >366 or ndoy < 1:
-        return None,None
-    mon_day_sum = [31,60,91,121,152,182,213,244,274,305,335,366]
-    for i in range(12):
-        if i == 0:
-            if ndoy <=31:
-                mon = 1
-                day = ndoy
-                break
-        else:
-            if mon_day_sum[i-1] < ndoy and ndoy <= mon_day_sum[i]:
-                mon = i+1
-                day = ndoy - mon_day_sum[i-1]
-                break
-            else:
-                continue
-
-    return mon,day
-
-def is_leap_year(year):
-    '''
-    Check if year is leap year.
-    '''
-    yr = int(year)
-    if yr % 100 != 0 and yr % 4 == 0:
-        return True
-    elif yr % 100 == 0 and yr % 400 == 0:
-        return True
-    else:
-        return False
-
-def date_to_datetime(date_str):
-    '''
-    Function to convert acis date_str of forms
-    yyyy-mm-dd
-    yyyy/mm/dd
-    yyyy:mm:dd
-    yyyymmdd
-    to datetime. The datetime object is returned
-    '''
-    eight_date = date_str.replace('-','').replace('/','').replace(':','')
-    if len(eight_date) != 8:
-        return None
-    dt = datetime.datetime(int(eight_date[0:4]),int(eight_date[4:6]), int(eight_date[6:8]))
-    return dt
-
-def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, max_or_min='max'):
-    '''
-    This function makes a StnMeta call to find either the
-    maximum or minimum valid daterange for a
-    station with station ID sid and elements in the list of climate elements el_list.
-
-    Keyword arguments:
-    sid  -- station ID
-    el_list -- list of elements required.
-               If el-list==None, we query for the 8 base elements
-               [maxt,mint,pcpn,snow,snwd, hdd,cdd,gdd]
-
-    Each element has its own valid daterange.
-    If max_or_min == max, the largest daterange is returned.
-    If max_or_min == min, the smallest daterange is returned.
-    '''
-    #Format start/end date into 8 digit strings
-    s_date = start_date.replace('-','').replace('/','').replace(':','')
-    e_date = end_date.replace('-','').replace('/','').replace(':','')
-    if s_date.lower() != 'por' and e_date.lower() != 'por':
-        return [s_date, e_date]
-
-    if el_list is None:
-        #el_tuple = 'maxt,mint,pcpn,snow,snwd,hdd,gdd,cdd'
-        el_tuple = '1,2,4,10,11,45'
-    else:
-        el_tuple =''
-        for idx, el in enumerate(el_list):
-            el_tuple+=str(WRCCData.ACIS_ELEMENTS_DICT[el]['vX'])
-            if idx < len(el_list) - 1:
-                el_tuple+=','
-
-        #el_tuple = ','.join(el_list)
-    meta_params = {'sids':sid, 'elems':el_tuple, 'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'}
-    try:
-        request = AcisWS.StnMeta(meta_params)
-    except:
-        return []
-    if 'error' in request.keys() or not 'meta' in request.keys():
-        return []
-
-    #Find valid daterange
-    #format first test date
-    el_idx = 0
-    vd_start = None;vd_end = None
-    idx_start = 0
-    if not request['meta']:
-        return []
-    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange']):
-        if s_date.lower() != 'por':
-            vd_start = date_to_datetime(s_date)
-        else:
-            if request['meta'][0]['valid_daterange'][el_idx]:
-                vd_start = date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][0])
-        if e_date.lower() != 'por':
-            vd_end = date_to_datetime(e_date)
-        else:
-            if request['meta'][0]['valid_daterange'][el_idx]:
-                vd_end =  date_to_datetime(request['meta'][0]['valid_daterange'][el_idx][1])
-        if vd_start is not None and vd_end is not None and vd_start <= vd_end:
-            idx_start = el_idx + 1
-            break
-    if vd_start is None or vd_end is None:
-        return ['','']
-    vd_start_date = ''
-    vd_end_date = ''
-    #loop over valid dateranges for each elements and find max or min valid daterange
-    for el_idx, el_vdr in enumerate(request['meta'][0]['valid_daterange'][idx_start:]):
-        vd_start_test = None;vd_end_test = None
-        if s_date.lower() == 'por':
-            if el_vdr:
-                vd_start_test = date_to_datetime(el_vdr[0])
-        if e_date.lower() == 'por':
-            if el_vdr:
-                vd_end_test = date_to_datetime(el_vdr[1])
-        if max_or_min == 'min':
-            if vd_start_test is not None and vd_start_test > vd_start and vd_start_test <= vd_end:
-                vd_start = vd_start_test
-            if vd_end_test is not None and vd_end_test < vd_end and vd_end_test >= vd_start:
-                vd_end = vd_end_test
-        elif max_or_min == 'max':
-            if vd_start_test is not None and vd_start_test < vd_start and vd_start_test <= vd_end:
-                vd_start = vd_start_test
-            if vd_end_test is not None and vd_end_test > vd_end and vd_end_test >= vd_start:
-                vd_end = vd_end_test
-    #convert back to date string
-    if s_date.lower() == 'por':
-        yr_start = str(vd_start.year);mon_start=str(vd_start.month);day_start = str(vd_start.day)
-    else:
-        yr_start = s_date[0:4];mon_start = s_date[4:6];day_start = s_date[6:8]
-    if e_date.lower() == 'por':
-        yr_end = str(vd_end.year);mon_end=str(vd_end.month);day_end = str(vd_end.day)
-    else:
-        yr_end = e_date[0:4];mon_end = e_date[4:6];day_end = e_date[6:8]
-
-    if len(mon_start) ==1:mon_start='0' + mon_start
-    if len(day_start) ==1:day_start='0' + day_start
-    if len(mon_end) ==1:mon_end='0' + mon_end
-    if len(day_end) ==1:day_end='0' + day_end
-    vd_start_date = '%s%s%s' %(yr_start, mon_start, day_start)
-    vd_end_date = '%s%s%s' %(yr_end, mon_end, day_end)
-    return [vd_start_date, vd_end_date]
 
 def get_dates(s_date, e_date, app_name):
     '''
@@ -1591,55 +1691,6 @@ def strip_n_sort(station_list):
             stn_list[i] = str(stn)
     return stn_list
 
-def find_start_end_dates(form_input):
-    '''
-    Converts form_input['start_date'] and form_input['end_date']
-    to 8 digit start, end dates of format yyyymmdd.
-    '''
-    end_date = str(form_input['start_date'].replace('-','').replace(':','').replace('/','').replace(' ',''))
-    mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
-    if 'start_date' not in form_input.keys():
-        s_date = 'por'
-    elif form_input['start_date'].lower() == 'por':
-        s_date = 'por'
-    else:
-        start_date = str(form_input['start_date']).replace('-','').replace(':','').replace('/','').replace(' ','')
-        if start_date == '' or start_date == ' ':
-            s_date = 'por'
-        else:
-            if len(start_date) == 4:
-                s_date = start_date + '0101'
-            elif len(start_date) == 6:
-                s_date = start_date + '01'
-            elif len(start_date) == 8:
-                s_date = start_date
-            else:
-                print 'Invalid start date format, should be yyyy or yyyymmdd!'
-                s_date = None
-    if 'end_date' not in form_input.keys():
-        e_date = 'por'
-    elif form_input['end_date'].lower() == 'por':
-        e_date = 'por'
-    else:
-        end_date = str(form_input['end_date'].replace('-','').replace(':','').replace('/','').replace(' ',''))
-        if end_date == '' or end_date == ' ':
-            e_date = 'por'
-        else:
-            if len(end_date) == 4:
-                e_date = end_date + '1231'
-            elif len(end_date) == 6:
-                if end_date[4:6] == '02' and WRCCUtils.is_leap_year(end_date[0:4]):
-                    mon_len = '29'
-                else:
-                    mon_len = mon_lens[int(end_date[4:6]) - 1]
-                e_date = end_date + mon_len
-            elif len(end_date) == 8:
-                e_date = end_date
-            else:
-                print 'Invalid end date format, should be yyyy or yyyymmdd!'
-                e_date = None
-    return s_date, e_date
-
 def get_element_list(form_input, program):
     '''
     Finds element list for SOD program data query
@@ -1648,55 +1699,20 @@ def get_element_list(form_input, program):
     form_input -- webpage user form fields
     program    -- application name
     '''
-    if program == 'Soddyrec':
-        if form_input['element'] == 'all':
-            elements = ['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd']
-        elif form_input['element'] == 'tmp':
-            elements = ['maxt', 'mint', 'pcpn']
-        elif form_input['element'] == 'wtr':
-            elements = ['pcpn', 'snow', 'snwd']
-        else:
-            elements = [form_input['element']]
-    elif program == 'Soddynorm':
-        elements = ['maxt', 'mint', 'pcpn']
-    elif program == 'Sodsumm':
-        if form_input['element'] == 'all':
-            elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
-        elif form_input['element'] == 'temp':
-            elements = ['maxt', 'mint', 'avgt']
-        elif form_input['element'] == 'prsn':
-            elements = ['pcpn', 'snow']
-        elif form_input['element'] == 'both':
-            elements = ['maxt', 'mint', 'avgt', 'pcpn', 'snow']
-        elif form_input['element'] in ['hc', 'g']:
-            elements = ['maxt', 'mint']
-    elif program in ['Sodxtrmts', 'Sodpct', 'Sodpiii', 'Sodrunr', 'Sodrun', 'Sodthr']:
-        if program in ['Sodrun', 'Sodrunr'] and form_input['element'] == 'range':
-            elements = ['maxt', 'mint']
-        elif program in ['Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
-            if form_input['element'] in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt', 'range']:
-                elements = ['maxt', 'mint']
-            else:
-                elements = ['%s' % form_input['element']]
-        else:
-            elements = ['%s' % form_input['element']]
-    elif program == 'Sodpad':
-        elements = ['pcpn']
-    elif program == 'Soddd':
-        elements = ['maxt', 'mint']
-    elif program in ['Sodmonline', 'Sodmonlinemy']:
-        elements = [form_input['element']]
-    elif program == 'Sodlist':
-        elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
-    elif program == 'Sodcnv':
-        elements = ['pcpn', 'snow', 'snwd', 'maxt', 'mint']
+    element_list = []
+    if program in ['Soddynorm', 'Sodlist', 'Sodcnv','Soddd','Sodpad']:
+        element_list = WRCCData.SOD_ELEMENT_LIST_BY_APP[program]['all']
     else:
-        #Check if elements is given as string, if so, convert to list
-        if isinstance(form_input['elements'], basestring):
-            elements = form_input['elements'].replace(' ', '').split(',')
-        else:
-            elements = [str(el) for el in form_input['elements']]
-    return elements
+        if 'element' in form_input.keys():
+            element_list = WRCCData.SOD_ELEMENT_LIST_BY_APP[program][form_input['element']]
+        elif 'elements' in form_input.keys():
+            #Check if elements is given as string, if so, convert to list
+            if isinstance(form_input['elements'], basestring):
+                element_list = form_input['elements'].replace(' ', '').split(',')
+            else:
+                element_list = [str(el) for el in form_input['elements']]
+    return element_list
+
 
 def format_sodlist_data(data_flag_tobs):
     '''

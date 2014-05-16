@@ -620,6 +620,174 @@ SHAPE_NAMES = {
 #SODS
 ###################################
 ###################################
+SOD_ELEMENT_LIST_BY_APP = {
+    'Soddyrec': {
+                'all':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
+                'tmp':['maxt', 'mint', 'pcpn'],
+                'wtr':['pcpn', 'snow', 'snwd'],
+                'pcpn':['pcpn'],
+                'snow':['snow'],
+                'snwd':['snwd'],
+                'maxt':['maxt'],
+                'mint':['mint'],
+                'cdd':['cdd'],
+                'hdd':['hdd']
+                },
+    'Soddynorm': {
+                'all':['maxt', 'mint', 'pcpn']
+                },
+    'Sodsumm': {
+                'all':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
+                'temp':['maxt', 'mint', 'avgt'],
+                'prsn':['pcpn', 'snow'],
+                'both':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
+                'hc':['maxt', 'mint'],
+                'g':['maxt', 'mint']
+               },
+    'Sodsum': {
+                'multi':['pcpn','snow','snwd','maxt','mint'],
+                'pcpn':['pcpn'],
+                'snow':['snow'],
+                'snwd':['snwd'],
+                'maxt':['maxt'],
+                'mint':['mint']
+               },
+    'Sodrun':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'range':['maxt','mint'],
+            },
+    'Sodrunr':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'range':['maxt', 'mint'],
+            },
+    'Sodlist':{
+              'all':['pcpn', 'snow', 'snwd', 'maxt', 'mint', 'obst']
+              },
+    'sodlist_web':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                },
+
+    'Sodcnv':{
+            'all':['pcpn', 'snow', 'snwd', 'maxt', 'mint']
+            },
+    'Soddd':{
+            'all':['maxt', 'mint']
+            },
+    'Sodpad':{
+            'all':['pcpn']
+            },
+    'Sodmonline':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                },
+    'Sodmonlinemy':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmv']
+                },
+    'Sodpct':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                },
+    'Sodthr':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                },
+    'Sodpiii':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                },
+
+    'Sodxtrmts':{
+              'pcpn':['pcpn'],
+              'snow':['snow'],
+              'snwd':['snwd'],
+              'maxt':['maxt'],
+              'mint':['mint'],
+              'avgt':['avgt'],
+              'dtr':['maxt','mint'],
+              'range':['maxt','mint'],
+              'cdd':['cdd'],
+              'hdd':['hdd'],
+              'gdd':['gdd'],
+              'evap':['evap'],
+              'wdmv':['wdmb']
+                }
+}
+
+
 FORM_IMAGE_SIZES = (
     ('small', 'Small (510x290)'),
     ('medium', 'Medium (650x370)'),

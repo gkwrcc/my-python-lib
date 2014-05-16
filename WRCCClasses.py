@@ -16,9 +16,9 @@ import datetime
 import csv
 from xlwt import Workbook
 from django.http import HttpResponse
-
+from django.conf import settings
 #WRCC modules
-import my_acis_settings, AcisWS, WRCCDataApps, WRCCUtils, WRCCData
+import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
 
 
@@ -831,7 +831,7 @@ class GridFigure(object) :
         return levels
 
     def get_grid(self) :
-        with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
+        with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
             encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
         empty_img = {'data':encoded_string, 'range':[0.0, 0.0], 'levels':[0,1,2,3,4,5,6,7,8],\
         'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -996,7 +996,7 @@ class GridDiffFigure(GridFigure) :
         try:
             result = AcisWS.GridCalc(self.params)
             if not result or 'error' in result.keys():
-                with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
+                with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
                 self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
                 'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -1005,7 +1005,7 @@ class GridDiffFigure(GridFigure) :
             else:
                 self.results = results
         except ValueError:
-            with open('%simg/empty.png' %my_acis_settings.MEDIA_URL, 'rb') as image_file:
+            with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -1014,14 +1014,15 @@ class GridDiffFigure(GridFigure) :
 
         return self.results
 
-class DataRequest(object):
+
+class LargeDataRequest(object):
     '''
     This class handles large data request freom SCENIC.
     Components:
     This class handles large data request freom SCENIC.
     Components:
     Keyword arguments:
-        params -- data request parametersi, keys:
+        params -- data request parameters, keys:
                   select_station_by/select_grid_by: specifies type of data request (station data/gridded data)
                   start_date/end_date, temporal resolution (daily/monthly/yearly)
                   elements, units (metric/english), flags (station data only)

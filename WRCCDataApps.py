@@ -14,8 +14,10 @@ from math import ceil
 import sets
 
 #Local modules
-import my_acis_settings,WRCCUtils, AcisWS, WRCCData
+import WRCCUtils, AcisWS, WRCCData
 
+#Settings
+from django.conf import settings
 
 #############################
 #CSC DATA PORTAL APPLICATIONS
@@ -314,7 +316,7 @@ def Sodpiii(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input([my_acis_settings.LIB_PREFIX + 'piii.dat.2']):
+    for line in fileinput.input([settings.LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -708,7 +710,7 @@ def Sodpiii(**kwargs):
             results_0[i][tbl_idx][num_yrs+6].append('%i' % int(count))
         #End numdur while loop... Phew...
         if kwargs['mean'] == 'am':stats[0] = amean
-        annpcp = 50.0 #from my_acis_settings.LIB_PREFIX + arealstats.dat
+        annpcp = 50.0 #from settings.LIB_PREFIX + arealstats.dat
         if kwargs['pct_average'] == 'apct':
             for idur in range(16):stats[1][idur] = apctan[idur]*annpcp
 
@@ -717,7 +719,7 @@ def Sodpiii(**kwargs):
 
         if kwargs['cv'] == 'acv':
             for idur in range(16):stats[1][idur] = acv[idur] * stats[0][idur]
-        #Ration of 6 and 12 hr to one day (from my_acis_settings.LIB_PREFIX + arealstats.dat)
+        #Ration of 6 and 12 hr to one day (from settings.LIB_PREFIX + arealstats.dat)
         r6to1 = 0.5
         r12to1 = 0.75
 
@@ -805,7 +807,7 @@ def Sodxtrmts(**kwargs):
     #Read in piii table:
     piii = {}
     count = 0
-    for line in fileinput.input([my_acis_settings.LIB_PREFIX + 'piii.dat.2']):
+    for line in fileinput.input([settings.LIB_PREFIX + 'piii.dat.2']):
         count+=1
         if count > 11 and count < 193:
             skew = line[1:4].lstrip()
@@ -2063,7 +2065,7 @@ def Sodrun(**kwargs):
         print_str2 = 'max2 - min1 = %6s min2 - max1 = %6s ======> max change = %6s' %(l[7], l[8], l[9])
         return '\n'.join([print_str1, print_str2])
     def convert_date(date):
-        str_date = ''.join(date.split('-'))
+        str_date = ''.join(str(date).split('-'))
         return str_date
     def update_run_cnt(run_cnt, day_cnt):
         if day_cnt in run_cnt:
