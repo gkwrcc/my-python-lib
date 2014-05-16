@@ -1018,8 +1018,18 @@ class DataRequest(object):
     '''
     This class handles large data request freom SCENIC.
     Components:
-
+    This class handles large data request freom SCENIC.
+    Components:
     Keyword arguments:
+        params -- data request parametersi, keys:
+                  select_station_by/select_grid_by: specifies type of data request (station data/gridded data)
+                  start_date/end_date, temporal resolution (daily/monthly/yearly)
+                  elements, units (metric/english), flags (station data only)
+                  grid (gridded data only)
+                  data_summary (temporal/spatial)
+                        temporal_summary/spatial_summary (max, min, mean, sum)
+                  date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
     '''
     def __init__(self, params):
-        pass
+        self.params = params
+        self.params_dir = params_dir
