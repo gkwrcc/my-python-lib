@@ -557,7 +557,7 @@ def Sodpiii(**kwargs):
                     if el_type in ['snwd', 'maxt', 'mint', 'avgt']:
                         if sumobs < ndur:
                             if el_type == 'avgt':
-                                if kwargs['mean_temperatures'] == 'b':
+                                if kwargs['ab'] == 'b':
                                     summ = 9999.0
                                 else:
                                     summ = -9999.0
@@ -585,7 +585,7 @@ def Sodpiii(**kwargs):
                             else:
                                 mon, day = WRCCUtils.compute_mon_day(idoy)
                     elif el_type == 'avgt':
-                        if (kwargs['mean_temperatures'] == 'a' and summ > xmax) or (kwargs['mean_temperatures'] == 'b' and summ < xmin):
+                        if (kwargs['ab'] == 'a' and summ > xmax) or (kwargs['ab'] == 'b' and summ < xmin):
                             xmax = summ
                             xmin = summ
                             #mon, day = WRCCUtils.compute_mon_day(idoy)
@@ -1802,6 +1802,7 @@ def Sodpct(**kwargs):
                 val = None
                 #check if we have to compute values from maxt, mint
                 if el_type in ['dtr', 'hdd', 'cdd', 'gdd', 'avgt']:
+                    #print yr, doy
                     dat_x = el_data[0][yr][doy]
                     dat_n = el_data[1][yr][doy]
                     val_x, flag_x = WRCCUtils.strip_data(dat_x)
@@ -2148,6 +2149,7 @@ def Sodrun(**kwargs):
                             rg = 'M'
                         stn_data_new.append([stn_data[idx][0], str(rg)])
             stn_data = stn_data_new
+
         #Initialize parameters
         day_cnt = 0
         run_cnt = {} #run_cnt[#days] = #runs of #days length
@@ -2182,7 +2184,7 @@ def Sodrun(**kwargs):
                 run_end = stn_data[idx-1][0]
                 if day_cnt >= min_run:
                     update_run_cnt(run_cnt, day_cnt)
-                    if el == 'range':
+                    if el == 'range' and app_name == 'Sodrunr':
                         print_str = write_str_range(stn_data_range[idx-1])
                         results[i].append(print_str)
                     print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
@@ -2267,7 +2269,7 @@ def Sodrun(**kwargs):
 
             if (op == '>' and data > thresh) or (op == '<' and data < thresh) \
             or (op == '=' and data == thresh):
-                if el == 'range':
+                if el == 'range' and app_name == 'Sodrunr':
                         print_str = write_str_range(stn_data_range[idx])
                         results[i].append(print_str)
                 if day_cnt == 0: #Start of run
@@ -2293,7 +2295,7 @@ def Sodrun(**kwargs):
         if flag == 0 or flag.isdigit(): #last value is good
             if day_cnt !=0 and day_cnt >= min_run:
                 update_run_cnt(run_cnt, day_cnt)
-                if el == 'range':
+                if el == 'range' and app_name == 'Sodrunr':
                     print_str = write_str_range(stn_data_range[idx])
                     results[i].append(print_str)
                 print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)
@@ -2313,7 +2315,7 @@ def Sodrun(**kwargs):
         elif flag == 'D': #last value is below threshold
             if day_cnt !=0 and day_cnt >= min_run:
                 update_run_cnt(run_cnt, day_cnt)
-                if el == 'range':
+                if el == 'range' and app_name == 'Sodrunr':
                     print_str = write_str_range(stn_data_range[run_start_idx])
                     results[i].append(print_str)
                 print_str = write_str_data(convert_date(run_start), convert_date(run_end), str(day_cnt), el, op, thresh)

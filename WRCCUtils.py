@@ -1022,7 +1022,6 @@ def write_griddata_to_file(data, form, f=None, request=None):
     return response
 
 def write_station_data_to_file(resultsdict, form, f=None, request=None):
-#def write_station_data_to_file(resultsdict, delimiter, file_extension, request=None, f= None, output_file_name=None, show_flags='F', show_observation_time='F'):
     '''
     Writes station data to a file.
 
@@ -1087,29 +1086,32 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
                 stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
             if delim== ':':
                 header_seperator = ' '
-            row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0], 'StationName' + header_seperator+stn_name]
+            row = ['*StationName' + header_seperator + stn_name, 'State' + header_seperator + str(resultsdict['stn_state'][stn])]
             writer.writerow(row)
-            row = ['*State' + header_seperator+str(resultsdict['stn_state'][stn]),'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation(' + elev_unit + ')' + header_seperator+str(resultsdict['stn_elev'][stn])]
+            row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0],'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation(' + elev_unit + ')' + header_seperator+str(resultsdict['stn_elev'][stn])]
             writer.writerow(row)
             row = ['*Units'+ header_seperator,form['units']]
+            writer.writerow(row)
+            row = []
             writer.writerow(row)
             row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
             writer.writerow(row)
             row = ['*date']
             for el in resultsdict['elements']:
                 el_strip,base_temp = get_el_and_base_temp(el)
+                if not base_temp: base_temp=''
                 if form['units'] == 'metric':
                     el_unit = WRCCData.UNITS_METRIC[el_strip]
                 else:
                     el_unit = WRCCData.UNITS_ENGLISH[el_strip]
                 if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                    row.append(str(el) + '(' + el_unit + ')')
+                    row.append(WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')')
                 elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
-                    row.append(str(el) + '(' + el_unit + ')');row.append('flag')
+                    row.append(WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')');row.append('Flag')
                 elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                    row.append(str(el) + '(' + el_unit + ')');row.append('ObsTime')
+                    row.append(WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')');row.append('ObsTime')
                 else:
-                    row.append(str(el) + '(' + el_unit + ')');row.append('flag');row.append('ObsTime')
+                    row.append(WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')');row.append('Flag');row.append('ObsTime')
             writer.writerow(row)
 
             for j, vals in enumerate(dat):
@@ -1118,12 +1120,16 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
                 row.append(vals[0])
                 for val in vals[1:]:
                     if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                        row.append(str(val[0]))
+                        #Show Trace as data value of no flag option upon request from Michelle 05/15/2014
+                        if str(val[1]) == 'T' : row.append('T')
+                        else : row.append(str(val[0]))
                     elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
                         row.append(str(val[0]))
                         row.append(str(val[1]))
                     elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                        row.append(str(val[0]))
+                        #Show Trace as data value of no flag option upon request from Michelle 05/15/2014
+                        if str(val[1]) == 'T' : row.append('T')
+                        else : row.append(str(val[0]))
                         row.append(str(val[2]))
                     else:
                         row.append(str(val[0]))
@@ -1142,8 +1148,8 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             #Header
             ws.write(0,0,'Stn Name');ws.write(0,1,'Stn ID');ws.write(0,2,'State');ws.write(0,3,'Lat');ws.write(0,4,'Lon');ws.write(0,5,'Elev');
             ws.write(1,0,str(resultsdict['stn_names'][stn]))
-            ws.write(1,1,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
-            ws.write(1,2,str(resultsdict['stn_state'][stn]))
+            ws.write(1,1,str(resultsdict['stn_state'][stn]))
+            ws.write(1,2,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
             ws.write(1,3,str(resultsdict['stn_lat'][stn]))
             ws.write(1,4,str(resultsdict['stn_lon'][stn]))
             ws.write(1,5,str(resultsdict['stn_elev'][stn]))
@@ -1154,56 +1160,69 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             ws.write(4,2,'T=Trace')
             ws.write(4,3,'S=Subsequent')
             ws.write(4,4,'A=Accumulated')
-            ws.write(5, 0, 'Date')
+            ws.write(6, 0, 'Date')
             idx = 0
             for k, el in enumerate(resultsdict['elements']):
                 el_strip,base_temp = get_el_and_base_temp(el)
+                if not base_temp:base_temp=''
                 if form['units'] == 'metric':
                     el_unit = WRCCData.UNITS_METRIC[el_strip]
                 else:
                     el_unit = WRCCData.UNITS_ENGLISH[el_strip]
                 idx+=1
                 if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                    ws.write(5, k+1, el + '(' + el_unit + ')')
+                    ws.write(6, k+1, WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')')
                 elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
-                    ws.write(5, idx, el + '(' + el_unit + ')')
-                    ws.write(5, idx+1,'flag')
+                    ws.write(6, idx, WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')')
+                    ws.write(6, idx+1,'Flag')
                     idx+=1
                 elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                    ws.write(5, idx, el + '(' + el_unit + ')')
-                    ws.write(5, idx+1,'obs time')
+                    ws.write(6, idx, WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')')
+                    ws.write(6, idx+1,'obs time')
                     idx+=1
                 else:
-                    ws.write(5, idx, el + '(' + el_unit + ')')
-                    ws.write(5, idx+1,'flag')
-                    ws.write(5, idx+2,'obs time')
+                    ws.write(6, idx, WRCCData.MICHELES_ELEMENT_NAMES[str(el_strip)] + str(base_temp) + '(' + el_unit + ')')
+                    ws.write(6, idx+1,'Flag')
+                    ws.write(6, idx+2,'obs time')
                     idx+=2
             #Data
             for j, vals in enumerate(dat):
                 idx = 0
-                ws.write(j+6,0,vals[0])
+                ws.write(j+7,0,vals[0])
                 for l,val in enumerate(vals[1:]):
                     idx+=1
                     if form['show_flags'] == 'F' and form['show_observation_time'] == 'F':
-                        try:
-                            ws.write(j+6, idx, float(val[0]))
-                        except:
-                            ws.write(j+6, idx, val[0])
+                        #Show Trace as data value of no flag option upon request from Michelle 05/15/2014
+                        if str(val[1]) == 'T':
+                            ws.write(j+7, idx, 'T')
+                        else:
+                            try:
+                                ws.write(j+7, idx, float(val[0]))
+                            except:
+                                ws.write(j+7, idx, val[0])
                     elif form['show_flags'] == 'T' and form['show_observation_time'] == 'F':
-                        ws.write(j+6, idx, val[0]) #row, column, label
-                        ws.write(j+6, idx+1, val[1])
+                        ws.write(j+7, idx, val[0]) #row, column, label
+                        ws.write(j+7, idx+1, val[1])
                         idx+=1
                     elif form['show_flags'] == 'F' and form['show_observation_time'] == 'T':
-                        ws.write(j+6, idx, val[0]) #row, column, label
-                        ws.write(j+6, idx+1, int(val[2]))
+                        #Show Trace as data value of no flag option upon request from Michelle 05/15/2014
+                        if str(val[1]) == 'T':
+                            ws.write(j+7, idx, 'T')
+                        else:
+                            ws.write(j+7, idx, val[0]) #row, column, label
+                        ws.write(j+7, idx+1, int(val[2]))
                         idx+=1
                     else:
-                        try:
-                            ws.write(j+6, idx, float(val[0])) #row, column, label
-                        except:
-                            ws.write(j+6, idx, val[0])
-                        ws.write(j+6, idx+1, val[1])
-                        ws.write(j+4, idx+2, int(val[2]))
+                        #Show Trace as data value of no flag option upon request from Michelle 05/15/2014
+                        if str(val[1]) == 'T':
+                            ws.write(j+7, idx, 'T')
+                        else:
+                            try:
+                                ws.write(j+7, idx, float(val[0])) #row, column, label
+                            except:
+                                ws.write(j+7, idx, val[0])
+                        ws.write(j+7, idx+1, val[1])
+                        ws.write(j+7, idx+2, int(val[2]))
                         idx+=2
         if f:
             try:

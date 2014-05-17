@@ -620,6 +620,24 @@ SHAPE_NAMES = {
 #SODS
 ###################################
 ###################################
+MICHELES_ELEMENT_NAMES = {
+    'pcpn':'Pcpn',
+    'snow':'Snow',
+    'snwd':'Snwd',
+    'maxt':'TMax',
+    'mint':'TMin',
+    'avgt':'TMean',
+    'obst':'TObs',
+    'dtr':'TRange',
+    'range':'TRange',
+    'cdd':'Cdd',
+    'hdd':'Hdd',
+    'gdd':'Gdd',
+    'corn':'Corn',
+    'evap':'Evap',
+    'wdmv':'Wdmv'
+}
+
 SOD_ELEMENT_LIST_BY_APP = {
     'Soddyrec': {
                 'all':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
@@ -707,7 +725,7 @@ SOD_ELEMENT_LIST_BY_APP = {
               'hdd':['hdd'],
               'gdd':['gdd'],
               'evap':['evap'],
-              'wdmv':['wdmb']
+              'wdmv':['wdmv']
                 },
     'Sodmonlinemy':{
               'pcpn':['pcpn'],
@@ -730,14 +748,14 @@ SOD_ELEMENT_LIST_BY_APP = {
               'snwd':['snwd'],
               'maxt':['maxt'],
               'mint':['mint'],
-              'avgt':['avgt'],
+              'avgt':['maxt','mint'],
               'dtr':['maxt','mint'],
               'range':['maxt','mint'],
-              'cdd':['cdd'],
-              'hdd':['hdd'],
-              'gdd':['gdd'],
+              'cdd':['maxt','mint'],
+              'hdd':['maxt','mint'],
+              'gdd':['maxt','mint'],
               'evap':['evap'],
-              'wdmv':['wdmb']
+              'wdmv':['wdmv']
                 },
     'Sodthr':{
               'pcpn':['pcpn'],
@@ -745,14 +763,14 @@ SOD_ELEMENT_LIST_BY_APP = {
               'snwd':['snwd'],
               'maxt':['maxt'],
               'mint':['mint'],
-              'avgt':['avgt'],
+              'avgt':['maxt','mint'],
               'dtr':['maxt','mint'],
               'range':['maxt','mint'],
-              'cdd':['cdd'],
-              'hdd':['hdd'],
-              'gdd':['gdd'],
+              'cdd':['maxt','mint'],
+              'hdd':['maxt','mint'],
+              'gdd':['maxt','mint'],
               'evap':['evap'],
-              'wdmv':['wdmb']
+              'wdmv':['wdmv']
                 },
     'Sodpiii':{
               'pcpn':['pcpn'],
@@ -760,14 +778,14 @@ SOD_ELEMENT_LIST_BY_APP = {
               'snwd':['snwd'],
               'maxt':['maxt'],
               'mint':['mint'],
-              'avgt':['avgt'],
+              'avgt':['maxt','mint'],
               'dtr':['maxt','mint'],
               'range':['maxt','mint'],
-              'cdd':['cdd'],
-              'hdd':['hdd'],
-              'gdd':['gdd'],
+              'cdd':['maxt','mint'],
+              'hdd':['maxt','mint'],
+              'gdd':['maxt','mint'],
               'evap':['evap'],
-              'wdmv':['wdmb']
+              'wdmv':['wdmv']
                 },
 
     'Sodxtrmts':{
@@ -776,14 +794,14 @@ SOD_ELEMENT_LIST_BY_APP = {
               'snwd':['snwd'],
               'maxt':['maxt'],
               'mint':['mint'],
-              'avgt':['avgt'],
+              'avgt':['maxt','mint'],
               'dtr':['maxt','mint'],
               'range':['maxt','mint'],
-              'cdd':['cdd'],
-              'hdd':['hdd'],
-              'gdd':['gdd'],
+              'cdd':['maxt','mint'],
+              'hdd':['maxt','mint'],
+              'gdd':['maxt','mint'],
               'evap':['evap'],
-              'wdmv':['wdmb']
+              'wdmv':['wdmv']
                 }
 }
 

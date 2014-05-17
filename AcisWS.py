@@ -22,7 +22,11 @@ import urllib2
 import json
 ##############################################################################
 #settings file
+#FIX ME:
+#Works for web server
 from django.conf import settings
+#Work for commandline execution
+#import settings as sett
 
 #Acis WebServices functions
 ###########################
@@ -37,15 +41,23 @@ def make_request(url,params) :
         #if error.code == 400 : print error.msg
         pass
 
+#FIX me: Shouldn't need two seperate wsettings files
 def MultiStnData(params):
-    return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
+    try:
+        return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
+    except:
+        return make_request(sett.ACIS_BASE_URL+'MultiStnData',params)
 
 def StnData(params):
-    return make_request(settings.ACIS_BASE_URL+'StnData',params)
-
+    try:
+        return make_request(settings.ACIS_BASE_URL+'StnData',params)
+    except:
+        return make_request(sett.ACIS_BASE_URL+'StnData',params)
 def StnMeta(params):
-    return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
-
+    try:
+        return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
+    except:
+        return make_request(sett.ACIS_BASE_URL+'StnMeta',params)
 def GridData(params):
     return make_request(settings.ACIS_BASE_URL+'GridData',params)
 
@@ -435,12 +447,6 @@ def get_station_data(form_input, program):
             base_temp = int(el[3:])
         except:
             base_temp = None
-        '''
-        if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
-            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp))
-        else:
-            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']))
-        '''
         if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
             elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
         else:
@@ -538,7 +544,6 @@ def get_station_data(form_input, program):
         params['sids'] =''
 
     #Data request
-    '''
     try:
         request = MultiStnData(params)
     except Exception, e:
@@ -546,8 +551,6 @@ def get_station_data(form_input, program):
         for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
             resultsdict[key] = []
         return resultsdict
-    '''
-    request = MultiStnData(params)
     try:
         request['data']
         if not request['data']:
