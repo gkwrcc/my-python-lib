@@ -440,13 +440,13 @@ def Sodpiii(**kwargs):
             ndur = lisdur[numdur -1] #number of days
             if 'days' in kwargs.keys():
                 if kwargs['days'] == 'i':
-                    numdu1 = numdur - 1
                     if ndur < kwargs['number_of_days']:
                         continue
                     elif ndur > kwargs['number_of_days'] and ndur != 99:
                         break
                     elif ndur == 99:
                         continue
+                    numdu1 = numdur -1
                 elif kwargs['days'] == '5':
                     if numdur < 3:continue
                     if numdur >=8:break
@@ -640,7 +640,6 @@ def Sodpiii(**kwargs):
             #Year loop
             for nyear in range(num_yrs):
                 value = annser[nyear][0][numdur - 1]
-                print value
                 #value = round(annser[nyear][0][numdur - 1],2)
                 if value >= -9998.0:
                     summ+=value
@@ -703,7 +702,6 @@ def Sodpiii(**kwargs):
                 tbl_idx = numdur - 3
             else:
                 tbl_idx = numdur - 1
-
             averages[tbl_idx] = '%.2f' %round(average,2)
             stdevs[tbl_idx] = '%.2f' %round(stdev,2)
             skews[tbl_idx] = '%.2f' %round(sk,2)
@@ -728,10 +726,9 @@ def Sodpiii(**kwargs):
         #Ration of 6 and 12 hr to one day (from settings.LIB_PREFIX + arealstats.dat)
         r6to1 = 0.5
         r12to1 = 0.75
-
         for idur in range(len(lisdur)):
             if kwargs['days'] == 'i':
-                if idur != numdu1 - 1:continue
+                if idur != numdu1:continue
             elif kwargs['days'] == '5':
                 if idur <2: #idur 0,1 are 6hr, 12 hr
                     continue
@@ -747,7 +744,7 @@ def Sodpiii(**kwargs):
         #End idur loop
         for idur in range(len(lisdur)):
             if kwargs['days'] == 'i':
-                if idur != numdu1 - 1:continue
+                if idur != numdu1:continue
                 tbl_idx = 0
             elif kwargs['days'] == '5':
                 if idur < 2:continue
