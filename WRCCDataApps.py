@@ -17,7 +17,8 @@ import sets
 import WRCCUtils, AcisWS, WRCCData
 
 #Settings
-from django.conf import settings
+#from django.conf import settings
+import my_acis.settings as settings
 
 #############################
 #CSC DATA PORTAL APPLICATIONS
@@ -434,7 +435,7 @@ def Sodpiii(**kwargs):
                 annser[yr][0][j] = -9999.0
         #BIG numdur loop
         #Loop over all durations
-        while numdur < len(lisdur) - 1: #16 = len(lisdur)
+        while numdur < len(lisdur): #16 = len(lisdur)
             numdur+=1
             ndur = lisdur[numdur -1] #number of days
             if 'days' in kwargs.keys():
@@ -623,7 +624,11 @@ def Sodpiii(**kwargs):
                 results_0[i][tbl_idx][iyear].append('%i' %(start_year + iyear))
                 results_0[i][tbl_idx][iyear].append('%.3f' %round(x,3))
                 results_0[i][tbl_idx][iyear].append('%s%s' %(mon,day))
-                results_0[i][tbl_idx][iyear].append('%i' %nummis)
+                if iyear == num_yrs - 1:
+                    if nummis > 0:
+                        results_0[i][tbl_idx][iyear].append('%i' %(nummis - 1))
+                else:
+                    results_0[i][tbl_idx][iyear].append('%i' %nummis)
             #End of year loop!
             #Find Statistics
             xmaxx = -9999.0
@@ -635,6 +640,7 @@ def Sodpiii(**kwargs):
             #Year loop
             for nyear in range(num_yrs):
                 value = annser[nyear][0][numdur - 1]
+                print value
                 #value = round(annser[nyear][0][numdur - 1],2)
                 if value >= -9998.0:
                     summ+=value
@@ -766,7 +772,10 @@ def Sodpiii(**kwargs):
                 results[i][tbl_idx][iretrn].append('P = %.4f ' % round(pexc,4))
                 results[i][tbl_idx][iretrn].append('T = %.4f ' % round(period,4))
                 results[i][tbl_idx][iretrn].append('PSD = %.3f ' % round(psd,3))
-                results[i][tbl_idx][iretrn].append('VALUE = %.2f ' % round(value,2))
+                if kwargs['el_type'] in ['snow','snwd', 'pcpn']:
+                    results[i][tbl_idx][iretrn].append('VALUE = %.2f" ' % round(value,2))
+                else:
+                    results[i][tbl_idx][iretrn].append('VALUE = %.2f ' % round(value,2))
     return results_0, results, averages, stdevs, skews
 
 def Sodxtrmts(**kwargs):

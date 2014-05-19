@@ -16,7 +16,8 @@ import datetime
 import csv
 from xlwt import Workbook
 from django.http import HttpResponse
-from django.conf import settings
+#from django.conf import settings
+import my_acis.settings as settings
 #WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 

@@ -24,9 +24,8 @@ import json
 #settings file
 #FIX ME:
 #Works for web server
-from django.conf import settings
-#Work for commandline execution
-#import settings as sett
+import my_acis.settings as settings
+#from django.conf import settings
 
 #Acis WebServices functions
 ###########################
@@ -43,21 +42,14 @@ def make_request(url,params) :
 
 #FIX me: Shouldn't need two seperate wsettings files
 def MultiStnData(params):
-    try:
-        return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
-    except:
-        return make_request(sett.ACIS_BASE_URL+'MultiStnData',params)
+    return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
 
 def StnData(params):
-    try:
-        return make_request(settings.ACIS_BASE_URL+'StnData',params)
-    except:
-        return make_request(sett.ACIS_BASE_URL+'StnData',params)
+    return make_request(settings.ACIS_BASE_URL+'StnData',params)
+
 def StnMeta(params):
-    try:
-        return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
-    except:
-        return make_request(sett.ACIS_BASE_URL+'StnMeta',params)
+    return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
+
 def GridData(params):
     return make_request(settings.ACIS_BASE_URL+'GridData',params)
 

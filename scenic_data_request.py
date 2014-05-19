@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys, os, datetime
-from django.conf import settings
+import my_acis.settings as settings
 
 '''
 scenic_data_request.py
