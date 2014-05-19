@@ -1014,6 +1014,30 @@ class GridDiffFigure(GridFigure) :
 
         return self.results
 
+class Logger(object):
+    def __init__(self, base_dir, log_file_name, logger_name=None):
+        self.base_dir = base_dir
+        self.log_file_name =  log_file_name
+        self.logger_name = 'logger'
+        if logger_name:self.logger_name = logger_name
+        import logging
+
+    def start_logger(self):
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        #Create file and shell handlers
+        fh = logging.FileHandler(base_dir + log_file)
+        sh = logging.StreamHandler()
+        fh.setLevel(logging.DEBUG)
+        sh.setLevel(logging.DEBUG)
+        #create formatter and add it to handler
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d in %(filename)s - %(message)s')
+        fh.setFormatter(formatter)
+        sh.setFormatter(formatter)
+        logger.addHandler(fh)
+        logger.addHandler(sh)
+        return logger
+
 
 class LargeDataRequest(object):
     '''
@@ -1030,7 +1054,54 @@ class LargeDataRequest(object):
                   data_summary (temporal/spatial)
                         temporal_summary/spatial_summary (max, min, mean, sum)
                   date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
+        logger -- logger object
     '''
-    def __init__(self, params):
+    def __init__(self, params, logger):
         self.params = params
-        self.params_dir = params_dir
+        self.logger =  logger
+
+
+    def get_user_info(self):
+        if 'user_name' in self.params.keys():user_name = self.params['user_name']
+        else : user_name = 'bdaudert'
+        if 'email' in self.params.keys():user_email = self.params['email']
+        else : user_email = 'bdaudert@dri.edu'
+        return user_name, user_email
+
+    def get_file_extension(self):
+        if 'data_format' in self.params.keys():
+            file_extension = WRCCData.FILE_EXTENSIONS[self.params['data_format']]
+            if file_extension == '.html':file_extension = '.txt'
+        else:
+            file_extension = '.txt'
+        return file_extension
+
+    def get_delimiter(self):
+        if 'delimiter' in self.arams.keys():delimiter = WRCCData.DELIMITERS[self.params['delimiter']]
+        else : delimiter = ' '
+        return delimiter
+
+    def split_data_request(self):
+        '''
+        Splits one large data request into multiple smaller chunks
+        Returns a list of parameter dictionaries
+        Note: current criteria for data reqest split up are:
+        Station  data request:
+            if data for multiple stations is requested
+            we ask for one year at a time
+        Gridded data requests:
+        if data for multiple gridpoints is requested
+        we ask for 7 days at a time
+        TO DO: come up with a better algorithm
+        '''
+        s_date = WRCCUtils.date_to_eight(self.params['start_date'])
+        e_date = WRCCUtils.date_to_eight(self.params['start_date'])
+        if s_date.lower() == 'por' or e_date.lower() == 'por':
+            element_list = WRCCUtils.convert_elements_to_list(self.params['elements'])
+            WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
+            if not s_date or not e_date:
+                self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
+            else:
+                self.logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
+
+

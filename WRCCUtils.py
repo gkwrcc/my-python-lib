@@ -338,12 +338,8 @@ def get_station_ids(stn_json_file_path):
     link to data find
     '''
     stn_ids = ''
-    json_data = {'stations':[]}
-    try:
-        with open(stn_json_file_path, 'r') as json_f:
-            json_data = u_convert(json.loads(json_f.read()))
-    except:
-        pass
+    json_data = load_json_data_from_file(stn_json_file_path)
+    if not json_data:json_data = {'stations':[]}
     name_previous = ''
     for idx,stn in enumerate(json_data['stations']):
         if stn['name'] == name_previous:
@@ -844,6 +840,15 @@ def u_convert(data):
         return type(data)(map(u_convert, data))
     else:
         return data
+
+def load_json_data_from_file(path_to_json_file):
+    json_data = None
+    try:
+        with open(path_to_json_file, 'r') as json_f:
+            json_data = u_convert(json.loads(json_f.read()))
+    except:
+        pass
+    return json_data
 
 def find_mon_len(year,mon):
     if is_leap_year(int(year)):
@@ -1710,6 +1715,13 @@ def strip_n_sort(station_list):
             stn_list[i] = str(stn)
     return stn_list
 
+def convert_elements_to_list(el_input):
+    if isinstance(el_input, basestring):
+        element_list = el_input.replace(' ', '').split(',')
+    else:
+        element_list = [str(el) for el in el_input]
+    return element_list
+
 def get_element_list(form_input, program):
     '''
     Finds element list for SOD program data query
@@ -1726,10 +1738,7 @@ def get_element_list(form_input, program):
             element_list = WRCCData.SOD_ELEMENT_LIST_BY_APP[program][form_input['element']]
         elif 'elements' in form_input.keys():
             #Check if elements is given as string, if so, convert to list
-            if isinstance(form_input['elements'], basestring):
-                element_list = form_input['elements'].replace(' ', '').split(',')
-            else:
-                element_list = [str(el) for el in form_input['elements']]
+            element_list = convert_elements_to_list(form_input['elements'])
     return element_list
 
 
