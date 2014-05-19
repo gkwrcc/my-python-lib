@@ -26,7 +26,7 @@ from CELERY.tasks import run_data_request
 ################
 ftp_server = 'pubfiles.dri.edu'
 mail_server = 'owa.dri.edu'
-from_address = 'csc-project@dri.edu'
+from_address = 'scenic@dri.edu'
 base_dir = '/tmp/data_requests/'
 pub_dir = '/pub/csc/test/'
 now = datetime.datetime.now()
