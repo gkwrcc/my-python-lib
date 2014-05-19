@@ -841,8 +841,16 @@ def u_convert(data):
     else:
         return data
 
+def load_data_to_json_file(path_to_file, data):
+    try:
+        with open(path_to_file, 'w+') as f:
+            json.dump(data, f)
+    except:
+        pass
+
 def load_json_data_from_file(path_to_json_file):
     json_data = None
+
     try:
         with open(path_to_json_file, 'r') as json_f:
             json_data = u_convert(json.loads(json_f.read()))

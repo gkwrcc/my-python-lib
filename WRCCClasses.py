@@ -15,9 +15,14 @@ import base64
 import datetime
 import csv
 from xlwt import Workbook
+import logging
+
+#Django
 from django.http import HttpResponse
+#Settings
 #from django.conf import settings
 import my_acis.settings as settings
+
 #WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
@@ -1024,10 +1029,10 @@ class Logger(object):
         import logging
 
     def start_logger(self):
-        logger = logging.getLogger(logger_name)
+        logger = logging.getLogger(self.logger_name)
         logger.setLevel(logging.DEBUG)
         #Create file and shell handlers
-        fh = logging.FileHandler(base_dir + log_file)
+        fh = logging.FileHandler(self.base_dir + self.log_file_name)
         sh = logging.StreamHandler()
         fh.setLevel(logging.DEBUG)
         sh.setLevel(logging.DEBUG)
@@ -1076,11 +1081,6 @@ class LargeDataRequest(object):
         else:
             file_extension = '.txt'
         return file_extension
-
-    def get_delimiter(self):
-        if 'delimiter' in self.arams.keys():delimiter = WRCCData.DELIMITERS[self.params['delimiter']]
-        else : delimiter = ' '
-        return delimiter
 
     def split_data_request(self):
         '''

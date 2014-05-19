@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
-import sys, os, datetime
+import sys, os, datetime, glob
 import my_acis.settings as settings
+
+import WRCCClasses, WRCCUtils
 
 '''
 scenic_data_request.py
@@ -22,16 +24,17 @@ if __name__ == '__main__' :
     #Check if we need to create a new log file
     #look at most recent log file
     log_files = logfiles = sorted([ f for f in os.listdir(base_dir) if f.endswith('.log')])
-    if not log_files:log_file = ''
-    else:log_file = logfiles[-1]
-    if log_file_test != log_file:log_file = log_file_test
+    if not log_files:log_file_name = ''
+    else:log_file_name = log_files[-1]
+    if log_file_test != log_file_name:log_file_name = log_file_test
 
     #Start Logging
-    Logger = WRCCClasses.Logger(base_dir, log_file, 'scenic_data_request')
+    Logger = WRCCClasses.Logger(base_dir, log_file_name, 'scenic_data_request')
     logger = Logger.start_logger()
 
     #Look for user parameter files in base_dir
-    params_files = filter(os.path.isfile, glob.glob(base_dir + '*_params.json'))
+    params_files = filter(os.path.isfile, glob.glob(base_dir + settings.PARAMS_FILE_EXTENSION))
+    print params_files
     params_files.sort(key=lambda x: os.path.getmtime(x))
     if not params_files:logger.info('No parameter files found! Exiting program.');sys.exit(0)
     for params_file in params_files:
@@ -39,4 +42,8 @@ if __name__ == '__main__' :
         if not params:
             logger.error('Cannot read parameter file: %s! Exiting program.' %os.path.basename(params_file))
             sys.exit(1)
-        LD = WRCCClasses.LargeDataRequest(params,logger)
+        logger.info('Parameter file: %s' % os.path.basename(params_file))
+        logger.info('Parameters: %s' % str(params))
+        LDR = WRCCClasses.LargeDataRequest(params,logger)
+        print LDR.get_user_info()
+        print LDR.get_file_extension()
