@@ -118,7 +118,7 @@ def find_geojson_of_area(search_area, val):
     else:
         return req['meta'][0]['geojson']['coordinates'][0][0]
 
-def find_bbox_of_area(search_area, val):
+def get_acis_bbox_of_area(search_area, val):
     '''
     Makes an ACIS general call
     Returns the enclosing boundng box 'W lon,S lat,E lon,N lat'
@@ -128,7 +128,7 @@ def find_bbox_of_area(search_area, val):
     v = str(val)
     #Sanity check
     if sa not in ['cwa', 'basin', 'county', 'climdiv']:
-        return ''
+        return None
     #Make general request
     params={'id':v,"meta":"geojson,bbox,name,id"}
     try:
@@ -165,7 +165,7 @@ def get_meta_data(search_area, val,vX_list=None):
 def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraints=None):
     '''
     Requests station meta data from ACIS and writes results to a json file
-    This json file is read by the javascript funcition initialize_station_map
+    This json file is read by the javascript function initialize_station_map
     which generates the station finder map
     Keyword arguments:
     by_type    -- station selection argument.
@@ -184,35 +184,12 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     vX_tuple = '1,2,43,3,4,10,11,7,45,44'
     shape_type = None
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
-    if by_type == 'county':
-        params['county'] = val
-    elif by_type == 'climate_division':
-        params['climdiv'] = val
-    elif by_type == 'county_warning_area':
-        params['cwa'] = val
-    elif by_type == 'basin':
-        params['basin'] =val
-    elif by_type == 'state':
-        params['state'] =val
-    elif by_type == 'bounding_box':
-        params['bbox'] = val
-    elif by_type == 'id' or by_type == 'station_id' or by_type == 'station_ids':
-        params['sids'] =val
-    elif by_type == 'states': #multiple states
-        params['state'] = val
-    elif by_type == 'sw_states':
-        params['state'] = 'az,ca,co,nm,nv,ut'
-    elif by_type == 'station':
-        params['sids'] = val
-    elif by_type == 'shape':
-        #Need to find enclosing bbox
+    params[WRCCData.STN_AREA_FORM_TO_PARAM[by_type]] = val
+    if by_type == 'sw_states':params['state'] = 'az,ca,co,nm,nv,ut'
+    #Find bbox for custom shapes
+    if by_type == 'shape':
         shape_type,bbox = WRCCUtils.get_bbox(val)
-        if bbox is None:
-            params['bbox'] = ''
-        else:
-            params['bbox'] = bbox
-    else:
-        pass
+        params['bbox'] = bbox
 
     #Acis WS call
     try:
@@ -391,19 +368,14 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
             stn_json['error'] = ['No meta data found']
 
     stn_json["stations"] = stn_meta_list
-    #double quotes needed for jquery json.load
-    stn_json_str = str(stn_json).replace("\'", "\"")
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     if by_type == 'sw_states':
         f_name = 'SW_stn.json'
-        f = open('/www/apps/csc/media/tmp/' + f_name,'w+')
+        f_dir = setting.TMP_DIR
     else:
         f_name = time_stamp + 'stn.json'
-        #f_name = 'NV_stn.json'
-        #f = open('/www/apps/csc/media/tmp/' + f_name,'w+')
-        f = open('/tmp/' +  f_name,'w+')
-    f.write(stn_json_str)
-    f.close()
+        f_dir = settings.TEMP_DIR
+    WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
     return stn_json, f_name
 
 
@@ -433,108 +405,30 @@ def get_station_data(form_input, program):
 
     elements = WRCCUtils.get_element_list(form_input, program)
     elems_list = []
+    elems_list_short  = []
     for el in elements:
-        el_strip = el[0:3]
-        try:
-            base_temp = int(el[3:])
-        except:
-            base_temp = None
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el)
+        elems_list_short.append(el_strip)
         if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
             elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
         else:
             elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],add='f,t'))
-    params = dict(sdate=s_date, edate=e_date, \
-    meta='name,state,sids,ll,elev,uid,county,climdiv,valid_daterange', \
-    elems=elems_list)
+    params = {
+            'sdate':s_date,
+            'edate':e_date,
+            'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',
+            'elems':elems_list
+            }
     shape_type = None
+    #Deal with POR input dates
     if 'station_id' in form_input.keys():
-        params['sids'] = form_input['station_id']
-        #Check for por start end dates
-        if s_date.lower() =='por' or e_date.lower() == 'por':
-            #meta_params = dict(sids=form_input['station_id'],elems=[dict(name=el)for el in elements], meta='valid_daterange')
-            elems_list =[]
-            for el in elements:
-                el_strip = el[0:3]
-                try:
-                    base_temp = int(el[3:])
-                except:
-                    base_temp = None
-                if el_strip in ['cdd', 'hdd','gdd'] and base_temp is not None:
-                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp))
-                elif el_strip == 'gdd' and base_temp is None:
-                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=50))
-                else:
-                    elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX']))
-
-            meta_params = dict(sids=form_input['station_id'],elems=elems_list, meta='valid_daterange')
-            try:
-                meta_request = StnMeta(meta_params)
-                if not 'meta' in meta_request.keys() or not meta_request['meta']:
-                    resultsdict['errors'] = 'Metadata could not be for this station. Please check that you are using a valid station ID.'
-                    return resultsdict
-            except Exception, e:
-                resultsdict['errors'] = 'Metadata request fail. Error: %s' %str(e)
-                return resultsdict
-            #Find largest daterange
-            try:
-                start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][0][8:10]))
-                end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][0][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][0][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][0][1][8:10]))
-                idx_s = 0
-                idx_e = 0
-            except Exception, e:
-                resultsdict['errors'] = 'Metadata request fail. Start, End data for this station could not be found. Error: %s' %str(e)
-                return resultsdict
-            for el_idx, dr in enumerate(meta_request['meta'][0]['valid_daterange']):
-                if len(dr) ==2 and len(dr[0])== 10 and len(dr[1])==10:
-                    new_start = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][0][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][0][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][0][8:10]))
-                    new_end = datetime.datetime(int(meta_request['meta'][0]['valid_daterange'][el_idx][1][0:4]), int(meta_request['meta'][0]['valid_daterange'][el_idx][1][5:7]),int(meta_request['meta'][0]['valid_daterange'][el_idx][1][8:10]))
-                else:
-                    new_start = start
-                    new_end = end
-
-                if new_start < start:
-                    start = new_start
-                    idx_s = el_idx
-                if new_end > end:
-                    end = new_end
-                    idx_e = el_idx
-            if s_date.lower() == 'por':
-                s_yr = meta_request['meta'][0]['valid_daterange'][idx_s][0][0:4]
-                s_mon = meta_request['meta'][0]['valid_daterange'][idx_s][0][5:7]
-                s_day = meta_request['meta'][0]['valid_daterange'][idx_s][0][8:10]
-                s_date = '%s%s%s' %(s_yr,s_mon,s_day)
-            if e_date.lower() == 'por':
-                e_yr = meta_request['meta'][0]['valid_daterange'][idx_e][1][0:4]
-                e_mon = meta_request['meta'][0]['valid_daterange'][idx_e][1][5:7]
-                e_day = meta_request['meta'][0]['valid_daterange'][idx_e][1][8:10]
-                e_date = '%s%s%s' %(e_yr,e_mon,e_day)
-            params['sdate']= str(s_date)
-            params['edate'] = str(e_date)
-    elif 'station_ids' in form_input.keys():
-        params['sids'] = form_input['station_ids']
-        stn_list = form_input['station_ids'].replace(' ','').split(',')
-    elif 'county' in form_input.keys():
-        params['county'] = form_input['county']
-    elif 'climate_division' in form_input.keys():
-        params['climdiv'] = form_input['climate_division']
-    elif 'county_warning_area' in form_input.keys():
-        params['cwa'] = form_input['county_warning_area']
-    elif 'basin' in form_input.keys():
-        params['basin'] = form_input['basin']
-    elif 'state' in form_input.keys():
-        params['state'] = form_input['state']
-    elif 'bounding_box' in form_input.keys():
-        params['bbox'] = form_input['bounding_box']
-    elif 'shape' in form_input.keys():
-        #Need to find enclosing bbox
+        #params['sids'] = form_input['station_id']
+        [params['sdate'], params['edate']] = WRCCUtils.find_valid_daterange(form_input['station_id'], start_date=s_date.lower(), end_date=e_date.lower(), el_list=elems_list_short, max_or_min='max')
+    params[WRCCData.STN_AREA_FORM_TO_PARAM[form_input['select_stations_by']]] = form_input[form_input['select_stations_by']]
+    #Find bbox if custom shape and update params['bbox']
+    if 'shape' in form_input.keys():
         shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
-        if bbox is None:
-            params['bbox'] = ''
-        else:
-            params['bbox'] = bbox
-    else:
-        params['sids'] =''
-
+        params['bbox'] = bbox
     #Data request
     try:
         request = MultiStnData(params)
@@ -556,10 +450,7 @@ def get_station_data(form_input, program):
             resultsdict[key] = []
         return resultsdict
     #Initialize output lists
-    if s_date is not None and e_date is not None:
-        dates = WRCCUtils.get_dates(s_date, e_date, program)
-    else:
-        dates = []
+    dates = WRCCUtils.get_dates(params['sdate'], params['edate'], program)
 
     resultsdict['dates'] = dates
     resultsdict['elements'] = elements
@@ -697,32 +588,21 @@ def get_grid_data(form_input, program):
     else:
         elements = ','.join(el_list)
     params = {'sdate': s_date, 'edate': e_date, 'grid': form_input['grid'], 'elems': elements, 'meta': 'll,elev'}
-    if 'location' in form_input.keys():params['loc'] = form_input['location']
-    if 'state' in form_input.keys():params['state'] = form_input['state']
-    if 'bounding_box' in form_input.keys():params['bbox'] = form_input['bounding_box']
+    #Note: climdiv, cwa, cunty, basin get mapped to bbox as gridACIS currently
+    #does not support direct calls for these
+    params[WRCCData.GRID_AREA_FORM_TO_PARAM[form_input['select_grid_by']]] = form_input[form_input['select_grid_by']]
+    #Fidn bbox if custom shape
     if 'shape' in form_input.keys():
         #Need to find enclosing bbox
         shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
-        if shape_type == 'location':
-            params['loc'] =form_input['shape']
-        else:
-            if bbox is None:
-                params['bbox'] = ''
-            else:
-                params['bbox'] = bbox
-    #Find enclosing bbox via General ACIS call (find_bbox_of_area)
-    if 'county_warning_area' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('cwa', form_input['county_warning_area'])
-    if 'cwa' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('cwa', form_input['cwa'])
-    if 'county' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('county', form_input['county'])
-    if 'basin' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('basin', form_input['basin'])
-    if 'climdiv' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('climdiv', form_input['climdiv'])
-    if 'climate_division' in form_input.keys():
-        params['bbox'] = find_bbox_of_area('climdiv', form_input['climate_division'])
+        if shape_type == 'location':params['loc'] = form_input['shape']
+        else:params['bbox'] = bbox
+    #Find enclosing bbox via General ACIS call if climdiv, cwa, county, basin
+    #Note: gridACIS currently does not support direct calls for these options
+    #FIX me : when gridACIS supports calls for climdiv, cwa, county, basin
+    if form_input['select_grid_by'] in ['county_warning_area', 'climate_division', 'basin', 'county']:
+        bbox = get_acis_bbox_of_area(WRCCData.STN_AREA_FORM_TO_PARAM[form_input['select_grid_by']], form_input[form_input['select_grid_by']])
+        params['bbox'] = bbox
     request = {}
     try:
         request = GridData(params)

@@ -34,7 +34,6 @@ if __name__ == '__main__' :
 
     #Look for user parameter files in base_dir
     params_files = filter(os.path.isfile, glob.glob(base_dir + settings.PARAMS_FILE_EXTENSION))
-    print params_files
     params_files.sort(key=lambda x: os.path.getmtime(x))
     if not params_files:logger.info('No parameter files found! Exiting program.');sys.exit(0)
     for params_file in params_files:
@@ -45,5 +44,5 @@ if __name__ == '__main__' :
         logger.info('Parameter file: %s' % os.path.basename(params_file))
         logger.info('Parameters: %s' % str(params))
         LDR = WRCCClasses.LargeDataRequest(params,logger)
-        print LDR.get_user_info()
-        print LDR.get_file_extension()
+        params_list = LDR.split_data_request()
+

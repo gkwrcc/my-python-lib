@@ -54,9 +54,6 @@ def date_to_eight(date,se=None):
     if len(d8) == 6:d8+=dd
     return d8
 
-
-
-
 def date_to_datetime(date_str):
     '''
     Function to convert acis date_str of forms
@@ -191,6 +188,11 @@ def is_leap_year(year):
         return True
     else:
         return False
+
+##########################
+#SPECIAL FUNCTIONS
+##########################
+
 
 def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, max_or_min='max'):
     '''
@@ -327,14 +329,11 @@ def get_dates(s_date, e_date, app_name):
     return dates
 
 
-##########################
-#SPECIAL FUNCTIONS
-##########################
 def get_station_ids(stn_json_file_path):
     '''
     finds all station ids of the
     stations listed in the json file
-    Used at statiion locator app to set initial station ids for
+    Used in station locator app to set initial station ids for
     link to data find
     '''
     stn_ids = ''
@@ -569,7 +568,7 @@ def find_bbox_of_shape(shape):
     try:
         bbox = str(min(lons_shape)) + ',' + str(min(lats_shape)) + ',' + str(max(lons_shape)) + ',' + str(max(lats_shape))
     except:
-        bbox= None
+        bbox= ''
     return bbox
 
 def find_bbox_of_circle(lon, lat, r):
@@ -619,7 +618,7 @@ def get_bbox(shape):
         bbox = find_bbox_of_shape(s)
     elif len(s) == 2:
         t = 'location'
-        bbox = str(s[0] - 0.1) + ',' + str(s[1] - 0.1) + ',' + str(s[0] + 0.1) + ',' + str(s[1] + 0.1)
+        bbox = str(s[0] - 0.3) + ',' + str(s[1] - 0.3) + ',' + str(s[0] + 0.3) + ',' + str(s[1] + 0.3)
     else:
         t = 'polygon'
         bbox = find_bbox_of_shape(s)
@@ -958,10 +957,8 @@ def write_griddata_to_file(data, form, f=None, request=None):
         except:
             pass
     elif file_extension == '.json':
-        with open(f, 'w+') as jsonf:
-            import json
-            json.dump(data, jsonf)
-            response = None
+        load_data_to_json_file(f, data)
+        response = None
     else: #Excel
         wb = Workbook()
         #Note row number limit is 65536 in some excel versions
@@ -1150,9 +1147,8 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
                         row.append(str(val[2]))
                 writer.writerow(row)
     elif file_extension == '.json':
-        with open(f, 'w+') as jsonf:
-            jsonf.write(json.dumps(resultsdict['stn_data']))
-            response = None
+        load_data_to_json_file(f, resultsdict['stn_data'])
+        response = None
     elif file_extension == '.xls': #Excel
         wb = Workbook()
         for stn, dat in enumerate(resultsdict['stn_data']):

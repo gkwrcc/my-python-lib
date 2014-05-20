@@ -837,7 +837,7 @@ class GridFigure(object) :
         return levels
 
     def get_grid(self) :
-        with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
+        with open('%simg/empty.png' %settings.MEDIA_DIR, 'rb') as image_file:
             encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
         empty_img = {'data':encoded_string, 'range':[0.0, 0.0], 'levels':[0,1,2,3,4,5,6,7,8],\
         'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -1002,7 +1002,7 @@ class GridDiffFigure(GridFigure) :
         try:
             result = AcisWS.GridCalc(self.params)
             if not result or 'error' in result.keys():
-                with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
+                with open('%simg/empty.png' %settings.MEDIA_DIR, 'rb') as image_file:
                     encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
                 self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
                 'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -1011,7 +1011,7 @@ class GridDiffFigure(GridFigure) :
             else:
                 self.results = results
         except ValueError:
-            with open('%simg/empty.png' %settings.MEDIA_URL, 'rb') as image_file:
+            with open('%simg/empty.png' %settings.MEDIA_DIR, 'rb') as image_file:
                 encoded_string = 'data:image/png;base64,' + base64.b64encode(image_file.read())
             self.results = {'data':encoded_string, 'range':[0.0, 0.0], \
             'cmap': [u'#000000', u'#4300a1', u'#0077dd', u'#00aa99', u'#00ba00', \
@@ -1064,8 +1064,11 @@ class LargeDataRequest(object):
     '''
     def __init__(self, params, logger):
         self.params = params
+        if 'select_grid_by' in self.params.keys():self.request_type = 'grid'
+        elif 'select_stations_by' in self.params.keys():self.request_type = 'station'
         self.logger =  logger
-
+        self.day_limit = setting.GRID_REQUEST_DAY_LIMIT
+        self.station_limit = STATION_REQUEST_STATION_LIMIT
 
     def get_user_info(self):
         if 'user_name' in self.params.keys():user_name = self.params['user_name']
@@ -1082,27 +1085,44 @@ class LargeDataRequest(object):
             file_extension = '.txt'
         return file_extension
 
-    def split_data_request(self):
+    def split_grid_data_request(self):
         '''
-        Splits one large data request into multiple smaller chunks
+        Splits one large data grid request into multiple smaller chunks
+        by dates.
         Returns a list of parameter dictionaries
-        Note: current criteria for data reqest split up are:
-        Station  data request:
-            if data for multiple stations is requested
-            we ask for one year at a time
-        Gridded data requests:
-        if data for multiple gridpoints is requested
-        we ask for 7 days at a time
-        TO DO: come up with a better algorithm
         '''
         s_date = WRCCUtils.date_to_eight(self.params['start_date'])
-        e_date = WRCCUtils.date_to_eight(self.params['start_date'])
+        e_date = WRCCUtils.date_to_eight(self.params['end_date'])
         if s_date.lower() == 'por' or e_date.lower() == 'por':
             element_list = WRCCUtils.convert_elements_to_list(self.params['elements'])
-            WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
+            s_date, e_date = WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
             if not s_date or not e_date:
                 self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
             else:
                 self.logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
+        #Find number of requests
+        start = WRCCUtils.date_to_datetime(s_date)
+        end = WRCCUtils.date_to_datetime(e_date)
+        try:days = (end - start).days
+        except:days = 0
+        num_requests = days / self.day_limit
+        if days % self.day_limit !=0:num_requests+=1
+        self.logger.info('Number of requests: %s' %str(num_requests))
+        #Construct parameter files for each request
+        params_list = [dict(self.params) for k in range(num_requests)]
+        for k in range(num_requests):
+            start_new = start + k*datetime.timedelta(days=day_limit )
+            if k < num_requests - 1:end_new = start_new + datetime.timedelta(days=day_limit - 1)
+            else:end_new = end
+            start_yr = str(start_new.year);end_yr = str(end_new.year)
+            start_month = str(start_new.month);end_month = str(end_new.month)
+            start_day = str(start_new.day);end_day = str(end_new.day)
+            if len(str(start_new.month)) == 1:start_month = '0%s' %str(start_new.month)
+            if len(str(end_new.month)) == 1:end_month = '0%s' %str(end_new.month)
+            if len(str(start_new.day)) == 1:start_day = '0%s' %str(start_new.day)
+            if len(str(end_new.day)) == 1:end_day = '0%s' %str(end_new.day)
+            params_list[k]['start_date'] = ''.join([start_yr, start_month, start_day])
+            params_list[k]['end_date'] = ''.join([end_yr, end_month, end_day])
+        return params_list
 
 

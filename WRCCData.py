@@ -304,6 +304,45 @@ SEARCH_AREA_FORM_TO_ACIS = {
     'point':'loc',
 }
 
+STN_AREA_FORM_TO_PARAM = {
+    'station_id':'sids',
+    'station_ids':'sids',
+    'sid':'sids',
+    'sids':'sids',
+    'climate_division':'climdiv',
+    'climdiv':'climdiv',
+    'county_warning_area':'cwa',
+    'cwa':'cwa',
+    'bounding_box':'bbox',
+    'bbox':'bbox',
+    'state':'state',
+    'sw_states':'state',
+    'states':'state',
+    'county':'county',
+    'basin':'basin',
+    'shape':'bbox',
+    'location':'loc',
+    'point':'loc'
+}
+
+GRID_AREA_FORM_TO_PARAM = {
+    #Note: gridACIS calls currently don't support cwa, climdiv, basin, county
+    'climate_division':'bbox',
+    'climdiv':'bbox',
+    'county_warning_area':'bbox',
+    'cwa':'bbox',
+    'bounding_box':'bbox',
+    'bbox':'bbox',
+    'state':'state',
+    'sw_states':'state',
+    'states':'state',
+    'county':'bbox',
+    'basin':'bbox',
+    'shape':'bbox',
+    'location':'loc',
+    'point':'loc'
+}
+
 ACIS_TO_SEARCH_AREA = {
     'climdiv':'climate_division',
     'climate_division':'climate_division',
