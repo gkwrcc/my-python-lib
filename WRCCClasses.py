@@ -1064,8 +1064,8 @@ class LargeDataRequest(object):
     '''
     def __init__(self, params, logger):
         self.params = params
-        if 'select_grid_by' in self.params.keys():self.request_type = 'grid'
-        elif 'select_stations_by' in self.params.keys():self.request_type = 'station'
+        if 'select_grid_by' in self.params.keys():self.data_request = getattr(AcisWS, 'get_grid_data')
+        elif 'select_stations_by' in self.params.keys():self.data_request = getattr(AcisWS, 'get_station_data')
         self.logger =  logger
         self.day_limit = setting.GRID_REQUEST_DAY_LIMIT
         self.station_limit = STATION_REQUEST_STATION_LIMIT
@@ -1085,16 +1085,41 @@ class LargeDataRequest(object):
             file_extension = '.txt'
         return file_extension
 
+    def split_station_data_request(self):
+        '''
+        Splits large station datat request parameters
+        into a number of smaller request.
+        For ease of concatenating the results,
+        grid data requests are split up by stations
+        Returns a list of parameter dictionaries
+        '''
+        area_type = self.params['select_stations_by']
+        val = self.params[self.params['select_stations_by']]
+        if area_type in ['station_id', 'station_ids']:
+            stn_list = WRCCUtils.convert_to_list(val)
+        else:
+            #Find all stations within the area
+            meta_params = {area_type: val,'meta':'name, sids'}
+            stn_list = []
+            try:
+                meta_data = AcisWS.StnMeta(meta_params)
+                for stn in meta_data['meta']:stn_list.append(stn['sids'][0].split(' ')[0])
+            except:
+                return []
+
+
     def split_grid_data_request(self):
         '''
-        Splits one large data grid request into multiple smaller chunks
-        by dates.
+        Splits one large data grid request parameters
+        into a number of smaller request.
+        For ease of concatenating the results,
+        grid data requests are split up by dates
         Returns a list of parameter dictionaries
         '''
         s_date = WRCCUtils.date_to_eight(self.params['start_date'])
         e_date = WRCCUtils.date_to_eight(self.params['end_date'])
         if s_date.lower() == 'por' or e_date.lower() == 'por':
-            element_list = WRCCUtils.convert_elements_to_list(self.params['elements'])
+            element_list = WRCCUtils.convert_to_list(self.params['elements'])
             s_date, e_date = WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
             if not s_date or not e_date:
                 self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))

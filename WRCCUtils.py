@@ -1719,12 +1719,11 @@ def strip_n_sort(station_list):
             stn_list[i] = str(stn)
     return stn_list
 
-def convert_elements_to_list(el_input):
-    if isinstance(el_input, basestring):
-        element_list = el_input.replace(' ', '').split(',')
-    else:
-        element_list = [str(el) for el in el_input]
-    return element_list
+def convert_to_list(item):
+    if isinstance(item, basestring):lst = item.replace(' ', '').split(',')
+    elif isinstance(item, list):lst = [str(it) for it in item]
+    else:lst = item
+    return lst
 
 def get_element_list(form_input, program):
     '''
@@ -1742,7 +1741,7 @@ def get_element_list(form_input, program):
             element_list = WRCCData.SOD_ELEMENT_LIST_BY_APP[program][form_input['element']]
         elif 'elements' in form_input.keys():
             #Check if elements is given as string, if so, convert to list
-            element_list = convert_elements_to_list(form_input['elements'])
+            element_list = convert_to_list(form_input['elements'])
     return element_list
 
 
