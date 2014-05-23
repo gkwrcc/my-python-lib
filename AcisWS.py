@@ -169,20 +169,107 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     which generates the station finder map
     Keyword arguments:
     by_type    -- station selection argument.
-                  station selection is one of: county, climate_division,
-                  county_warning_area, basin, bounding_box, state, states or shape for custom polygon
+                  station selection is one of: county, climate_division, bounding box
+                  county_warning_area, basin, state, states or custom shapes
     val        -- Value of station selection argument, e.g, AL if by_type = state
-    el_list    -- List of var_majors of climate elements (default None)
-    time_range -- [start_date, end_date](default None)
+    el_list    -- List of var_majors of climate elements
+                  (default None --> we look for for any of the 11 common elements)
+    time_range -- User form start and end dates [start_date, end_date]
+                  (default None --> we take valid_daterange of el_list)
+    contraints -- specifies element contsraints and date contsraints:
+                  any_any, all_all, any_all, all_any
 
     If el_list and time_range are given, only stations that have elements
     for the given time range are listed.
     '''
+    def stn_in_poly(by_type, shape_type, shape,stn_meta):
+        shape = [float(s) for s in shape]
+        if shape_type == 'circle':
+            poly = shape
+            stn_in = WRCCUtils.point_in_circle(stn_meta['ll'][0], stn_meta['ll'][1], poly)
+        else:
+            if shape_type in ['bbox','location']:
+                poly = [(shape[0],shape[1]), (shape[0],shape[3]),(shape[2],shape[3]),(shape[2],shape[1])]
+            else:
+                poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+            stn_in = WRCCUtils.point_in_poly(stn_meta['ll'][0], stn_meta['ll'][1], poly)
+        if not stn_in:return False
+        else:return True
+
+    def station_invalid(el_list, vX_list, time_range, stn, contraints):
+        #Check if constraints are met for element list and date range
+        if constraints in ['any_any', 'any_all']:
+            flag_invalid_station = True
+        elif constraints in ['all_all', 'all_any']:
+            flag_invalid_station = False
+        for el_idx, el_vX in enumerate(el_list):
+            #Find correct index in vX_list
+            try:
+                idx = vX_list.index(el_vX)
+            except:
+                if constraints in ['all_all', 'all_any']:
+                    flag_invalid_station = True
+                    break
+                elif constraints in ['any_any', 'any_all']:
+                    continue
+            #Sanity Check
+            if not stn['valid_daterange'][idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
+                #data for this element does not exist at station
+                flag_invalid_station = True
+                break
+            elif not stn['valid_daterange'][idx] and (constraints == 'any_any' or constraints == 'any_all'):
+                continue
+
+            #Find period of record for this element and station
+            por_start = WRCCUtils.date_to_datetime(stn['valid_daterange'][idx][0])
+            por_end = WRCCUtils.date_to_datetime(stn['valid_daterange'][idx][1])
+            if time_range[0].lower() != 'por':
+                user_start = WRCCUtils.date_to_datetime(time_range[0])
+            else:
+                user_start = por_start
+            if time_range[1].lower() != 'por':
+                user_end = WRCCUtils.date_to_datetime(time_range[1])
+            else:
+                user_end = por_end
+            #Check constraints logic for this element and station
+            if constraints == 'all_all' or constraints is None:
+                #all  elements have data records for all dates within start and end date given by user
+                if user_start < por_start or user_end > por_end:
+                    flag_invalid_station =  True
+                    break
+            elif constraints == 'any_any':
+                #At least one element has one data record within user given time_range
+                if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
+                    flag_invalid_station = False
+                    break
+            elif constraints == 'all_any':
+                #All elements have at least one data record within user given time_range
+                if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
+                    continue
+                else:
+                    flag_invalid_station =  True
+                    break
+            elif constraints == 'any_all':
+                #At least one elements has data records for all dates within given date_range
+                if user_start >= por_start and user_end <= por_end:
+                    flag_invalid_station = False
+                    break
+        return flag_invalid_station
+
+    #Settings
     stn_list = []
-    stn_json={'network_codes': WRCCData.KELLY_NETWORK_CODES, 'network_icons': WRCCData.KELLY_NETWORK_ICONS}
+    stn_json={
+        'network_codes': WRCCData.KELLY_NETWORK_CODES,
+        'network_icons': WRCCData.KELLY_NETWORK_ICONS
+    }
     vX_list= ['1','2','43','3','4','10','11','7','45','44']
     vX_tuple = '1,2,43,3,4,10,11,7,45,44'
     shape_type = None
+    time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
+    f_name = time_stamp + 'stn.json'
+    f_dir = settings.TEMP_DIR
+
+    #Set up metedata requet
     params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
     params[WRCCData.STN_AREA_FORM_TO_PARAM[by_type]] = val
     if by_type == 'sw_states':params['state'] = 'az,ca,co,nm,nv,ut'
@@ -191,190 +278,114 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         shape_type,bbox = WRCCUtils.get_bbox(val)
         params['bbox'] = bbox
 
-    #Acis WS call
+    #Acis Metadata call and sanity checks on results
     try:
         request = StnMeta(params)
     except:
-        request = {'error':'bad request, check params: %s'  % str(params)}
+        stn_json['error'] = 'Metadata request failed. Please check your parameters!'
+        WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
+        return stn_json, f_name
+    if not 'meta' in request.keys() or not request['meta'] or 'error' in request.keys():
+        stn_json['error'] = 'No metadata found.'
+        WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
+        return stn_json, f_name
 
     stn_meta_list = []
-    if 'meta' in request.keys():
-        #For alphabetic ordering of station names
-        sorted_list =[]
-        #Keep track of duplicates
-        unique_stations = []
-        for i, stn in enumerate(request['meta']):
-            #if custom shape, check if  stn lies within shape
-            if by_type == 'shape':
-                if shape_type in ['bbox','location']:
-                    shape = bbox.split(',')
-                else:
-                    shape = val.split(',')
-                shape = [float(s) for s in shape]
-                if shape_type == 'circle':
-                    poly = shape
-                    stn_in = WRCCUtils.point_in_circle(stn['ll'][0], stn['ll'][1], poly)
-                else:
-                    if shape_type in ['bbox','location']:
-                        poly = [(shape[0],shape[1]), (shape[0],shape[3]),(shape[2],shape[3]),(shape[2],shape[1])]
-                    else:
-                        poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
-                    stn_in = WRCCUtils.point_in_poly(stn['ll'][0], stn['ll'][1], poly)
-                if not stn_in:
-                    continue
-
-            if not stn['valid_daterange']:
+    #For alphabetic ordering of station names
+    sorted_list =[]
+    #Keep track of duplicates
+    unique_stations = []
+    for i, stn in enumerate(request['meta']):
+        #if custom shape, check if  stn lies within shape
+        if by_type == 'shape':
+            if shape_type in ['bbox','location']:shape = bbox.split(',')
+            else:shape = val.split(',')
+            if not stn_in_poly(by_type, shape_type, shape, stn):
                 continue
-            #check if we are looking for stations with particular elements
-            if el_list is not None and time_range is not None:
+        #sanity check
+        if not stn['valid_daterange']:
+            continue
 
-                #Check if ACIS produced correct output, i.e. one valid_daterange per element
-                if len(stn['valid_daterange']) < len(el_list):
-                    continue
-                #Check if constraints are met for element list and date range
-                if constraints in ['any_any', 'any_all']:
-                    flag_invalid_station = True
-                elif constraints in ['all_all', 'all_any']:
-                    flag_invalid_station = False
-                for el_idx, el_vX in enumerate(el_list):
-                    #Find correct index in vX_list
-                    try:
-                        idx = vX_list.index(el_vX)
-                    except:
-                        if constraints in ['all_all', 'all_any']:
-                            flag_invalid_station = True
-                            break
-                        elif constraints in ['any_any', 'any_all']:
-                            continue
-                    #Sanity Check
-                    if not stn['valid_daterange'][idx] and (constraints == 'all_all'  or constraints == 'all_any' or constraints is None):
-                        #data for this element does not exist at station
-                        flag_invalid_station = True
-                        break
-                    elif not stn['valid_daterange'][idx] and (constraints == 'any_any' or constraints == 'any_all'):
-                        continue
-
-                    #Find period of record for this element and station
-                    por_start = datetime.datetime(int(stn['valid_daterange'][idx][0][0:4]), int(stn['valid_daterange'][idx][0][5:7]),int(stn['valid_daterange'][idx][0][8:10]))
-                    por_end = datetime.datetime(int(stn['valid_daterange'][idx][1][0:4]), int(stn['valid_daterange'][idx][1][5:7]),int(stn['valid_daterange'][idx][1][8:10]))
-                    if time_range[0].lower() != 'por':
-                        user_start = datetime.datetime(int(time_range[0][0:4]), int(time_range[0][4:6]),int(time_range[0][6:8]))
-                    else:
-                        user_start = por_start
-                    if time_range[1].lower() != 'por':
-                        user_end = datetime.datetime(int(time_range[1][0:4]), int(time_range[1][4:6]),int(time_range[1][6:8]))
-                    else:
-                        user_end = por_end
-                    #Check constraints logic for this element and station
-                    if constraints == 'all_all' or constraints is None:
-                        #all  elements have data records for all dates within start and end date given by user
-                        if user_start < por_start or user_end > por_end:
-                            flag_invalid_station =  True
-                            break
-                    elif constraints == 'any_any':
-                        #At least one element has one data record within user given time_range
-                        if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
-                            flag_invalid_station = False
-                            break
-                    elif constraints == 'all_any':
-                        #All elements have at least one data record within user given time_range
-                        if (user_end >= por_start and user_start <= por_end) or (user_start <= por_end and user_end >=por_start):
-                            continue
-                        else:
-                            flag_invalid_station =  True
-                            break
-                    elif constraints == 'any_all':
-                        #At least one elements has data records for all dates within given date_range
-                        if user_start >= por_start and user_end <= por_end:
-                            flag_invalid_station = False
-                            break
-                #Check if station is valid, if not, proceed to next station
-                if flag_invalid_station:
-                    continue
+        #check if we are looking for stations with particular elements
+        if el_list is not None and time_range is not None:
+            #Check if ACIS produced correct output, i.e. one valid_daterange per element
+            if len(stn['valid_daterange']) < len(el_list):
+                continue
+            #Check if station is valid, if not, proceed to next station
+            flag_invalid_station = station_invalid(el_list, vX_list, time_range, stn, constraints)
+            if flag_invalid_station:continue
 
 
-            stn_sids = []
-            stn_networks = []
-            stn_network_codes = []
-            sids = stn['sids'] if 'sids' in stn.keys() else []
-            marker_icons = []
-            for sid in sids:
-                sid_split = sid.split(' ')
-                #put coop id up front (for csc application metagraph  and possibly others)
-                if str(sid_split[1]) == '2':
-                    stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
-                    stn_network_codes.insert(0, str(sid_split[1]))
-                    marker_icons.insert(0, WRCCData.NETWORK_ICONS[str(sid_split[1])])
-                    stn_networks.insert(0,WRCCData.NETWORK_CODES[str(sid_split[1])])
-                else:
-                    stn_sids.append(str(sid_split[0]).replace("\'"," "))
-                    stn_network_codes.append(str(sid_split[1]))
-                    if int(sid_split[1]) <= 10:
-                        stn_networks.append(WRCCData.NETWORK_CODES[str(sid_split[1])])
-                        marker_icons.append(WRCCData.NETWORK_ICONS[str(sid_split[1])])
-                    else:
-                        stn_networks.append('Misc')
-                        marker_icons.append(WRCCData.NETWORK_ICONS['11'])
-            #Sanity check : Some Acis records are incomplete, leading to key error
-            if 'll' in stn.keys():
-                lat = str(stn['ll'][1])
-                lon = str(stn['ll'][0])
+        stn_sids = []
+        stn_networks = []
+        stn_network_codes = []
+        sids = stn['sids'] if 'sids' in stn.keys() else []
+        marker_icons = []
+        for sid in sids:
+            sid_split = sid.split(' ')
+            #put coop id up front (for csc application metagraph  and possibly others)
+            if str(sid_split[1]) == '2':
+                stn_sids.insert(0,str(sid_split[0]).replace("\'"," "))
+                stn_network_codes.insert(0, str(sid_split[1]))
+                marker_icons.insert(0, WRCCData.NETWORK_ICONS[str(sid_split[1])])
+                stn_networks.insert(0,WRCCData.NETWORK_CODES[str(sid_split[1])])
             else:
-                continue
-            name = str(stn['name']).replace("\'"," ").replace('#','') if 'name' in stn.keys() else 'Name not listed'
-            uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
-            elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
-            state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
-            #sort station networks so that coop is last
-            #so that coop markesr show on map
-            stn_networks_sorted = []
-            for n in stn_networks:
-                if n !='COOP':
-                    stn_networks_sorted.append(n)
-            if 'COOP' in stn_networks:
-                stn_networks_sorted.append('COOP')
-            #Generate one entry per network that the station belongs to
-            for j, sid in enumerate(stn_networks_sorted):
-                stn_dict = {"name":name,"uid":uid,"sid":stn_sids[j],"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
-                "state":state_key, "marker_icon":marker_icons[j], "marker_category":stn_networks[j],\
-                "stn_networks":stn_networks,"stn_network":','.join(stn_networks),"stn_network_codes": stn_network_codes}
-                #check which elements are available at the stations[valid_daterange is not empty]
-                valid_date_range_list = stn['valid_daterange']
-                available_elements = []
-                for j,rnge in enumerate(valid_date_range_list):
-                    if rnge:
-                        available_elements.append([WRCCData.ACIS_ELEMENTS[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
-                        #append growing degree days
-                        if WRCCData.ACIS_ELEMENTS[vX_list[j]]['name'] == 'cdd':
-                            available_elements.append([WRCCData.ACIS_ELEMENTS['-44']['name_long'], [str(rnge[0]), str(rnge[1])]])
-                if available_elements:
-                    stn_dict['available_elements'] = available_elements
-                #find index in alphabetically ordered list of station names
-                sorted_list.append(name.split(' ')[0])
-                try:
-                    sorted_list.sort()
-                    stn_idx = sorted_list.index(name.split(' ')[0])
-                except ValueError:
-                    stn_idx = -1
-                #Insert stn into alphabeticlly ordered list
-                if stn_idx == -1:
-                    stn_meta_list.append(stn_dict)
+                stn_sids.append(str(sid_split[0]).replace("\'"," "))
+                stn_network_codes.append(str(sid_split[1]))
+                if int(sid_split[1]) <= 10:
+                    stn_networks.append(WRCCData.NETWORK_CODES[str(sid_split[1])])
+                    marker_icons.append(WRCCData.NETWORK_ICONS[str(sid_split[1])])
                 else:
-                    stn_meta_list.insert(stn_idx, stn_dict)
-    else:
-        if 'error' in request.keys():
-            stn_json['error'] = request['error']
+                    stn_networks.append('Misc')
+                    marker_icons.append(WRCCData.NETWORK_ICONS['11'])
+        #Sanity check : Some Acis records are incomplete, leading to key error
+        if 'll' in stn.keys():
+            lat = str(stn['ll'][1])
+            lon = str(stn['ll'][0])
         else:
-            stn_json['error'] = ['No meta data found']
+            continue
+        name = str(stn['name']).replace("\'"," ").replace('#','') if 'name' in stn.keys() else 'Name not listed'
+        uid = str(stn['uid']) if 'uid' in stn.keys() else 'Uid not listed'
+        elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
+        state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
+        #sort station networks so that coop is last
+        #so that coop markesr show on map
+        stn_networks_sorted = []
+        for n in stn_networks:
+            if n !='COOP':
+                stn_networks_sorted.append(n)
+        if 'COOP' in stn_networks:
+            stn_networks_sorted.append('COOP')
+        #Generate one entry per network that the station belongs to
+        for j, sid in enumerate(stn_networks_sorted):
+            stn_dict = {"name":name,"uid":uid,"sid":stn_sids[j],"sids":stn_sids,"elevation":elev,"lat":lat,"lon":lon,\
+            "state":state_key, "marker_icon":marker_icons[j], "marker_category":stn_networks[j],\
+            "stn_networks":stn_networks,"stn_network":','.join(stn_networks),"stn_network_codes": stn_network_codes}
+            #check which elements are available at the stations[valid_daterange is not empty]
+            valid_date_range_list = stn['valid_daterange']
+            available_elements = []
+            for j,rnge in enumerate(valid_date_range_list):
+                if rnge:
+                    available_elements.append([WRCCData.ACIS_ELEMENTS[vX_list[j]]['name_long'], [str(rnge[0]), str(rnge[1])]])
+                    #append growing degree days
+                    if WRCCData.ACIS_ELEMENTS[vX_list[j]]['name'] == 'cdd':
+                        available_elements.append([WRCCData.ACIS_ELEMENTS['-44']['name_long'], [str(rnge[0]), str(rnge[1])]])
+            if available_elements:
+                stn_dict['available_elements'] = available_elements
+            #find index in alphabetically ordered list of station names
+            sorted_list.append(name.split(' ')[0])
+            try:
+                sorted_list.sort()
+                stn_idx = sorted_list.index(name.split(' ')[0])
+            except ValueError:
+                stn_idx = -1
+            #Insert stn into alphabeticlly ordered list
+            if stn_idx == -1:
+                stn_meta_list.append(stn_dict)
+            else:
+                stn_meta_list.insert(stn_idx, stn_dict)
 
     stn_json["stations"] = stn_meta_list
-    time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
-    if by_type == 'sw_states':
-        f_name = 'SW_stn.json'
-        f_dir = setting.TMP_DIR
-    else:
-        f_name = time_stamp + 'stn.json'
-        f_dir = settings.TEMP_DIR
     WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
     return stn_json, f_name
 
@@ -397,6 +408,8 @@ def get_station_data(form_input, program):
     '''
     #Set up parameters for data request
     resultsdict = defaultdict(list)
+    for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
+        resultsdict[key] = []
     s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
     #Sanity check for valid date input:
     if (s_date.lower() == 'por' or e_date.lower() == 'por') and ('station_id' not in form_input.keys()):
@@ -424,6 +437,9 @@ def get_station_data(form_input, program):
     if 'station_id' in form_input.keys():
         #params['sids'] = form_input['station_id']
         [params['sdate'], params['edate']] = WRCCUtils.find_valid_daterange(form_input['station_id'], start_date=s_date.lower(), end_date=e_date.lower(), el_list=elems_list_short, max_or_min='max')
+        if not params['sdate'] or not params['edate']:
+            resultsdict['error'] = 'No start/end date could be found for this station in the metadata database.'
+            return resultsdict
     params[WRCCData.STN_AREA_FORM_TO_PARAM[form_input['select_stations_by']]] = form_input[form_input['select_stations_by']]
     #Find bbox if custom shape and update params['bbox']
     if 'shape' in form_input.keys():
@@ -434,20 +450,14 @@ def get_station_data(form_input, program):
         request = MultiStnData(params)
     except Exception, e:
         resultsdict['error'] = 'StnData request failed. Error: %s. Pameters: %s.' %(str(e), params)
-        for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
-            resultsdict[key] = []
         return resultsdict
     try:
         request['data']
         if not request['data']:
             resultsdict['error'] = 'No data found for these parameters!'
-            for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
-                resultsdict[key] = []
             return resultsdict
     except Exception, e:
-        resultsdict['error'] = 'No data found! Error: %s. Pameters: %s.' %(str(e), params)
-        for key in ['stn_data', 'dates', 'stn_ids', 'stn_names', 'stn_errors', 'elements']:
-            resultsdict[key] = []
+        resultsdict['error'] = 'No data found for these parameters! Error: %s.'
         return resultsdict
     #Initialize output lists
     dates = WRCCUtils.get_dates(params['sdate'], params['edate'], program)
