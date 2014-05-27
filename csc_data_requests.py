@@ -189,9 +189,11 @@ def worker(params,params_file,data_q, errors_q):
         #Determine weather we have station or grid requests
         if 'select_grid_by' in params_list[0].keys():
             data_request = getattr(AcisWS, 'get_grid_data')
+            formatter = getattr(WRCCUtils, 'format_grid_data')
             request_type ='grid'
         else:
             data_request = getattr(AcisWS, 'get_station_data')
+            formatter = getattr(WRCCUtils, 'format_station_data')
             request_type = 'station'
         if request_type == 'grid':
             results = []
@@ -214,12 +216,11 @@ def worker(params,params_file,data_q, errors_q):
             elif 'errors' in data_out.keys():
                 logger.info('Error when requesting data. Error: %s.' % (str(data_out['errors'])))
                 error_out = 'Process failed at data request.'
-            if request_type == 'grid':
-                try:
-                    data_out = WRCCUtils.format_grid_data(data_out, p)
-                except:
-                    logger.error('Could not format grid data. Parameters: %s ' %str(p))
-                    error_out = 'Process %s failed at datta formating. Parameters: %s' %str(p)
+            try:
+                data_out = formatter(data_out, p, 'sodlist-web')
+            except:
+                logger.error('Could not format data. Parameters: %s ' %str(p))
+                error_out = 'Process %s failed at data formating. Parameters: %s' %str(p)
 
             if error_out is not '':
                 if error is '':

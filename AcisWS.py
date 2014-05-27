@@ -389,8 +389,66 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
     return stn_json, f_name
 
-
 def get_station_data(form_input, program):
+    '''
+    Retrieves Station Data from ACIS.
+    Keyword arguments:
+    form_input -- parameter file for data request obtained from user of CSC pages
+    program -- specifies program that is making the request.
+    '''
+    request = {'data':[]}
+    s_date, e_date = WRCCUtils.start_end_date_to_eight(form_input)
+    #Sanity check for valid date input:
+    if (s_date.lower() == 'por' or e_date.lower() == 'por') and ('station_id' not in form_input.keys()):
+        resultsdict['error'] = 'Parameter error. Start/End date ="por" not supported for multi station call.'
+        return resultsdict
+
+    elements = WRCCUtils.get_element_list(form_input, program)
+    elems_list = []
+    elems_list_short  = []
+    for el in elements:
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el)
+        elems_list_short.append(el_strip)
+        if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
+        else:
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],add='f,t'))
+    params = {
+            'sdate':s_date,
+            'edate':e_date,
+            'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',
+            'elems':elems_list
+            }
+    shape_type = None
+    #Deal with POR input dates
+    if 'station_id' in form_input.keys():
+        #params['sids'] = form_input['station_id']
+        [params['sdate'], params['edate']] = WRCCUtils.find_valid_daterange(form_input['station_id'], start_date=s_date.lower(), end_date=e_date.lower(), el_list=elems_list_short, max_or_min='max')
+        if not params['sdate'] or not params['edate']:
+            resultsdict['error'] = 'No start/end date could be found for this station in the metadata database.'
+            return resultsdict
+    params[WRCCData.STN_AREA_FORM_TO_PARAM[form_input['select_stations_by']]] = form_input[form_input['select_stations_by']]
+    #Find bbox if custom shape and update params['bbox']
+    if 'shape' in form_input.keys():
+        shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
+        params['bbox'] = bbox
+    #Data request
+    try:
+        req = MultiStnData(params)
+    except Exception, e:
+        request['error'] = 'StnData request failed. Error: %s. Pameters: %s.' %(str(e), params)
+        return request
+    try:
+        req['data']
+        if not req['data']:
+            request['error'] = 'No data found for these parameters!'
+            return request
+    except Exception, e:
+        request['error'] = 'No data found for these parameters! Error: %s.'
+        return request
+    return req
+
+def get_station_data_old(form_input, program):
     '''
     Retrieves Station Data from ACIS.
     Keyword arguments:

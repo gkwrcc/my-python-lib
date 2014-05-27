@@ -1036,7 +1036,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
     Writes station data to a file.
 
     Keyword aruments:
-    resultsdict      -- output of get_station_data call, has keys:
+    resultsdict      -- output of format_station_data call, has keys:
         stn_data             -- data to write to file
         dates            -- list of dates of data request
         stn_names    -- list of station names of data request
@@ -1245,7 +1245,151 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             wb.save(response)
     return response
 
-def format_grid_data(req, params):
+def format_station_data(request, form_input, program=None):
+    '''
+    Format station data. Output is a dictionary  with keys:
+    dates
+    elements
+    stn_errors
+    stn_names
+    stn_ids
+    stn_data
+    stn_state
+    stn_lat
+    stn_lon
+    stn_elev
+    Keyword arguments:
+    request    -- Data request object, result of MultiStnData call to ACIS-WS
+    form_input -- parameter dictionary
+    program    -- application name
+    '''
+    elements = WRCCUtils.get_element_list(form_input, program)
+    dates = WRCCUtils.get_dates(form_input['start_date'], form_input['end_date'], program)
+    #Initialize output lists
+    resultsdict = {
+        'dates':dates,
+        'elements':elements,
+        'stn_errors':['' for stn in request['data']],
+        'stn_names':['' for stn in request['data']],
+        'stn_ids':[[] for stn in request['data']],
+        'stn_data':[[] for stn in request['data']],
+        'stn_state':[' ' for stn in request['data']],
+        'stn_lat':[' ' for stn in request['data']],
+        'stn_lon':[' ' for stn in request['data']],
+        'stn_elev':[' ' for stn in request['data']]
+    }
+    #Sanity check
+    if 'error' in request.keys():
+        resultsdict['error'] = request['error']
+        return resultsdict
+    idx_empty_list = []
+    stn_idx = -1
+    shape_type = None
+    if 'shape' in form_input.keys():
+        shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
+    for stn, data in enumerate(request['data']):
+        stn_idx+=1
+        #if custom shape, check if  stn lies within shape
+        stn_in = True
+        if shape_type is not None:
+            shape = form_input['shape'].split(',')
+            shape = [float(s) for s in shape]
+        if shape_type == 'circle':
+            poly = shape
+            try:
+                stn_in = WRCCUtils.point_in_circle(data['meta']['ll'][0], data['meta']['ll'][1], poly)
+            except:
+                stn_in = False
+        elif shape_type in ['polygon','bbox', 'point']:
+            if shape_type == 'bbox':
+                shape = [shape[0], shape[1], shape[2], shape[1], shape[0],shape[3], shape[2],shape[3]]
+            poly = [(shape[2*idx],shape[2*idx+1]) for idx in range(len(shape)/2)]
+            try:
+                stn_in = WRCCUtils.point_in_poly(data['meta']['ll'][0], data['meta']['ll'][1], poly)
+            except:
+                stn_in = False
+        if not stn_in:
+            del resultsdict['stn_errors'][stn_idx]
+            del resultsdict['stn_names'][stn_idx]
+            del resultsdict['stn_ids'][stn_idx]
+            del resultsdict['stn_data'][stn_idx]
+            del resultsdict['stn_state'][stn_idx]
+            del resultsdict['stn_lat'][stn_idx]
+            del resultsdict['stn_lon'][stn_idx]
+            del resultsdict['stn_elev'][stn_idx]
+            stn_idx-=1
+            continue
+        #Order the data
+        if not 'data' in data.keys():
+            data['data'] = []
+        if 'error' in data.keys():
+            resultsdict['stn_errors'][stn_idx] = str(data['error'])
+        try:
+            resultsdict['stn_ids'][stn_idx] = []
+            stn_id_list = data['meta']['sids']
+            for sid in stn_id_list:
+                stn_id = str(sid.split(' ')[0])
+                network_id_name = WRCCData.NETWORK_CODES[str(sid.split(' ')[1])]
+                ids = '%s %s' %(stn_id, network_id_name)
+                #Put COOP upfront
+                if network_id_name == "COOP":
+                    resultsdict['stn_ids'][stn_idx].insert(0, ids)
+                else:
+                    resultsdict['stn_ids'][stn_idx].append(ids)
+        except:
+            pass
+        try:
+            resultsdict['stn_names'][stn_idx] = str(data['meta']['name'])
+        except:
+            pass
+        try:
+            #FIX ME: odd formattng issue when one day request
+            if len(dates) == 1:
+                resultsdict['stn_data'][stn_idx] = [data['data']]
+            else:
+                resultsdict['stn_data'][stn_idx] = data['data']
+        except:
+            pass
+        try:
+            resultsdict['stn_state'][stn_idx] = str(data['meta']['state'])
+        except:
+            pass
+        try:
+            resultsdict['stn_lon'][stn_idx] = str(data['meta']['ll'][0])
+        except:
+            pass
+        try:
+            resultsdict['stn_lat'][stn_idx] = str(data['meta']['ll'][1])
+        except:
+            pass
+        try:
+            resultsdict['stn_elev'][stn_idx] = str(data['meta']['elev'])
+        except:
+            pass
+
+        if not resultsdict['stn_data'][stn_idx]:
+            resultsdict['stn_errors'][stn_idx] = 'No data found!'
+        #Add dates and convert to metric if needed
+        if dates:
+            for idx, date in  enumerate(dates):
+                #Units:
+                if 'units' in form_input.keys() and form_input['units'] == 'metric':
+                    for el_idx, el in enumerate(form_input['elements'].replace(' ','').split(',')):
+                        resultsdict['stn_data'][stn_idx][idx][el_idx][0] = WRCCUtils.convert_to_metric(el, resultsdict['stn_data'][stn_idx][idx][el_idx][0])
+                #Dates
+                d = date.replace(' ','').replace(':','').replace('/','').replace('-','')
+                dlm = WRCCData.DATE_FORMAT[form_input['date_format']]
+                resultsdict['stn_data'][stn_idx][idx].insert(0, d[0:4] + dlm + d[4:6] + dlm + d[6:8])
+    #final check on station data if comma separated list of stations
+    if 'station_ids' in form_input.keys():
+        for idx in idx_empty_list:
+            resultsdict['stn_ids'].insert(idx, [stn_list_in[idx] + ' '])
+            resultsdict['stn_names'].insert(idx, '')
+            resultsdict['stn_errors'].insert(idx, 'No data found!')
+            resultsdict['stn_data'].insert(idx, [])
+    return resultsdict
+
+def format_grid_data(req, params,program=None):
     '''
     Format grid data. Output are lists of form [date, lat, lon, value_element1, value_element2, ...]
 
