@@ -1045,11 +1045,9 @@ class Logger(object):
         return logger
 
 
-class LargeDataRequest(object):
+class LargeStationDataRequest(object):
     '''
-    This class handles large data request freom SCENIC.
-    Components:
-    This class handles large data request freom SCENIC.
+    This class handles large station data request freom SCENIC.
     Components:
     Keyword arguments:
         params -- data request parameters, keys:
@@ -1150,4 +1148,92 @@ class LargeDataRequest(object):
             params_list[k]['end_date'] = ''.join([end_yr, end_month, end_day])
         return params_list
 
+    def get_data(self, params):
+        '''
+        ACIS data request
+        request_type -- grid or station
+        params       -- parameter file
+        '''
+        request = {'data':[]}
+        if 'select_stations_by' in params.keys():
+            data_request = getattr(AcisWS, 'get_station_data')
+        elif 'select_grid_by' in params.keys():
+            data_request = getattr(AcisWS, 'get_grid_data')
+        else:
+            request['error'] = 'Not a valid paramete file. \
+            Neither select_stations_by nor select_grid_by are specified. '
+            return request
+        try:
+            request = data_request(params,'sodlist-web')
+        except:
+            request['error'] = 'Invalid data request.'
+            return request
+        return request
+
+
+    def split_station_data_results(self, request, max_stations):
+        '''
+        Splits grid data request into smaller chunks
+        for writing to file
+        request     -- results of a large station data request
+                       (MultiStnData call)
+        max_stations -- max number of stations allowed
+                       for writing to file
+        return a list of stn  indices
+        '''
+        #Sanity check
+        if not 'data' in request.keys() or not request['data']:
+            return []
+        idx_list = [0]
+        num_stations = len(request['data'])
+        if num_stations < int(max_stations):
+            div = 1
+            rem = 0
+        else:
+            div = num_stations / int(max_stations)
+            rem = num_stations % int(max_stations)
+        for idx in range(1, div + 1):
+            idx_list.append(idx * num_stations)
+        if rem != 0:
+            idx_list.append(idx_list[-1] + rem)
+        return idx_list
+
+    def split_grid_data_results(self, request, max_lats, max_lons):
+        '''
+        Splits grid data request into smaller chunks
+        for writing to file
+        request        -- results of a large gridde data request
+                          (GridData call)
+        max_lats -- max number of latitiudes allowed
+                          for writing to file
+        max_lons -- max number of longitudes allowed
+                          for writing to file
+        returns list of latitude and longitude grid indices
+        '''
+        #Sanity check
+        if not 'meta' in request.keys():return 0
+        if not 'lat' in request['meta'].keys(): return 0
+        if not 'lat' in request['meta'].keys(): return 0
+        if not 'data' in request.keys():return 0
+        mll = [max_lats, max_lons]
+        idx_list = [[0],[0]]
+        #find number of grid points in request
+        no_lats = len(request['meta']['lat'])
+        no_lons = len(request['meta']['lon'][0])
+        #Lats
+        for ll_idx, num in enumerate([no_lats, no_lons]):
+            if num / mll[ll_idx] == 0:
+                idx_list[ll_idx].append(num)
+            else:
+                div = num / mll[ll_idx]
+                rem = num % mll[ll_idx]
+                for idx in range(1, div + 1):
+                    idx_list[ll_idx].append(idx * num)
+                if rem != 0:
+                    idx_list[ll_idx].append(idx_list[ll_idx][-1] + rem)
+        return idx_list
+
+    def split_data_results(self):
+        if 'select_stations_by' in self.params.keys():
+        elif 'select_grid_by' in self.params.keys():
 
