@@ -1416,7 +1416,8 @@ def format_grid_data(req, params,program=None):
     for el_idx,el in enumerate(el_list):
         el_strip, base_temp = get_el_and_base_temp(el)
         if base_temp:el_list[el_idx] = el_strip
-    #Initialize data dict
+    #Initialize data dicts
+    #Note: single gridpoint request outputs have different format
     data = {'meta':{'lat':[[]], 'lon':[[]], 'elev':[[]]}, 'data':[]}
     if 'error' in req.keys():
         data['error'] = req['error']
@@ -1429,6 +1430,14 @@ def format_grid_data(req, params,program=None):
             if ll in req['meta'].keys():
                 if 'location' in prms.keys():data['meta'][ll] = [[req['meta'][ll]]]
                 else:data['meta'][ll] = req['meta'][ll]
+        if isinstance(data['meta']['lat'],float):
+            lats = [[data['meta']['lat']]]
+            lons = [[data['meta']['lon']]]
+            elevs = [[data['meta']['elev']]]
+        else:
+            lats = data['meta']['lat']
+            lons = data['meta']['lon']
+            elevs = data['meta']['elev']
     if data_summary == 'temporal':
         if 'smry' in req.keys():data['data'] = req['smry']
         else:data['data'] = []
@@ -1451,188 +1460,117 @@ def format_grid_data(req, params,program=None):
         else:
             end_date = '0000'+dlm+'00'+dlm+'00'
         date_range = '%s-%s' %(start_date, end_date)
-        #Single gridpoint format
-        if 'location' in prms.keys():
-            if prms['units'] == 'metric':
-                ll = WRCCUtils.convert_to_metric('elev', data['meta']['elev'][0][0])
-            else:
-                ll = data['meta']['elev'][0][0]
-            data_out = [[date_range, round(data['meta']['lon'][0][0],2), round(data['meta']['lat'][0][0],2), ll]]
-            generator = ((el_idx,val) for el_idx, val in enumerate(data['data']))
-            for (el_idx, val) in generator:
+        #Loop over lats/lons
+        lat_num = 0
+        generator = ((lat_idx, lat_grid) for lat_idx, lat_grid in enumerate(lats)
+        for (lat_idx, lat_grid) in generator:lat_num+=len(lat_grid)
+        length = lat_num
+        data_out = [[] for i in range(length)]
+        #Multiple gridpoints
+        idx = -1
+        generator_lat =  ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(lats))
+        for (grid_idx, lat_grid) in generator_lat:
+            generator_lon = ((lon_idx, lon) for lon_idx, lon in enumerate(lons[grid_idx]))
+            lat = lat_grid[0]
+            for (lon_idx, lon) in generator_lon:
+                idx+=1
+                #If custom shape, check if  stn lies within shape
+                if poly:
+                    try:point_in = PointIn(lon, lat, poly)
+                    except:point_in = False
+                    if not point_in:
+                        del data_out[idx]
+                        idx-=1
+                        continue
+                data_out[idx].append(date_range)
+                data_out[idx].append(round(lon,2))
+                data_out[idx].append(round(lat,2))
+                #Take care of units for elevation
                 if prms['units'] == 'metric':
-                    data_out[0].append(WRCCUtils.convert_to_metric(el_list[el_idx], val))
+                    data_out[idx].append(WRCCUtils.convert_to_metric('elev',elevs[grid_idx][lon_idx]))
                 else:
-                    data_out[0].append(val)
-            return data_out
+                    data_out[idx].append(elevs[grid_idx][lon_idx])
+                #Element data
+                for el_idx in range(len(data['data'])):
+                    if prms['units'] == 'metric':
+                        data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx],data['data'][el_idx][grid_idx][lon_idx]))
+                    else:
+                        data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
+        return data_out
 
-        # Multiple gridpoints
+    #RAW DATA REQUEST OR SPATIAL SUMMARY
+    poly = None
+    #Initialize data dict
+    data_out = [[] for i in range(len(data['data']))]
+    if not isinstance(data['meta']['lat'],float) and not 'location' in prms.keys():
+        #Check for irregular shapes
+        lat_num = sum(len(lat_grid) for lat_grid in data['meta']['lat'])
+        length = len(data['data']) * lat_num
+        data_out = [[] for i in range(length)]
 
-        else: # Multiple gridpoints
-            #check for irregular shapes and define poly if so
-            lat_num = 0
-            generator = ((lat_idx, lat_grid) for lat_idx, lat_grid in enumerate(data['meta']['lat']))
-            for (lat_idx, lat_grid) in generator:lat_num+=len(lat_grid)
-            length = lat_num
-            data_out = [[] for i in range(length)]
-            #Multiple gridpoints
-            idx = -1
-            generator_lat =  ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(data['meta']['lat']))
-            for (grid_idx, lat_grid) in generator_lat:
-                generator_lon = ((lon_idx, lon) for lon_idx, lon in enumerate(data['meta']['lon'][grid_idx]))
-                lat = lat_grid[0]
-                for (lon_idx, lon) in generator_lon:
-                    idx+=1
-                    #if custom shape, check if  stn lies within shape
-                    if poly:
-                        try:point_in = PointIn(lon, lat, poly)
-                        except:point_in = False
-                        if not point_in:
-                            del data_out[idx]
-                            idx-=1
-                            continue
-                    data_out[idx].append(date_range)
-                    data_out[idx].append(round(lon,2))
+    #Loop over data
+    idx = -1
+    #Spatial summary output
+    generator = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data['data']))
+    for (date_idx, date_vals) in generator:
+        d = WRCCUtils.date_to_eight(date_vals[0])
+        if prms['temporal_resolution'] == 'yly':data_out[date_idx].append(d[0:4])
+        elif prms['temporal_resolution'] == 'mly':data_out[date_idx].append(d[0:4]+dlm+d[4:6])
+        else:data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+        #data array for spatial summary computation
+        data_summ = [[] for el in el_list]
+        generator_lat = ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(lats))
+        #Loop over lats/lons
+        for (grid_idx, lat_grid) in generator_lat:
+            lat = lat_grid[0]
+            generator_lon = ((lon_idx, lon) for lon_idx, lon in enumerate(lons[grid_idx]))
+            for (lon_idx, lon) in generator_lon:
+                idx+=1
+                #if custom shape, check if  stn lies within shape
+                if poly:
+                    try:point_in = PointIn(lon, lat, poly)
+                    except:point_in = False
+                    if not point_in:
+                        del data_out[idx]
+                        idx-=1
+                        continue
+                if prms['temporal_resolution'] == 'yly':data_out[idx].append(d[0:4])
+                elif prms['temporal_resolution'] == 'mly':data_out[idx].append(d[0:4]+dlm+d[4:6])
+                else:data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+                if data_summary == 'none':
+                    data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                     data_out[idx].append(round(lat,2))
                     if prms['units'] == 'metric':
-                        data_out[idx].append(WRCCUtils.convert_to_metric('elev',data['meta']['elev'][grid_idx][lon_idx]))
+                        data_out[idx].append(WRCCUtils.convert_to_metric('elev',elevs[grid_idx][lon_idx]))
                     else:
-                        data_out[idx].append(data['meta']['elev'][grid_idx][lon_idx])
+                        data_out[idx].append(elevs[grid_idx][lon_idx])
 
-                    for el_idx in range(len(data['data'])):
+                    for el_idx in range(1,len(el_list) + 1):
                         if prms['units'] == 'metric':
-                            data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx],data['data'][el_idx][grid_idx][lon_idx]))
+                            data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],date_vals[el_idx][grid_idx][lon_idx]))
                         else:
-                            data_out[idx].append(data['data'][el_idx][grid_idx][lon_idx])
-        return data_out
-    else:
-        poly = None
-        #RAW DATA REQUEST OR SPATIAL SUMMARY
-        if isinstance(data['meta']['lat'],float):
-            #shape is location
-            lats = [[data['meta']['lat']]]
-            lons = [[data['meta']['lon']]]
-            elevs = [[data['meta']['elev']]]
-        else:
-            lats = data['meta']['lat']
-            lons = data['meta']['lon']
-            elevs = data['meta']['elev']
-        if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
-            data_out = [[] for i in range(len(data['data']))]
-        else:
-            #check for irregular shapes and define poly if so
-            #set output data_out
-            lat_num = 0
-            for lat_idx, lat_grid in enumerate(data['meta']['lat']):
-                lat_num+=len(lat_grid)
-            length = len(data['data']) * lat_num
-            data_out = [[] for i in range(length)]
-        #Loop over data
-        idx = -1
-        #Spatial summary output
-        data_s_summ = [[] for d in data['data']]
-        generator = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data['data']))
-        for (date_idx, date_vals) in generator:
-        #for date_idx, date_vals in enumerate(data['data']):
-            d = WRCCUtils.date_to_eight(date_vals[0])
-            #d = str(date_vals[0]).replace(' ','').replace(':','').replace('/','').replace('-','')
-            if prms['temporal_resolution'] == 'yly':data_s_summ[date_idx].append(d[0:4])
-            elif prms['temporal_resolution'] == 'mly':data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6])
-            else:data_s_summ[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
-            #for spatial summary
-            data_summ = [[] for el in el_list]
-            if 'location' in prms.keys() or isinstance(data['meta']['lat'],float):
-                if prms['temporal_resolution'] == 'yly':data_out[date_idx].append(d[0:4])
-                elif prms['temporal_resolution'] == 'mly':data_out[date_idx].append(d[0:4]+dlm+d[4:6])
-                else:data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
-                data_out[date_idx].append(round(lons[0][0],2))
-                data_out[date_idx].append(round(lats[0][0],2))
-                if prms['units'] == 'metric':
-                    data_out[date_idx].append(WRCCUtils.convert_to_metric('elev',elevs[0][0]))
-                else:
-                    data_out[date_idx].append(elevs[0][0])
-                for el_idx in range(1,len(el_list) + 1):
-                    if prms['units'] == 'metric':
-                        data_out[date_idx].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],str(date_vals[el_idx]).strip(' ')))
-                    else:
-                        data_out[date_idx].append(str(date_vals[el_idx]).strip(' '))
-                    try:
-                        v = float(date_vals[el_idx])
-                        if abs(v + 999.0)>0.0001:
-                            if prms['units'] == 'metric':
-                                data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx -1],v))
-                            else:
-                                data_summ[el_idx-1].append(v)
-                    except:
-                        pass
-            else:
-                generator_lat = ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(lats))
-                for (grid_idx, lat_grid) in generator_lat:
-                    lat = lat_grid[0]
-                    generator_lon = ((lon_idx, lon) for lon_idx, lon in enumerate(lons[grid_idx]))
-                    for (lon_idx, lon) in generator_lon:
-                        idx+=1
-                        #if custom shape, check if  stn lies within shape
-                        if poly:
-                            try:point_in = PointIn(lon, lat, poly)
-                            except:point_in = False
-                            if not point_in:
-                                del data_out[idx]
-                                idx-=1
-                                continue
-                        if prms['temporal_resolution'] == 'yly':data_out[idx].append(d[0:4])
-                        elif prms['temporal_resolution'] == 'mly':data_out[idx].append(d[0:4]+dlm+d[4:6])
-                        else:data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
-                        data_out[idx].append(round(lons[grid_idx][lon_idx],2))
-                        data_out[idx].append(round(lat,2))
+                            data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
+                #Array for data summary
+                try:
+                    v = float(date_vals[el_idx][grid_idx][lon_idx])
+                    if abs(v + 999.0)>0.0001:
                         if prms['units'] == 'metric':
-                            data_out[idx].append(WRCCUtils.convert_to_metric('elev',elevs[grid_idx][lon_idx]))
+                            data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
                         else:
-                            data_out[idx].append(elevs[grid_idx][lon_idx])
-
-                        for el_idx in range(1,len(el_list) + 1):
-                            if prms['units'] == 'metric':
-                                data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],date_vals[el_idx][grid_idx][lon_idx]))
-                            else:
-                                data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
-                            try:
-                                v = float(date_vals[el_idx][grid_idx][lon_idx])
-                                if abs(v + 999.0)>0.0001:
-                                    if prms['units'] == 'metric':
-                                        data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
-                                    else:
-                                        data_summ[el_idx-1].append(v)
-                            except:
-                                pass
-            if data_summary == "spatial":
-                if prms['spatial_summary'] == "max":
-                    for el_idx, el in enumerate(el_list):
-                        if data_summ[el_idx]:
-                            data_s_summ[date_idx].append(max(data_summ[el_idx]))
-                        else:
-                            data_s_summ[date_idx].append(-999.0)
-                if prms['spatial_summary'] == "min":
-                    for el_idx, el in enumerate(el_list):
-                        if data_summ[el_idx]:
-                            data_s_summ[date_idx].append(min(data_summ[el_idx]))
-                        else:
-                            data_s_summ[date_idx].append(-999.0)
-                if prms['spatial_summary'] == "mean":
-                    for el_idx, el in enumerate(el_list):
-                        if data_summ[el_idx]:
-                            data_s_summ[date_idx].append(round(sum(data_summ[el_idx]) / float(len(data_summ[el_idx])),2))
-                        else:
-                            data_s_summ[date_idx].append(-999.0)
-                if prms['spatial_summary'] == "sum":
-                    for el_idx, el in enumerate(el_list):
-                        if data_summ[el_idx]:
-                            data_s_summ[date_idx].append(sum(data_summ[el_idx]))
-                        else:
-                            data_s_summ[date_idx].append(-999.0)
-        if data_summary == 'spatial':
-            return data_s_summ
-        else:
-            return data_out
+                            data_summ[el_idx-1].append(v)
+                except:
+                    pass
+        #Compute spatial summaries for each day
+        if data_summary == "spatial":
+            v = -999.0
+            for el_idx, el in enumerate(el_list):
+                if data_summ[el_idx]:
+                    if prms['spatial_summary'] == "max":v = max(data_summ[el_idx])
+                    if prms['spatial_summary'] == "min":v=min(data_summ[el_idx])
+                    if prms['spatial_summary'] == "mean":v=round(sum(data_summ[el_idx]) / float(len(data_summ[el_idx])),2)
+                    if prms['spatial_summary'] == "sum":v=sum(data_summ[el_idx])
+            data_out[date_idx].append(v)
+    return data_out
 
 def get_station_meta(station_id):
     meta_params = {"sids":station_id,"meta":"name,state,sids,ll ,elev,uid,county,climdiv"}
