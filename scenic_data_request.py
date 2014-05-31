@@ -43,6 +43,13 @@ if __name__ == '__main__' :
             sys.exit(1)
         logger.info('Parameter file: %s' % os.path.basename(params_file))
         logger.info('Parameters: %s' % str(params))
-        LDR = WRCCClasses.LargeDataRequest(params,logger)
-        params_list = LDR.split_data_request()
-
+        if 'select_stations_by' in params.keys():
+            LDR = WRCCClasses.LargeStationDataRequest(params,logger)
+        elif 'select_grid_by' in params.keys():
+            LDR = WRCCClasses.LargeGridDataRequest(params,logger)
+        #params_list = LDR.split_data_request()
+        logger.info('Requesting data')
+        request = LDR.get_data(params)
+        logger.info('Data request completed')
+        idx_list = LDR.split_data(request)
+        print idx_list

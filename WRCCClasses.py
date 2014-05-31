@@ -1062,11 +1062,11 @@ class LargeStationDataRequest(object):
     '''
     def __init__(self, params, logger):
         self.params = params
-        if 'select_grid_by' in self.params.keys():self.data_request = getattr(AcisWS, 'get_grid_data')
-        elif 'select_stations_by' in self.params.keys():self.data_request = getattr(AcisWS, 'get_station_data')
         self.logger =  logger
-        self.day_limit = setting.GRID_REQUEST_DAY_LIMIT
-        self.station_limit = STATION_REQUEST_STATION_LIMIT
+        #Limit of stations per request
+        self.limit = settings.STATION_REQUEST_STATION_LIMIT
+        #Limit of stations for file writing
+        self.max_stations = settings.MAX_STATIONS
 
     def get_user_info(self):
         if 'user_name' in self.params.keys():user_name = self.params['user_name']
@@ -1083,7 +1083,7 @@ class LargeStationDataRequest(object):
             file_extension = '.txt'
         return file_extension
 
-    def split_station_data_request(self):
+    def split_request(self):
         '''
         Splits large station datat request parameters
         into a number of smaller request.
@@ -1105,8 +1105,90 @@ class LargeStationDataRequest(object):
             except:
                 return []
 
+    def get_data(self, params):
+        '''
+        ACIS data request
+        request_type -- grid or station
+        params       -- parameter file
+        '''
+        request = {'data':[]}
+        try:
+            request = AcisWS.get_station_data(params,'sodlist-web')
+        except:
+            request['error'] = 'Invalid data request.'
+            return request
+        return request
 
-    def split_grid_data_request(self):
+
+    def split_data(self, request):
+        '''
+        Splits grid data request into smaller chunks
+        for writing to file
+        request     -- results of a large station data request
+                       (MultiStnData call)
+        max_stations -- max number of stations allowed
+                       for writing to file
+        return a list of stn  indices
+        '''
+        #Sanity check
+        if not 'data' in request.keys() or not request['data']:
+            return []
+        idx_list = [0]
+        num_stations = len(request['data'])
+        print 'Number of stations: ' + str(num_stations)
+        if num_stations < int(self.max_stations):
+            div = 1
+            rem = 0
+        else:
+            div = num_stations / int(self.max_stations)
+            rem = num_stations % int(self.max_stations)
+        for idx in range(1, div + 1):
+            idx_list.append(idx * self.max_stations)
+        if rem != 0:
+            idx_list.append(idx_list[-1] + rem)
+        self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
+        return idx_list
+
+class LargeGridDataRequest(object):
+    '''
+    This class handles large station data request freom SCENIC.
+    Components:
+    Keyword arguments:
+        params -- data request parameters, keys:
+                  select_station_by/select_grid_by: specifies type of data request (station data/gridded data)
+                  start_date/end_date, temporal resolution (daily/monthly/yearly)
+                  elements, units (metric/english), flags (station data only)
+                  grid (gridded data only)
+                  data_summary (temporal/spatial)
+                        temporal_summary/spatial_summary (max, min, mean, sum)
+                  date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
+        logger -- logger object
+    '''
+    def __init__(self, params, logger):
+        self.params = params
+        self.logger =  logger
+        #Limit of days per data request
+        self.limit = settings.GRID_REQUEST_DAY_LIMIT
+        #Limit of lats, lons for file writing
+        self.max_lats = settings.MAX_LATS
+        self.max_lons = settings.MAX_LONS
+
+    def get_user_info(self):
+        if 'user_name' in self.params.keys():user_name = self.params['user_name']
+        else : user_name = 'bdaudert'
+        if 'email' in self.params.keys():user_email = self.params['email']
+        else : user_email = 'bdaudert@dri.edu'
+        return user_name, user_email
+
+    def get_file_extension(self):
+        if 'data_format' in self.params.keys():
+            file_extension = WRCCData.FILE_EXTENSIONS[self.params['data_format']]
+            if file_extension == '.html':file_extension = '.txt'
+        else:
+            file_extension = '.txt'
+        return file_extension
+
+    def split_request(self):
         '''
         Splits one large data grid request parameters
         into a number of smaller request.
@@ -1128,14 +1210,14 @@ class LargeStationDataRequest(object):
         end = WRCCUtils.date_to_datetime(e_date)
         try:days = (end - start).days
         except:days = 0
-        num_requests = days / self.day_limit
-        if days % self.day_limit !=0:num_requests+=1
+        num_requests = days / self.limit
+        if days % self.limit !=0:num_requests+=1
         self.logger.info('Number of requests: %s' %str(num_requests))
         #Construct parameter files for each request
         params_list = [dict(self.params) for k in range(num_requests)]
         for k in range(num_requests):
-            start_new = start + k*datetime.timedelta(days=day_limit )
-            if k < num_requests - 1:end_new = start_new + datetime.timedelta(days=day_limit - 1)
+            start_new = start + k*datetime.timedelta(days=self.limit )
+            if k < num_requests - 1:end_new = start_new + datetime.timedelta(days=self.limit - 1)
             else:end_new = end
             start_yr = str(start_new.year);end_yr = str(end_new.year)
             start_month = str(start_new.month);end_month = str(end_new.month)
@@ -1155,59 +1237,19 @@ class LargeStationDataRequest(object):
         params       -- parameter file
         '''
         request = {'data':[]}
-        if 'select_stations_by' in params.keys():
-            data_request = getattr(AcisWS, 'get_station_data')
-        elif 'select_grid_by' in params.keys():
-            data_request = getattr(AcisWS, 'get_grid_data')
-        else:
-            request['error'] = 'Not a valid paramete file. \
-            Neither select_stations_by nor select_grid_by are specified. '
-            return request
         try:
-            request = data_request(params,'sodlist-web')
+            request = AcisWS.get_grid_data(params,'sodlist-web')
         except:
             request['error'] = 'Invalid data request.'
             return request
         return request
 
-
-    def split_station_data_results(self, request, max_stations):
-        '''
-        Splits grid data request into smaller chunks
-        for writing to file
-        request     -- results of a large station data request
-                       (MultiStnData call)
-        max_stations -- max number of stations allowed
-                       for writing to file
-        return a list of stn  indices
-        '''
-        #Sanity check
-        if not 'data' in request.keys() or not request['data']:
-            return []
-        idx_list = [0]
-        num_stations = len(request['data'])
-        if num_stations < int(max_stations):
-            div = 1
-            rem = 0
-        else:
-            div = num_stations / int(max_stations)
-            rem = num_stations % int(max_stations)
-        for idx in range(1, div + 1):
-            idx_list.append(idx * num_stations)
-        if rem != 0:
-            idx_list.append(idx_list[-1] + rem)
-        return idx_list
-
-    def split_grid_data_results(self, request, max_lats, max_lons):
+    def split_data(self, request):
         '''
         Splits grid data request into smaller chunks
         for writing to file
         request        -- results of a large gridde data request
                           (GridData call)
-        max_lats -- max number of latitiudes allowed
-                          for writing to file
-        max_lons -- max number of longitudes allowed
-                          for writing to file
         returns list of latitude and longitude grid indices
         '''
         #Sanity check
@@ -1215,25 +1257,24 @@ class LargeStationDataRequest(object):
         if not 'lat' in request['meta'].keys(): return 0
         if not 'lat' in request['meta'].keys(): return 0
         if not 'data' in request.keys():return 0
-        mll = [max_lats, max_lons]
+        mll = [self.max_lats, self.max_lons]
         idx_list = [[0],[0]]
         #find number of grid points in request
-        no_lats = len(request['meta']['lat'])
-        no_lons = len(request['meta']['lon'][0])
+        num_lats = len(request['meta']['lat'])
+        num_lons = len(request['meta']['lon'][0])
+        print 'Number of lats: ' + str(num_lats)
+        print 'Number of lons: ' + str(num_lons)
         #Lats
-        for ll_idx, num in enumerate([no_lats, no_lons]):
+        for ll_idx, num in enumerate([num_lats, num_lons]):
             if num / mll[ll_idx] == 0:
                 idx_list[ll_idx].append(num)
             else:
                 div = num / mll[ll_idx]
                 rem = num % mll[ll_idx]
                 for idx in range(1, div + 1):
-                    idx_list[ll_idx].append(idx * num)
+                    idx_list[ll_idx].append(idx * mll[ll_idx])
                 if rem != 0:
                     idx_list[ll_idx].append(idx_list[ll_idx][-1] + rem)
+        self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
         return idx_list
-
-    def split_data_results(self):
-        if 'select_stations_by' in self.params.keys():
-        elif 'select_grid_by' in self.params.keys():
 
