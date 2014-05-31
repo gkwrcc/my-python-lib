@@ -947,9 +947,13 @@ def write_griddata_to_file(data, form, f=None, request=None):
                 el_unit = WRCCData.UNITS_ENGLISH[el_strip]
             row.append('%s(%s)' %(str(el),el_unit))
         writer.writerow(row)
-        for date_idx, date_vals in enumerate(data):
+        generator_date = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data))
+        for (date_idx, date_vals) in generator_date:
+        #for date_idx, date_vals in enumerate(data):
             row = []
-            for idx, dat in enumerate(date_vals):
+            generator_data = ((idx, dat) for idx, dat in enumerate(date_vals))
+            for (idx, dat) in generator_data:
+            #for idx, dat in enumerate(date_vals):
                 row.append('%s' % str(dat))
             writer.writerow(row)
         try:
@@ -965,8 +969,12 @@ def write_griddata_to_file(data, form, f=None, request=None):
         row_number = 0
         flag = 0
         sheet_counter = 0
-        for date_idx, date_vals in enumerate(data): #row
-            for j, val in enumerate(date_vals):#column
+        generator_date = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data))
+        for (date_idx, date_vals) in generator:
+        #for date_idx, date_vals in enumerate(data): #row
+            generator_data = ((j, val) for j, val in enumerate(date_vals))
+            for (j, val) in generator_data:
+            #for j, val in enumerate(date_vals):#column
                 if row_number == 0:
                     flag = 1
                 else:
@@ -990,7 +998,7 @@ def write_griddata_to_file(data, form, f=None, request=None):
                     ws.write(2, 0, 'Units')
                     ws.write(2, 1, form['units'])
                     ws.write(3, 0, 'Date')
-                    if form['data_summary'] != 'spatial':
+                    if form['data_summary'] != 'spatial' and not 'location' in form.keys():
                         ws.write(3, 1, 'Lat')
                         ws.write(3, 2, 'Lon')
                         ws.write(3, 3, 'Elev' + '(' + elev_unit + ')')
@@ -1008,7 +1016,7 @@ def write_griddata_to_file(data, form, f=None, request=None):
                                 el_unit = WRCCData.UNITS_METRIC[el_strip]
                             else:
                                 el_unit = WRCCData.UNITS_ENGLISH[el_strip]
-                            ws.write(3, k+4, el + '('+ el_unit + ')')
+                            ws.write(3, k+1, el + '('+ el_unit + ')')
                     row_number = 1
                     flag = 0
                 try:
@@ -1411,7 +1419,9 @@ def format_grid_data(req, params,program=None):
     else:data_summary = 'none'
     el_list_input = prms['elements']
     el_list = el_list_input
-    poly, PointIn = set_poly_and_PointIn(prms)
+    poly = None;pointIn = None
+    if prms['select_grid_by'] not in ['location', 'state', 'bounding_box']:
+        poly, PointIn = set_poly_and_PointIn(prms)
     #strip base temp of degree days:
     for el_idx,el in enumerate(el_list):
         el_strip, base_temp = get_el_and_base_temp(el)
@@ -1422,7 +1432,6 @@ def format_grid_data(req, params,program=None):
     if 'error' in req.keys():
         data['error'] = req['error']
         if 'meta' in req.keys():data['meta'] = req['meta']
-    if 'data' in req.keys():data['data'] = req['data']
     if 'meta' in req.keys():
         #format lat/lons
         #Note: single gridpoint request outputs have different format
@@ -1438,11 +1447,27 @@ def format_grid_data(req, params,program=None):
             lats = data['meta']['lat']
             lons = data['meta']['lon']
             elevs = data['meta']['elev']
+
+    #Define data array
+    #Note: single gridpoint requests/temporal summaries have different format
+    if 'data' in req.keys():
+        if 'location' in prms.keys() and data_summary != 'temporal':
+            data['data'] = []
+            generator = ((date_idx, date_vals) for date_idx, date_vals in enumerate(req['data']))
+            for (date_idx, date_vals) in generator:
+                d = [date_vals[0]]
+                for el_val in date_vals[1:]:
+                    d.append([[el_val]])
+                data['data'].append(d)
+        else:
+            data['data'] = req['data']
     if data_summary == 'temporal':
-        if 'smry' in req.keys():data['data'] = req['smry']
+        if 'smry' in req.keys():
+            if 'location' in prms.keys():
+                data['data'] = [[[v]] for v in req['smry']]
+            else:
+                data['data'] = req['smry']
         else:data['data'] = []
-
-
     #Format data depending out data_format choice: json, summarized data or raw data request
     if prms['data_format'] == 'json':
         return req
@@ -1462,11 +1487,10 @@ def format_grid_data(req, params,program=None):
         date_range = '%s-%s' %(start_date, end_date)
         #Loop over lats/lons
         lat_num = 0
-        generator = ((lat_idx, lat_grid) for lat_idx, lat_grid in enumerate(lats)
+        generator = ((lat_idx, lat_grid) for lat_idx, lat_grid in enumerate(lats))
         for (lat_idx, lat_grid) in generator:lat_num+=len(lat_grid)
         length = lat_num
         data_out = [[] for i in range(length)]
-        #Multiple gridpoints
         idx = -1
         generator_lat =  ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(lats))
         for (grid_idx, lat_grid) in generator_lat:
@@ -1534,9 +1558,6 @@ def format_grid_data(req, params,program=None):
                         del data_out[idx]
                         idx-=1
                         continue
-                if prms['temporal_resolution'] == 'yly':data_out[idx].append(d[0:4])
-                elif prms['temporal_resolution'] == 'mly':data_out[idx].append(d[0:4]+dlm+d[4:6])
-                else:data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                 if data_summary == 'none':
                     data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                     data_out[idx].append(round(lat,2))
@@ -1550,16 +1571,19 @@ def format_grid_data(req, params,program=None):
                             data_out[idx].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],date_vals[el_idx][grid_idx][lon_idx]))
                         else:
                             data_out[idx].append(date_vals[el_idx][grid_idx][lon_idx])
+
                 #Array for data summary
-                try:
-                    v = float(date_vals[el_idx][grid_idx][lon_idx])
-                    if abs(v + 999.0)>0.0001:
-                        if prms['units'] == 'metric':
-                            data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
-                        else:
-                            data_summ[el_idx-1].append(v)
-                except:
-                    pass
+                for el_idx in range(1,len(el_list) + 1):
+                    try:
+                        v = float(date_vals[el_idx][grid_idx][lon_idx])
+                        if abs(v + 999.0)>0.0001:
+                            if prms['units'] == 'metric':
+                                data_summ[el_idx-1].append(WRCCUtils.convert_to_metric(el_list[el_idx - 1],v))
+                            else:
+                                data_summ[el_idx-1].append(v)
+                    except:
+                        pass
+
         #Compute spatial summaries for each day
         if data_summary == "spatial":
             v = -999.0
@@ -1569,7 +1593,7 @@ def format_grid_data(req, params,program=None):
                     if prms['spatial_summary'] == "min":v=min(data_summ[el_idx])
                     if prms['spatial_summary'] == "mean":v=round(sum(data_summ[el_idx]) / float(len(data_summ[el_idx])),2)
                     if prms['spatial_summary'] == "sum":v=sum(data_summ[el_idx])
-            data_out[date_idx].append(v)
+                data_out[date_idx].append(v)
     return data_out
 
 def get_station_meta(station_id):
