@@ -247,10 +247,15 @@ MONTH_LENGTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 DELIMITERS = {
     'comma':',',
+    ',':',',
     'tab':chr(9),
+    '   ':chr(9),
     'colon': ':',
+    ':': ':',
     'space': ' ',
-    'pipe':'|'
+    ' ': ' ',
+    'pipe':'|',
+    '|':'|'
 }
 
 CMAPS = [ 'Accent','Blues','BrBG','BuGn','BuPu','CMRmap','Dark2','GnBu','Greens',\

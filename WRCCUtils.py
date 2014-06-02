@@ -40,9 +40,8 @@ def date_to_eight(date,se=None):
     '''
     mon_lens = ['31', '28', '31','30','31','30', '31','31','30','31','30','31']
     d8 = date.replace('-','').replace('/','').replace(':','').replace(' ','')
-    if se == 'start':
-        mmdd = '0101';dd = '01'
-    elif se == 'end':
+    mmdd = '0101';dd='01'
+    if se == 'end':
         mmdd = '1231'
         if len(d8) == 6:
             if d8[4:6] == '02' and WRCCUtils.is_leap_year(d8[0:4]):
@@ -961,8 +960,9 @@ def write_griddata_to_file(data, form, f=None, request=None):
         except:
             pass
     elif file_extension == '.json':
-        load_data_to_json_file(f, data)
-        response = None
+        if f:
+            load_data_to_json_file(f, data)
+            response = None
     else: #Excel
         wb = Workbook()
         #Note row number limit is 65536 in some excel versions
@@ -1043,7 +1043,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
     '''
     Writes station data to a file.
 
-    Keyword aruments:
+    keyword aruments:
     resultsdict      -- output of format_station_data call, has keys:
         stn_data             -- data to write to file
         dates            -- list of dates of data request
@@ -1274,17 +1274,18 @@ def format_station_data(request, form_input, program=None):
     elements = WRCCUtils.get_element_list(form_input, program)
     dates = WRCCUtils.get_dates(form_input['start_date'], form_input['end_date'], program)
     #Initialize output lists
+    l = range(len(request['data']))
     resultsdict = {
         'dates':dates,
         'elements':elements,
-        'stn_errors':['' for stn in request['data']],
-        'stn_names':['' for stn in request['data']],
-        'stn_ids':[[] for stn in request['data']],
-        'stn_data':[[] for stn in request['data']],
-        'stn_state':[' ' for stn in request['data']],
-        'stn_lat':[' ' for stn in request['data']],
-        'stn_lon':[' ' for stn in request['data']],
-        'stn_elev':[' ' for stn in request['data']]
+        'stn_errors':['' for stn in l],
+        'stn_names':['' for stn in l],
+        'stn_ids':[[] for stn in l],
+        'stn_data':[[] for stn in l],
+        'stn_state':[' ' for stn in l],
+        'stn_lat':[' ' for stn in l],
+        'stn_lon':[' ' for stn in l],
+        'stn_elev':[' ' for stn in l]
     }
     #Sanity check
     if 'error' in request.keys():
@@ -1295,7 +1296,8 @@ def format_station_data(request, form_input, program=None):
     shape_type = None
     if 'shape' in form_input.keys():
         shape_type,bbox = WRCCUtils.get_bbox(form_input['shape'])
-    for stn, data in enumerate(request['data']):
+    generator = ((stn, data) for stn, data in enumerate(request['data']))
+    for (stn, data) in generator:
         stn_idx+=1
         #if custom shape, check if  stn lies within shape
         stn_in = True
@@ -1346,6 +1348,7 @@ def format_station_data(request, form_input, program=None):
                     resultsdict['stn_ids'][stn_idx].append(ids)
         except:
             pass
+
         try:
             resultsdict['stn_names'][stn_idx] = str(data['meta']['name'])
         except:
@@ -1379,7 +1382,9 @@ def format_station_data(request, form_input, program=None):
             resultsdict['stn_errors'][stn_idx] = 'No data found!'
         #Add dates and convert to metric if needed
         if dates:
-            for idx, date in  enumerate(dates):
+            generator = ((idx, date) for idx, date in  enumerate(dates))
+            for (idx, date) in generator:
+            #for idx, date in  enumerate(dates):
                 #Units:
                 if 'units' in form_input.keys() and form_input['units'] == 'metric':
                     for el_idx, el in enumerate(form_input['elements'].replace(' ','').split(',')):
@@ -1475,12 +1480,12 @@ def format_grid_data(req, params,program=None):
     #TEMPORAL SUMMARY
     if data_summary == 'temporal':
         if 'start_date' in prms.keys():
-            d = WRCCUtils.date_to_eight(prms['start_date'])
+            d = WRCCUtils.date_to_eight(prms['start_date'], 'start')
             start_date = d[0:4] + dlm + d[4:6] + dlm + d[6:8]
         else:
             start_date = '0000'+dlm+'00'+dlm+'00'
         if 'end_date' in prms.keys():
-            d = WRCCUtils.date_to_eight(prms['end_date'])
+            d = WRCCUtils.date_to_eight(prms['end_date'], 'end')
             end_date = d[0:4] + dlm + d[4:6] + dlm + d[6:8]
         else:
             end_date = '0000'+dlm+'00'+dlm+'00'
@@ -1537,10 +1542,7 @@ def format_grid_data(req, params,program=None):
     #Spatial summary output
     generator = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data['data']))
     for (date_idx, date_vals) in generator:
-        d = WRCCUtils.date_to_eight(date_vals[0])
-        if prms['temporal_resolution'] == 'yly':data_out[date_idx].append(d[0:4])
-        elif prms['temporal_resolution'] == 'mly':data_out[date_idx].append(d[0:4]+dlm+d[4:6])
-        else:data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
+        d = WRCCUtils.date_to_eight(date_vals[0], 'start')
         #data array for spatial summary computation
         data_summ = [[] for el in el_list]
         generator_lat = ((grid_idx, lat_grid) for grid_idx, lat_grid in enumerate(lats))
@@ -1559,6 +1561,9 @@ def format_grid_data(req, params,program=None):
                         idx-=1
                         continue
                 if data_summary == 'none':
+                    if prms['temporal_resolution'] == 'yly':data_out[idx].append(d[0:4])
+                    elif prms['temporal_resolution'] == 'mly':data_out[idx].append(d[0:4]+dlm+d[4:6])
+                    else:data_out[idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
                     data_out[idx].append(round(lons[grid_idx][lon_idx],2))
                     data_out[idx].append(round(lat,2))
                     if prms['units'] == 'metric':
@@ -1586,6 +1591,9 @@ def format_grid_data(req, params,program=None):
 
         #Compute spatial summaries for each day
         if data_summary == "spatial":
+            if prms['temporal_resolution'] == 'yly':data_out[date_idx].append(d[0:4])
+            elif prms['temporal_resolution'] == 'mly':data_out[date_idx].append(d[0:4]+dlm+d[4:6])
+            else:data_out[date_idx].append(d[0:4]+dlm+d[4:6]+dlm+d[6:8])
             v = -999.0
             for el_idx, el in enumerate(el_list):
                 if data_summ[el_idx]:
