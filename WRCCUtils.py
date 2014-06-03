@@ -296,7 +296,7 @@ def find_valid_daterange(sid, start_date='por', end_date='por', el_list=None, ma
     vd_end_date = '%s%s%s' %(yr_end, mon_end, day_end)
     return [vd_start_date, vd_end_date]
 
-def get_dates(s_date, e_date, app_name):
+def get_dates(s_date, e_date, app_name=None):
     '''
     This function is in place because Acis_WS's MultiStnCall does not return dates
     it takes as arguments a start date and an end date (format yyyymmdd)
@@ -1255,7 +1255,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             wb.save(response)
     return response
 
-def format_station_data(request, form_input, program=None):
+def format_station_data(request, form_input):
     '''
     Format station data. Output is a dictionary  with keys:
     dates
@@ -1271,10 +1271,9 @@ def format_station_data(request, form_input, program=None):
     Keyword arguments:
     request    -- Data request object, result of MultiStnData call to ACIS-WS
     form_input -- parameter dictionary
-    program    -- application name
     '''
-    elements = WRCCUtils.get_element_list(form_input, program)
-    dates = WRCCUtils.get_dates(form_input['start_date'], form_input['end_date'], program)
+    elements = get_element_list(form_input)
+    dates = get_dates(form_input['start_date'], form_input['end_date'])
     #Initialize output lists
     l = range(len(request['data']))
     resultsdict = {
@@ -1404,7 +1403,7 @@ def format_station_data(request, form_input, program=None):
             resultsdict['stn_data'].insert(idx, [])
     return resultsdict
 
-def format_grid_data(req, params,program=None):
+def format_grid_data(req, params):
     '''
     Format grid data. Output are lists of form [date, lat, lon, value_element1, value_element2, ...]
 
@@ -1763,7 +1762,7 @@ def strip_data(val):
     return strp_val, flag
 
 
-def get_dates(s_date, e_date, app_name):
+def get_dates(s_date, e_date, app_name=None):
     '''
     This function is in place because Acis_WS's MultiStnCall does not return dates
     it takes as arguments a start date and an end date (format yyyymmdd)
@@ -1814,7 +1813,7 @@ def convert_to_list(item):
     else:lst = item
     return lst
 
-def get_element_list(form_input, program):
+def get_element_list(form_input, program=None):
     '''
     Finds element list for SOD program data query
 

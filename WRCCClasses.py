@@ -1150,6 +1150,7 @@ class Mail(object):
         self.toaddr = toaddr
         self.subject = subject
         self.message = message
+        self.logger = logger
 
     def write_email(self):
         '''
@@ -1167,13 +1168,13 @@ class Mail(object):
 
         server.set_debuglevel(1)
         try:
-            server.sendmail(self.fromaddr, self.toaddr, self.msg)
+            server.sendmail(self.fromaddr, self.toaddr, msg)
             server.quit()
             if self.logger:
                 self.logger.info('Email message sent to %s' %str(self.toaddr))
             return None
         except Exception, e:
-            return 'Email attempt to recipient %s failed with error %s' %(str(toaddr), str(e))
+            return 'Email attempt to recipient %s failed with error %s' %(str(self.toaddr), str(e))
 
 class LargeStationDataRequest(object):
     '''
@@ -1271,6 +1272,42 @@ class LargeStationDataRequest(object):
         if self.logger:
             self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
         return idx_list
+
+    def format_data_and_write_to_file(self, out_file):
+        f_out = open(out_file, 'w+')
+        if self.logger:
+            self.logger.info('Splitting data into smaller chunks for formatting')
+        idx_list = self.split_data(self.request)
+        generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
+        if self.logger:
+            self.logger.info('Formatting data')
+        idx = 0
+        for data in generator:
+            idx+=1
+            req_small={}
+            for key, val in self.request.iteritems():
+                if key != 'data':
+                    req_small[key] = val
+            req_small['data'] = data
+            temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
+            if self.logger:
+                self.logger.info('Formatting data chunk %s' %str(idx))
+            results_small = WRCCUtils.format_station_data(req_small, self.params)
+            if self.logger:
+                self.logger.info('Finished formatting data chunk %s' %str(idx))
+                self.logger.info('Writing data chunk %s to file' %str(idx))
+            WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
+            if self.logger:
+                self.logger.info('Finished writing data chunk %s to file' %str(idx))
+                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
+            with open(temp_file, 'r') as f:
+                f_out.write(f.read())
+            if self.logger:
+                self.logger.info('Data chunk %s completed.' %str(idx))
+        if self.logger:
+            self.logger.info('Data request completed')
+        f_out.close()
+
 
 class LargeGridDataRequest(object):
     '''
