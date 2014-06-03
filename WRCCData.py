@@ -452,6 +452,7 @@ DISPLAY_PARAMS = {
     'dates_constraints': 'Date Constraints',
     'element':'Element',
     'elements':'Elements',
+    'elems_long':'Elements',
     'elements_string': 'Elements String',
     'degree_days':'Degree Days',
     'element_selection': 'Element Selection',
@@ -513,6 +514,7 @@ DISPLAY_PARAMS = {
     'running_mean_days': 'Days used in Running Mean Computation',
     'delimiter': 'Delimiter',
     'data_format': 'Data Format',
+    'date_format': 'Date Format',
     'show_flags': 'Show Flags',
     'show_observation_time': 'Show Observation Time',
     'temporal_resolution': 'Temporal Resolution',
@@ -616,6 +618,14 @@ DATA_FORMAT_CHOICES_LTD = (
 
 )
 
+DATA_FORMATS = {
+    'dlm':'Delimited, .dat',
+    'clm':'Columnar, .txt',
+    'xl':'Excel, .xls',
+    'html':'HTML'
+}
+
+
 DATE_FORMAT = {
     'none':'',
     'dash':'-',
@@ -672,8 +682,8 @@ SHAPE_NAMES = {
 ###################################
 MICHELES_ELEMENT_NAMES = {
     'pcpn':'Pcpn',
-    'snow':'Snow',
-    'snwd':'Snwd',
+    'snow':'Snfl',
+    'snwd':'Sndp',
     'maxt':'TMax',
     'mint':'TMin',
     'avgt':'TMean',

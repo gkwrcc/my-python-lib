@@ -1114,6 +1114,8 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             writer.writerow(row)
             row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
             writer.writerow(row)
+            row = []
+            writer.writerow(row)
             row = ['*date']
             for el in resultsdict['elements']:
                 el_strip,base_temp = get_el_and_base_temp(el)

@@ -7,7 +7,7 @@ Defines classes used in the my_acis project
 ##############################################################################
 # import modules required by Acis
 #import  pprint, time
-import time, re,os
+import time, re, os
 import json
 from cStringIO import StringIO
 import cairo
@@ -16,6 +16,8 @@ import datetime
 import csv
 from xlwt import Workbook
 import logging
+from ftplib import FTP
+import smtplib
 
 #Django
 from django.http import HttpResponse
@@ -1044,6 +1046,134 @@ class Logger(object):
         logger.addHandler(sh)
         return logger
 
+class FTPClass(object):
+    '''
+    Uploads file f to ftp_server
+    in directory pub_dir
+    '''
+    def __init__(self, ftp_server, pub_dir, f, logger = None):
+        self.ftp_server = ftp_server
+        self.pub_dir = pub_dir
+        self.f = f
+        self.logger = logger
+
+    def login(self):
+        '''
+        ftp server login
+        '''
+        try:
+            self.ftp = FTP(self.ftp_server)
+            self.ftp.login()
+            self.ftp.set_debuglevel(0)
+            if self.logger:
+                self.logger.info('Successfully Connected to ftp server %s' %str(self.ftp_server))
+            return None
+        except Exception, e:
+            return 'Error connecting to FTP server: %s' %str(e)
+
+    def cwd(self):
+        try:
+            self.ftp.cwd(self.pub_dir)
+            if self.logger:
+                self.logger.info('Successfully changed to directory: %s' %str(self.pub_dir))
+            return None
+        except:
+            #Need to create sub_directories one by one
+            dir_list = self.pub_dir.strip('/').split('/')
+            sub_dir = ''
+            for d in dir_list:
+                sub_dir = sub_dir +  '/' + d
+                try:
+                    self.ftp.cwd(sub_dir)
+                    if self.logger:
+                        self.logger.info('Successfully changed to directory: %s' %str(sub_dir))
+                except:
+                    if self.logger:
+                        self.logger.info('Creating Directory: %s on %s' %(sub_dir, self.ftp_server))
+                    try:
+                        self.ftp.mkd(sub_dir)
+                    except Exception, e:
+                        return 'Error creating sub dircetory %s . Error: %s' %(str(sub_dir), str(e))
+        try:
+            self.ftp.cwd(self.pub_dir)
+            return None
+        except:
+            if self.logger:
+                self.logger.error('Can not change to directory: %s on %s.' %(self.pub_dir, self.ftp_server))
+            return 'ERROR'
+
+    def upload_file(self):
+        fname = os.path.basename(self.f)
+        ext = os.path.splitext(self.f)[1]
+        #Check if file already exists
+        if fname in self.ftp.nlst():
+            if self.logger:
+                self.logger.info('File %s already exists on server!' %str(fname))
+            return None
+        if ext in (".txt", ".htm", ".html", ".json"):
+            try:
+                if self.logger:
+                    self.logger.info('Uploading file: %s' %str(fname))
+                self.ftp.storlines('STOR %s' % fname, open(self.f))
+                if self.logger:
+                    self.logger.info('Successfully uploaded file: %s' %str(fname))
+                return None
+            except Exception, e:
+                return 'Upload error: %s' %str(e)
+        else:
+            try:
+                if self.logger:
+                    self.logger.info('Uploading file: %s' %str(fname))
+                self.ftp.storbinary('STOR %s' % fname, open(self.f, 'rb'), 1024)
+                if self.logger:
+                    self.logger.info('Successfully uploaded file: %s' %str(fname))
+                return None
+            except Exception, e:
+                return 'Upload error: %s' %str(e)
+
+    def close_ftp(self):
+        self.ftp.quit()
+
+    def FTPUpload(self):
+        error = self.login()
+        if not error:error = self.cwd()
+        else:return 'ERROR'
+        if not error:
+            self.upload_file()
+            return None
+        self.close_ftp()
+
+class Mail(object):
+    def __init__(self, mail_server,fromaddr,toaddr,subject, message, logger=None):
+        self.mail_server = mail_server
+        self.fromaddr = fromaddr
+        self.toaddr = toaddr
+        self.subject = subject
+        self.message = message
+
+    def write_email(self):
+        '''
+        Write e-mail via python's  smtp module
+        '''
+        msg = "From: %s\nTo: %s\nSubject:%s\n\n%s" % ( self.fromaddr, self.toaddr, self.subject, self.message )
+        try:
+            server = smtplib.SMTP(self.mail_server)
+            if self.logger:
+                self.logger.info('Connected to mail server %s' %str(self.mail_server))
+        except Exception, e:
+            if self.logger:
+                self.logger.info('Connecting to mail server %s failed with error: %s' %(str(self.mail_server),str(e)))
+            return str(e)
+
+        server.set_debuglevel(1)
+        try:
+            server.sendmail(self.fromaddr, self.toaddr, self.msg)
+            server.quit()
+            if self.logger:
+                self.logger.info('Email message sent to %s' %str(self.toaddr))
+            return None
+        except Exception, e:
+            return 'Email attempt to recipient %s failed with error %s' %(str(toaddr), str(e))
 
 class LargeStationDataRequest(object):
     '''
@@ -1060,7 +1190,7 @@ class LargeStationDataRequest(object):
                   date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
         logger -- logger object
     '''
-    def __init__(self, params, logger):
+    def __init__(self, params, logger=None):
         self.params = params
         self.logger =  logger
         #Limit of stations per request
@@ -1074,13 +1204,6 @@ class LargeStationDataRequest(object):
         if 'email' in self.params.keys():user_email = self.params['email']
         else : user_email = 'bdaudert@dri.edu'
         return user_name, user_email
-
-    def get_file_extension(self):
-        if 'data_format' in self.params.keys():
-            self.file_extension = WRCCData.FILE_EXTENSIONS[self.params['data_format']]
-            if self.file_extension == '.html':file_extension = '.txt'
-        else:
-            self.file_extension = '.txt'
 
     def split_request(self):
         '''
@@ -1145,7 +1268,8 @@ class LargeStationDataRequest(object):
             idx_list.append(idx * self.max_stations)
         if rem != 0:
             idx_list.append(idx_list[-1] + rem)
-        self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
+        if self.logger:
+            self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
         return idx_list
 
 class LargeGridDataRequest(object):
@@ -1173,13 +1297,6 @@ class LargeGridDataRequest(object):
         self.max_lons = settings.MAX_LONS
 
 
-    def get_file_extension(self):
-        if 'data_format' in self.params.keys():
-            self.file_extension = WRCCData.FILE_EXTENSIONS[self.params['data_format']]
-            if self.file_extension == '.html':self.file_extension = '.txt'
-        else:
-            self.file_extension = '.txt'
-
     def split_request(self):
         '''
         Splits one large data grid request parameters
@@ -1194,9 +1311,11 @@ class LargeGridDataRequest(object):
             element_list = WRCCUtils.convert_to_list(self.params['elements'])
             s_date, e_date = WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
             if not s_date or not e_date:
-                self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
+                if self.logger:
+                    self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
             else:
-                self.logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
+                if self.logger:
+                    self.logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
         #Find number of requests
         start = WRCCUtils.date_to_datetime(s_date)
         end = WRCCUtils.date_to_datetime(e_date)
@@ -1204,7 +1323,8 @@ class LargeGridDataRequest(object):
         except:days = 0
         num_requests = days / self.day_limit
         if days % self.day_limit !=0:num_requests+=1
-        self.logger.info('Number of requests: %s' %str(num_requests))
+        if self.logger:
+            self.logger.info('Number of requests: %s' %str(num_requests))
         #Construct parameter files for each request
         params_list = [dict(self.params) for k in range(num_requests)]
         for k in range(num_requests):
@@ -1244,10 +1364,11 @@ class LargeGridDataRequest(object):
         returns list of data indices
         '''
         #Sanity check
-        if not 'meta' in request.keys():return 0
-        if not 'lat' in request['meta'].keys(): return 0
-        if not 'lat' in request['meta'].keys(): return 0
-        if not 'data' in request.keys():return 0
+        if 'error' in request.keys():return []
+        if not 'meta' in request.keys():return []
+        if not 'lat' in request['meta'].keys(): return []
+        if not 'lat' in request['meta'].keys(): return []
+        if not 'data' in request.keys():return []
         idx_list = [0]
         #find number of grid points in request
         num_lats = len(request['meta']['lat'])
@@ -1269,14 +1390,14 @@ class LargeGridDataRequest(object):
             idx_list.append(idx_list[-1] + rem)
         return idx_list
 
-
     def format_data_and_write_to_file(self, out_file):
-        self.get_file_extension()
-        f_out = open(out_file + self.file_extension, 'w+')
-        self.logger.info('Splitting data into smaller chunks for formatting')
+        f_out = open(out_file, 'w+')
+        if self.logger:
+            self.logger.info('Splitting data into smaller chunks for formatting')
         idx_list = self.split_data(self.request)
         generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
-        self.logger.info('Formatting data')
+        if self.logger:
+            self.logger.info('Formatting data')
         idx = 0
         for data in generator:
             idx+=1
@@ -1286,17 +1407,22 @@ class LargeGridDataRequest(object):
                     req_small[key] = val
             req_small['data'] = data
             temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
-            self.logger.info('Formatting data chunk %s' %str(idx))
+            if self.logger:
+                self.logger.info('Formatting data chunk %s' %str(idx))
             results_small = WRCCUtils.format_grid_data(req_small, self.params)
-            self.logger.info('Finished formatting data chunk %s' %str(idx))
-            self.logger.info('Writing data chunk %s to file' %str(idx))
+            if self.logger:
+                self.logger.info('Finished formatting data chunk %s' %str(idx))
+                self.logger.info('Writing data chunk %s to file' %str(idx))
             WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
-            self.logger.info('Finished writing data chunk %s to file' %str(idx))
-            self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
+            if self.logger:
+                self.logger.info('Finished writing data chunk %s to file' %str(idx))
+                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
             with open(temp_file, 'r') as f:
                 f_out.write(f.read())
-            self.logger.info('Data chunk %s completed.' %str(idx))
-        self.logger.info('Data request completed')
+            if self.logger:
+                self.logger.info('Data chunk %s completed.' %str(idx))
+        if self.logger:
+            self.logger.info('Data request completed')
         f_out.close()
 
 
