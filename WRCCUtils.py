@@ -765,67 +765,6 @@ def convert_db_dates(messy_date):
 
 
 
-def upload(ftp_server,pub_dir,f):
-    '''
-    Uploads file to ftp_server
-    in directory pub_dir
-    '''
-    try:
-        fname = os.path.split(f)[1]
-        ftp = FTP(ftp_server)
-        ftp.login()
-        ftp.set_debuglevel(0)
-        try:
-            ftp.cwd(pub_dir)
-        except:
-            #Need to create sub_directories one by one
-            dir_list = pub_dir.strip('/').split('/')
-            sub_dir = ''
-            for d in dir_list:
-                sub_dir = sub_dir +  '/' + d
-                try:
-                    ftp.cwd(sub_dir)
-                except:
-                    print 'Creating Directory: %s on %s' % (sub_dir, ftp_server)
-                    ftp.mkd(sub_dir)
-        try:
-            ftp.cwd(pub_dir)
-        except:
-            error = 'File: %s Upload error. Could not create directory %s on server %s' %(f,pub_dir, ftp_server)
-        ext = os.path.splitext(f)[1]
-        #Check if file is already there
-        print ftp.nlst()
-        if fname in ftp.nlst():
-            pass
-        else:
-            if ext in (".txt", ".htm", ".html", ".json"):
-                ftp.storlines('STOR %s' % fname, open(f))
-            else:
-                ftp.storbinary('STOR %s' % fname, open(f, 'rb'), 1024)
-        ftp.quit()
-        error = None
-    except Exception, e:
-        error = 'File: %s Upload error: %s' %(f, str(e))
-    return error
-
-
-def write_email(mail_server,fromaddr,toaddr,subject, message):
-    '''
-    Write e-mail via pythons  smtp module
-    '''
-    msg = "From: %s\nTo: %s\nSubject:%s\n\n%s" % ( fromaddr, toaddr, subject, message )
-
-    try:
-        server = smtplib.SMTP(mail_server)
-        server.set_debuglevel(1)
-        server.sendmail(fromaddr, toaddr, msg)
-        server.quit()
-        error = None
-    except Exception, e:
-        error = 'Email attempt to recipient %s failed with error %s' %(toaddr, str(e))
-    return error
-
-
 def u_convert(data):
     '''
     Unicode converter, needed to write json files
@@ -884,6 +823,7 @@ def write_griddata_to_file(data, form, f=None, request=None):
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
+    if file_extension == '.html':file_extension = '.txt'
     elev_unit = 'ft'
     if form['units'] == 'metric':elev_unit = 'm'
     if isinstance(form['elements'],list):
@@ -970,7 +910,7 @@ def write_griddata_to_file(data, form, f=None, request=None):
         flag = 0
         sheet_counter = 0
         generator_date = ((date_idx, date_vals) for date_idx, date_vals in enumerate(data))
-        for (date_idx, date_vals) in generator:
+        for (date_idx, date_vals) in generator_date:
         #for date_idx, date_vals in enumerate(data): #row
             generator_data = ((j, val) for j, val in enumerate(date_vals))
             for (j, val) in generator_data:
@@ -1066,6 +1006,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
     '''
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     file_extension = WRCCData.FILE_EXTENSIONS[form['data_format']]
+    if file_extension == '.html':file_extension = '.txt'
     elev_unit = 'ft'
     if form['units'] =='metric':elev_unit = 'm'
     #set file name

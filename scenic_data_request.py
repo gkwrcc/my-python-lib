@@ -30,7 +30,7 @@ def start_logger(base_dir):
 
 def get_params_files(base_dir):
     #Look for user parameter files in base_dir
-    params_files = filter(os.path.isfile, glob.glob(base_dir + settings.PARAMS_FILE_EXTENSION))
+    params_files = filter(os.path.isfile, glob.glob(base_dir + '*' + settings.PARAMS_FILE_EXTENSION))
     params_files.sort(key=lambda x: os.path.getmtime(x))
     return params_files
 
@@ -64,51 +64,63 @@ def get_display_params(params):
     for key, val in params.iteritems():
         if key in  ['select_grid_by', 'select_stations_by']:
             display_params = WRCCData.DISPLAY_PARAMS[params[key]] + ': ' + params[params[key]] + ', '+ display_params
+            display_params = WRCCData.DISPLAY_PARAMS[params[key]] + ': '+ display_params
 
-        if key in keys:
-            if  key == 'elems_long':
-                display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+  ','.join(params[key]) + ', '
-            elif key == 'date_format':
-                display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.DATE_FORMAT[params[key]]  + ', '
-            elif key == 'data_format':
-                display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.DATA_FORMATS[params[key]]  + ', '
-            else:
-                display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+  str(params[key]) + ', '
-                if key == 'data_summary' and params[key] != 'none':
-                    ds = params[key] + '_summary'
-                    display_params+=WRCCData.DISPLAY_PARAMS[ds] + ': ' + WRCCData.DISPLAY_PARAMS[params[ds]] + ', '
+        if key not in keys:continue
+        if  key == 'elems_long':
+            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+  ','.join(params[key]) + ', '
+        elif key in ['date_format']:
+            df = WRCCData.DATE_FORMAT[params[key]]
+            d = 'yyyy' + df + 'mm' + df + 'dd'
+            if 'temporal_resolution' in params.keys():
+                if params['temporal_resolution'] == 'mly':d = df.join(d.split(df)[0:2])
+                if params['temporal_resolution'] == 'yly':d = df.join(d.split(df)[0])
+            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': ' + d  + ', '
+        elif key in ['data_format']:
+            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.DATA_FORMAT[params[key]]  + ', '
+        elif key in ['show_observation_time', 'show_flags','data_summary']:
+            if key == 'data_summary' and params[key] != 'none':k = params[key] + '_summary'
+            else:k=key
+            display_params+=WRCCData.DISPLAY_PARAMS[k] + ': ' + WRCCData.DISPLAY_PARAMS[params[k]] + ', '
+        elif key == 'grid':
+            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.GRID_CHOICES[params[key]]  + ', '
     return display_params
 
 def get_user_info(params):
     if 'user_name' in params.keys():user_name = params['user_name']
     else : user_name = 'bdaudert'
-    if 'email' in params.keys():user_email = params['email']
+    if 'user_email' in params.keys():user_email = params['user_email']
     else : user_email = 'bdaudert@dri.edu'
     return user_name, user_email
 
 
-def compose_email(params, ftp_server, output_file_path):
+def compose_email(params, ftp_server, ftp_dir, file_name):
         #NOTIFY_USER
         mail_server = settings.DRI_MAIL_SERVER
         fromaddr = settings.CSC_FROM_ADDRESS
         user_name, user_email = get_user_info(params)
-        subj = 'Data request %s' % os.path.basename(output_file_path)
+        subj = 'Data request %s' % file_name
         now = datetime.datetime.now()
         date = now.strftime( '%d/%m/%Y %H:%M' )
         pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
         display_params = get_display_params(params)
         message_text ='''
         Date: %s
-        Dear %s
+        Dear %s,
         Your data requests has been processed :-).
+
         The data is available here:
         %s
+
         The name of your file is:
         %s
+
         You can pick up your data until: %s.
+
         Your parameters were:
+
         %s
-        '''%(date, user_name,'ftp://' + ftp_server + output_file_path, os.path.basename(output_file_path),str(pick_up_latest), display_params)
+        '''%(date, user_name,'ftp://' + ftp_server + ftp_dir + file_name, file_name, str(pick_up_latest), display_params)
         return subj, message_text
 
 def compose_failed_request_email(params_files_failed, log_file):
@@ -191,8 +203,13 @@ if __name__ == '__main__' :
         LDR.get_data()
         logger.info('Data obtained')
         #check that results of data request are valid
-        if not 'data' in LDR.request.keys() or 'error' in LDR.request.keys():
-            logger.error('No data found for parameter file: %s! Exiting program.' %os.path.basename(params_file))
+        if 'error' in LDR.request.keys():
+            logger.error('Data request error: %s! Parameter file: %s' %( LDR.request['error'],os.path.basename(params_file)))
+            params_files_failed.append(params_file)
+            #os.remove(params_file)
+            continue
+        if not 'data' in LDR.request.keys() and not 'smry' in LDR.request.keys():
+            logger.error('No data found! Parameter file: %s' %( os.path.basename(params_file)))
             params_files_failed.append(params_file)
             #os.remove(params_file)
             continue
@@ -207,7 +224,6 @@ if __name__ == '__main__' :
             #os.remove(params_file)
             continue
         #Transfer data to FTP server
-        '''
         FTP = WRCCClasses.FTPClass(ftp_server, ftp_dir, out_file, logger)
         error = FTP.FTPUpload()
         if error:
@@ -215,9 +231,8 @@ if __name__ == '__main__' :
             params_files_failed.append(params_file)
             #os.remove(params_file)
             continue
-        '''
         #Notify User
-        subject, message = compose_email(params, ftp_server, out_file)
+        subject, message = compose_email(params, ftp_server, ftp_dir, os.path.basename(out_file))
         user_name, user_email = get_user_info(params)
         MAIL = WRCCClasses.Mail(mail_server,fromaddr,user_email,subject, message,logger)
         error = MAIL.write_email()

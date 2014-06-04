@@ -409,8 +409,8 @@ DISPLAY_PARAMS = {
     'name':'Station Name',
     'state':'State',
     'valid_daterange': 'Valid Date Range (by element)',
-    'select_grid_by':'Grid Selection By',
-    'select_stations_by': 'Station Selection By',
+    'select_grid_by':'Grid Data Request',
+    'select_stations_by': 'Station Data Request',
     #search areas
     'stnid': 'Station ID',
     'stnids': 'Station IDs',
@@ -563,7 +563,9 @@ DISPLAY_PARAMS = {
     'projection':'Projection',
     'map_ol': 'Map Overlay',
     'interpolation':'Interpolation Method',
-    'cmap': 'Color Map'
+    'cmap': 'Color Map',
+    'user_name': 'User Name',
+    'user_email': 'User Email'
 }
 
 GRID_CHOICES = {
@@ -618,7 +620,7 @@ DATA_FORMAT_CHOICES_LTD = (
 
 )
 
-DATA_FORMATS = {
+DATA_FORMAT = {
     'dlm':'Delimited, .dat',
     'clm':'Columnar, .txt',
     'xl':'Excel, .xls',

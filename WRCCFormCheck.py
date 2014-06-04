@@ -407,3 +407,19 @@ def check_cmap(form):
     if cmap not in WRCCData.CMAPS:
         return 'Not a valid color map. Please refer to the list below to find your coor map name.'
     return err
+
+def check_user_email(form):
+    err = None
+    from email.utils import parseaddr
+    if len(form['user_email'].split(',')) > 2:
+        return 'Not a valid email address: %s' %str(form['user_email'])
+    if len(form['user_email'].split('@')) != 2:
+        return 'Not a valid email address: %s' %str(form['user_email'])
+    if len(form['user_email'].split(' ')) != 1:
+        return 'Not a valid email address: %s' %str(form['user_email'])
+    address = parseaddr(form['user_email'])[1]
+    if not address:
+        return 'Not a valid email address: %s' %str(form['user_email'])
+    if len(address.split('.')) < 2:
+        return 'Not a valid email address: %s' %str(form['user_email'])
+    return err

@@ -1206,44 +1206,17 @@ class LargeStationDataRequest(object):
         else : user_email = 'bdaudert@dri.edu'
         return user_name, user_email
 
-    def split_request(self):
-        '''
-        Splits large station datat request parameters
-        into a number of smaller request.
-        For ease of concatenating the results,
-        grid data requests are split up by stations
-        Returns a list of parameter dictionaries
-        '''
-        area_type = self.params['select_stations_by']
-        val = self.params[self.params['select_stations_by']]
-        if area_type in ['station_id', 'station_ids']:
-            stn_list = WRCCUtils.convert_to_list(val)
-        else:
-            #Find all stations within the area
-            meta_params = {area_type: val,'meta':'name, sids'}
-            stn_list = []
-            try:
-                meta_data = AcisWS.StnMeta(meta_params)
-                for stn in meta_data['meta']:stn_list.append(stn['sids'][0].split(' ')[0])
-            except:
-                return []
-
-    def get_data(self, params):
+    def get_data(self):
         '''
         ACIS data request
-        request_type -- grid or station
-        params       -- parameter file
         '''
-        request = {'data':[]}
+        self.request = {'data':[]}
         try:
-            request = AcisWS.get_station_data(params,'sodlist-web')
+            self.request = AcisWS.get_station_data(self.params,'sodlist-web')
         except:
-            request['error'] = 'Invalid data request.'
-            return request
-        return request
+            self.request['error'] = 'Invalid data request.'
 
-
-    def split_data(self, request):
+    def split_data(self):
         '''
         Splits grid data request into smaller chunks
         for writing to file
@@ -1254,11 +1227,11 @@ class LargeStationDataRequest(object):
         return a list of stn  indices
         '''
         #Sanity check
-        if not 'data' in request.keys() or not request['data']:
-            return []
+        if 'error' in self.request.keys():return []
+        if not 'data' in self.request.keys():return []
+        if not self.request['data']:return []
         idx_list = [0]
-        num_stations = len(request['data'])
-        print 'Number of stations: ' + str(num_stations)
+        num_stations = len(self.request['data'])
         if num_stations < int(self.max_stations):
             div = 1
             rem = 0
@@ -1277,7 +1250,8 @@ class LargeStationDataRequest(object):
         f_out = open(out_file, 'w+')
         if self.logger:
             self.logger.info('Splitting data into smaller chunks for formatting')
-        idx_list = self.split_data(self.request)
+        idx_list = self.split_data()
+        print idx_list
         generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
         if self.logger:
             self.logger.info('Formatting data')
@@ -1296,7 +1270,7 @@ class LargeStationDataRequest(object):
             if self.logger:
                 self.logger.info('Finished formatting data chunk %s' %str(idx))
                 self.logger.info('Writing data chunk %s to file' %str(idx))
-            WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
+            WRCCUtils.write_station_data_to_file(results_small,self.params,f=temp_file)
             if self.logger:
                 self.logger.info('Finished writing data chunk %s to file' %str(idx))
                 self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
@@ -1333,52 +1307,6 @@ class LargeGridDataRequest(object):
         self.max_lats = settings.MAX_LATS
         self.max_lons = settings.MAX_LONS
 
-
-    def split_request(self):
-        '''
-        Splits one large data grid request parameters
-        into a number of smaller request.
-        For ease of concatenating the results,
-        grid data requests are split up by dates
-        Returns a list of parameter dictionaries
-        '''
-        s_date = WRCCUtils.date_to_eight(self.params['start_date'])
-        e_date = WRCCUtils.date_to_eight(self.params['end_date'])
-        if s_date.lower() == 'por' or e_date.lower() == 'por':
-            element_list = WRCCUtils.convert_to_list(self.params['elements'])
-            s_date, e_date = WRCCUtils.find_valid_daterange(sid, el_list=element_list, max_or_min='max')
-            if not s_date or not e_date:
-                if self.logger:
-                    self.logger.error('Not a valid daterange: %s - %s' %(s_date, e_date))
-            else:
-                if self.logger:
-                    self.logger.info('Valid daterange found: %s - %s' %(s_date, e_date))
-        #Find number of requests
-        start = WRCCUtils.date_to_datetime(s_date)
-        end = WRCCUtils.date_to_datetime(e_date)
-        try:days = (end - start).days
-        except:days = 0
-        num_requests = days / self.day_limit
-        if days % self.day_limit !=0:num_requests+=1
-        if self.logger:
-            self.logger.info('Number of requests: %s' %str(num_requests))
-        #Construct parameter files for each request
-        params_list = [dict(self.params) for k in range(num_requests)]
-        for k in range(num_requests):
-            start_new = start + k*datetime.timedelta(days=self.day_limit )
-            if k < num_requests - 1:end_new = start_new + datetime.timedelta(days=self.day_limit - 1)
-            else:end_new = end
-            start_yr = str(start_new.year);end_yr = str(end_new.year)
-            start_month = str(start_new.month);end_month = str(end_new.month)
-            start_day = str(start_new.day);end_day = str(end_new.day)
-            if len(str(start_new.month)) == 1:start_month = '0%s' %str(start_new.month)
-            if len(str(end_new.month)) == 1:end_month = '0%s' %str(end_new.month)
-            if len(str(start_new.day)) == 1:start_day = '0%s' %str(start_new.day)
-            if len(str(end_new.day)) == 1:end_day = '0%s' %str(end_new.day)
-            params_list[k]['start_date'] = ''.join([start_yr, start_month, start_day])
-            params_list[k]['end_date'] = ''.join([end_yr, end_month, end_day])
-        return params_list
-
     def get_data(self):
         '''
         ACIS data request
@@ -1391,7 +1319,7 @@ class LargeGridDataRequest(object):
         except:
             self.request['error'] = 'Invalid data request.'
 
-    def split_data(self, request):
+    def split_data(self):
         '''
         Splits grid data request into smaller chunks
         by looking at lats, lons and number of days
@@ -1401,16 +1329,26 @@ class LargeGridDataRequest(object):
         returns list of data indices
         '''
         #Sanity check
-        if 'error' in request.keys():return []
-        if not 'meta' in request.keys():return []
-        if not 'lat' in request['meta'].keys(): return []
-        if not 'lat' in request['meta'].keys(): return []
-        if not 'data' in request.keys():return []
+        if 'error' in self.request.keys():return []
+        if not 'meta' in self.request.keys():return []
+        if not 'lat' in self.request['meta'].keys(): return []
+        if not 'lat' in self.request['meta'].keys(): return []
+        if not 'data' in self.request.keys() and not 'smry' in self.request.keys():return []
         idx_list = [0]
         #find number of grid points in request
-        num_lats = len(request['meta']['lat'])
-        num_lons = len(request['meta']['lon'][0])
-        days =  len(request['data'])
+        num_lats =0;num_lons=0
+        try:
+            num_lats = len(self.request['meta']['lat'])
+        except:
+            if type(self.request['meta']['lat']) == float:
+                num_lats = 1
+        try:
+            num_lons = len(self.request['meta']['lon'][0])
+        except:
+            if type(self.request['meta']['lon']) == float:
+                num_lons = 1
+        if 'smry' in self.request.keys():days = 1
+        else:days =  len(self.request['data'])
         num_loop_points = num_lats * num_lons * days
         max_loop_points = self.day_limit * self.max_lats * self.max_lons
         max_days = 0
@@ -1419,7 +1357,8 @@ class LargeGridDataRequest(object):
         div = days / max_days
         rem = days % max_days
         if div == 0:
-            self.idx_list = [0, len(request['data'])]
+            if 'smry' in self.request.keys():idx_list = [0, len(self.request['smry'])]
+            else:idx_list = [0, len(self.request['data'])]
             return idx_list
         for idx in range(1, div + 1):
             idx_list.append(idx * max_days)
@@ -1431,8 +1370,11 @@ class LargeGridDataRequest(object):
         f_out = open(out_file, 'w+')
         if self.logger:
             self.logger.info('Splitting data into smaller chunks for formatting')
-        idx_list = self.split_data(self.request)
-        generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
+        idx_list = self.split_data()
+        if 'smry' in self.request.keys():
+            generator = (self.request['smry'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
+        else:
+            generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
         if self.logger:
             self.logger.info('Formatting data')
         idx = 0
