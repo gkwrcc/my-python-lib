@@ -1366,8 +1366,19 @@ class LargeGridDataRequest(object):
             idx_list.append(idx_list[-1] + rem)
         return idx_list
 
-    def format_data_and_write_to_file(self, out_file):
-        f_out = open(out_file, 'w+')
+    def format_write_transfer(self,params_file, params_files_failed,out_file, ftp_server, ftp_dir,max_file_size,logger=None):
+        '''
+        Formats data for file output.
+        Writes data to files of max size max_file_size in chunks.
+        Transfers data files to ftp server.
+        Returns list of output files of max size max_file_size
+        '''
+        f_ext = os.path.splitext(out_file)[1]
+        f_base = os.path.splitext(out_file)[0]
+        idx = 1
+        f = f_base + str(idx) + f_ext
+        out_files = []
+        f_out = open(f, 'w+')
         if self.logger:
             self.logger.info('Splitting data into smaller chunks for formatting')
         idx_list = self.split_data()
@@ -1395,15 +1406,49 @@ class LargeGridDataRequest(object):
             WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
             if self.logger:
                 self.logger.info('Finished writing data chunk %s to file' %str(idx))
-                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
-            with open(temp_file, 'r') as f:
-                f_out.write(f.read())
+                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(f)))
+            with open(temp_file, 'r') as temp:
+                f_out.write(temp.read())
+                #Check file size and open new file if needed
+                if os.stat(f).st_size > max_file_size:
+                    out_files.append(f)
+                f_out.close()
+                #transfer to FTP and delete file
+                if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
+                else: FTP = FTPClass(ftp_server, ftp_dir, f)
+                error = FTP.FTPUpload()
+                if error:
+                    if self.logger:
+                        self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
+                    params_files_failed.append(params_file)
+                    os.remove(f)
+                    return []
+                os.remove(f)
+                idx+=1
+                #new file
+                f = f_base + str(idx) + f_ext
+                f_out = f_out = open(f, 'w+')
+
             if self.logger:
                 self.logger.info('Data chunk %s completed.' %str(idx))
         if self.logger:
             self.logger.info('Data request completed')
+        #Transfer last file
+        if not os.stat(f).st_size > 0:
+            return out_files
+        out_files.append(f)
+        if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
+        else: FTP = FTPClass(ftp_server, ftp_dir, f)
+        error = FTP.FTPUpload()
+        if error:
+            if self.logger:
+                self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
+            params_files_failed.append(params_file)
+            os.remove(f)
+            return []
         f_out.close()
-
+        os.remove(f)
+        return out_files
 
 
 

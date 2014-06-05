@@ -68,6 +68,28 @@ def date_to_datetime(date_str):
     dt = datetime.datetime(int(eight_date[0:4]),int(eight_date[4:6]), int(eight_date[6:8]))
     return dt
 
+def datetime_to_date(dt, seperator):
+    '''
+    yyyy-mm-dd
+    yyyy/mm/dd
+    yyyy:mm:dd
+    yyyymmdd
+    '''
+    if type(dt) != datetime.datetime:
+        return '0000' + str(seperator) + '00' + str(seperator) + '00'
+    try:y = str(dt.year)
+    except:y = '0000'
+    try:
+        m =str(dt.month)
+        if len(m) ==1:m = '0' + m
+    except:
+        m = '00'
+    try:
+        d =str(dt.day)
+        if len(d) ==1:d = '0' + m
+    except:
+        d = '00'
+    return y + str(seperator) + m + str(seperator) + d
 def get_start_date(time_unit, end_date, number):
     '''
     Given a time unit (days, months or years),

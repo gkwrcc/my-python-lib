@@ -15,7 +15,8 @@ def start_logger(base_dir):
     #Set up Logging
     #Start new log file for each day:
     today = datetime.datetime.today()
-    day_stamp = '%s%s%s' %(str(today.year), str(today.month), str(today.day))
+    day_stamp = WRCCUtils.datetime_to_date(today,'')
+    #day_stamp = '%s%s%s' %(str(today.year), str(today.month), str(today.day))
     log_file_test  = 'scenic_data_requests_' + day_stamp + '.log'
     #Check if we need to create a new log file
     #Look at most recent log file
@@ -94,7 +95,7 @@ def get_user_info(params):
     return user_name, user_email
 
 
-def compose_email(params, ftp_server, ftp_dir, file_name):
+def compose_email(params, ftp_server, ftp_dir, out_files):
         #NOTIFY_USER
         mail_server = settings.DRI_MAIL_SERVER
         fromaddr = settings.CSC_FROM_ADDRESS
@@ -104,6 +105,11 @@ def compose_email(params, ftp_server, ftp_dir, file_name):
         date = now.strftime( '%d/%m/%Y %H:%M' )
         pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
         display_params = get_display_params(params)
+        dp = '';files=''
+        for line in display_params.split(','):
+            dp+=line +'\n'
+        for f in out_files:
+            files+= f + '\n'
         message_text ='''
         Date: %s
         Dear %s,
@@ -112,7 +118,7 @@ def compose_email(params, ftp_server, ftp_dir, file_name):
         The data is available here:
         %s
 
-        The name of your file is:
+        The name of your files are:
         %s
 
         You can pick up your data until: %s.
@@ -120,7 +126,7 @@ def compose_email(params, ftp_server, ftp_dir, file_name):
         Your parameters were:
 
         %s
-        '''%(date, user_name,'ftp://' + ftp_server + ftp_dir + file_name, file_name, str(pick_up_latest), display_params)
+        '''%(date, user_name,'ftp://' + ftp_server + ftp_dir, files,str(pick_up_latest), dp)
         return subj, message_text
 
 def compose_failed_request_email(params_files_failed, log_file):
@@ -131,7 +137,7 @@ def compose_failed_request_email(params_files_failed, log_file):
     subj = 'Failed data requests'
     now = datetime.datetime.now()
     date = now.strftime( '%d/%m/%Y %H:%M' )
-    message_text ='''
+    message='''
         Date: %s
         Dear Me,
         Following data requests have failed:
@@ -141,14 +147,13 @@ def compose_failed_request_email(params_files_failed, log_file):
         '''%(date,','.join(params_files_failed), log_file)
     return subj, message
 
-def delete_params_file(params_file):
-    try:
-        os.remove(params_file)
-    except:
-        pass
+#############
+#M A I N
+###############
 
 if __name__ == '__main__' :
 
+    #os.remove('/tmp/data_requests/GridNVTwoYr_params.json')
     #Set statics
     base_dir = settings.DATA_REQUEST_BASE_DIR
     params_file_extension = settings.PARAMS_FILE_EXTENSION
@@ -156,7 +161,7 @@ if __name__ == '__main__' :
     ftp_dir = settings.DRI_PUB_DIR
     mail_server = settings.DRI_MAIL_SERVER
     fromaddr = settings.CSC_FROM_ADDRESS
-
+    max_file_size = settings.MAX_FILE_SIZE
     #Set timers
     cron_job_time = settings.CRON_JOB_TIME
     now = now = datetime.datetime.now()
@@ -182,16 +187,14 @@ if __name__ == '__main__' :
         logger.info('Parameters: %s' % str(params))
         #Check if params file is older than
         #cron job time --> data request completed or in progress
-
+        '''
         #Check if request in progress
-        #st=os.stat(params_file)
-        #mtime=datetime.datetime.fromtimestamp(st.st_mtime)
-        #if mtime <= x_mins_ago:
-        #    logger.info('Data request for parameter file %s is in progress' %str(os.path.basename(params_file)))
-        #    continue
-
-        #Avoid naming conflicts of output file names--timestamp will be attached
-        out_file = set_output_file(params, base_dir, time_stamp)
+        st=os.stat(params_file)
+        mtime=datetime.datetime.fromtimestamp(st.st_mtime)
+        if mtime <= x_mins_ago:
+            logger.info('Data request for parameter file %s is in progress' %str(os.path.basename(params_file)))
+            continue
+        '''
 
         #Define and instantiate data request class
         if 'select_stations_by' in params.keys():
@@ -206,45 +209,44 @@ if __name__ == '__main__' :
         if 'error' in LDR.request.keys():
             logger.error('Data request error: %s! Parameter file: %s' %( LDR.request['error'],os.path.basename(params_file)))
             params_files_failed.append(params_file)
-            #os.remove(params_file)
+            os.remove(params_file)
             continue
         if not 'data' in LDR.request.keys() and not 'smry' in LDR.request.keys():
             logger.error('No data found! Parameter file: %s' %( os.path.basename(params_file)))
             params_files_failed.append(params_file)
-            #os.remove(params_file)
+            os.remove(params_file)
             continue
         #Format data and write to file
-        LDR.format_data_and_write_to_file(out_file)
+        #Avoid naming conflicts of output file names--timestamp will be attached
+        out_file = set_output_file(params, base_dir, time_stamp)
+        out_files = LDR.format_write_transfer(params_file,params_files_failed,out_file, ftp_server, ftp_dir,max_file_size,logger)
         logger.info('Large Data Request completed. Parameter file was: %s' %str(os.path.basename(params_file)))
         #Check that out_file exists and is non-empty
-        error = check_output_file(out_file)
-        if error:
-            logger.error('ERROR writing data to file. Parameter file: %s. Error %s' %(os.path.basename(params_file),error))
+        if not out_files:
+            logger.error('ERROR: No output files were generated. Parameter file: %s.' %(os.path.basename(params_file)))
             params_files_failed.append(params_file)
-            #os.remove(params_file)
-            continue
-        #Transfer data to FTP server
-        FTP = WRCCClasses.FTPClass(ftp_server, ftp_dir, out_file, logger)
-        error = FTP.FTPUpload()
-        if error:
-            logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
-            params_files_failed.append(params_file)
-            #os.remove(params_file)
+            os.remove(params_file)
             continue
         #Notify User
-        subject, message = compose_email(params, ftp_server, ftp_dir, os.path.basename(out_file))
+        subject, message = compose_email(params, ftp_server, ftp_dir,out_files)
         user_name, user_email = get_user_info(params)
         MAIL = WRCCClasses.Mail(mail_server,fromaddr,user_email,subject, message,logger)
         error = MAIL.write_email()
         if error:
             logger.error('ERROR notifying user %s Error: %s' %(user_email,error))
             params_files_failed.append(params_file)
-            #os.remove(params_file)
+            os.remove(params_file)
             continue
-        if params_files_failed:
-            #Send emal to me
-            subject, message = compose_failed_request_email(params_files_failed, log_file_name)
-            EMAIL = WRCCClasses.Mail(mail_server,fromaddr,'bdaudert@dri.edu',subject, message,logger)
-            error = EMAIL.write_email()
-            if error:
-                logger.error('ERROR notifying ME %s Error: %s' %(user_email,error))
+        #Remove parameter file
+        os.remove(params_file)
+        try:os.remove(out_file)
+        except:pass
+
+    #Check for failed requests
+    if params_files_failed:
+        #Send emal to me
+        subject, message = compose_failed_request_email(params_files_failed, log_file_name)
+        EMAIL = WRCCClasses.Mail(mail_server,fromaddr,'bdaudert@dri.edu',subject, message,logger)
+        error = EMAIL.write_email()
+        if error:
+            logger.error('ERROR notifying ME %s Error: %s' %(user_email,error))
