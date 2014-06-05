@@ -65,7 +65,7 @@ def get_display_params(params):
     for key, val in params.iteritems():
         if key in  ['select_grid_by', 'select_stations_by']:
             display_params = WRCCData.DISPLAY_PARAMS[params[key]] + ': ' + params[params[key]] + ', '+ display_params
-            display_params = WRCCData.DISPLAY_PARAMS[params[key]] + ': '+ display_params
+            display_params = WRCCData.DISPLAY_PARAMS[key] + ': '+ display_params
 
         if key not in keys:continue
         if  key == 'elems_long':
@@ -100,7 +100,7 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         mail_server = settings.DRI_MAIL_SERVER
         fromaddr = settings.CSC_FROM_ADDRESS
         user_name, user_email = get_user_info(params)
-        subj = 'Data request %s' % file_name
+        subj = 'Data request %s' % params['output_file_name']
         now = datetime.datetime.now()
         date = now.strftime( '%d/%m/%Y %H:%M' )
         pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
@@ -118,7 +118,7 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         The data is available here:
         %s
 
-        The name of your files are:
+        The file names/file sizes are:
         %s
 
         You can pick up your data until: %s.
@@ -158,7 +158,6 @@ if __name__ == '__main__' :
     base_dir = settings.DATA_REQUEST_BASE_DIR
     params_file_extension = settings.PARAMS_FILE_EXTENSION
     ftp_server = settings.DRI_FTP_SERVER
-    ftp_dir = settings.DRI_PUB_DIR
     mail_server = settings.DRI_MAIL_SERVER
     fromaddr = settings.CSC_FROM_ADDRESS
     max_file_size = settings.MAX_FILE_SIZE
@@ -179,6 +178,8 @@ if __name__ == '__main__' :
     for params_file in params_files:
         time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
         params = WRCCUtils.load_json_data_from_file(params_file)
+        #Extra directory for each request
+        ftp_dir = settings.DRI_PUB_DIR + params['output_file_name'].replace(' ','')
         if not params:
             logger.error('Cannot read parameter file: %s! Exiting program.' %os.path.basename(params_file))
             params_files_failed.append(params_file)
@@ -225,7 +226,7 @@ if __name__ == '__main__' :
         if not out_files:
             logger.error('ERROR: No output files were generated. Parameter file: %s.' %(os.path.basename(params_file)))
             params_files_failed.append(params_file)
-            os.remove(params_file)
+            #os.remove(params_file)
             continue
         #Notify User
         subject, message = compose_email(params, ftp_server, ftp_dir,out_files)
@@ -238,9 +239,7 @@ if __name__ == '__main__' :
             os.remove(params_file)
             continue
         #Remove parameter file
-        os.remove(params_file)
-        try:os.remove(out_file)
-        except:pass
+        #os.remove(params_file)
 
     #Check for failed requests
     if params_files_failed:

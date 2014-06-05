@@ -1051,7 +1051,7 @@ class FTPClass(object):
     Uploads file f to ftp_server
     in directory pub_dir
     '''
-    def __init__(self, ftp_server, pub_dir, f, logger = None):
+    def __init__(self, ftp_server, pub_dir, f=None, logger = None):
         self.ftp_server = ftp_server
         self.pub_dir = pub_dir
         self.f = f
@@ -1071,15 +1071,15 @@ class FTPClass(object):
         except Exception, e:
             return 'Error connecting to FTP server: %s' %str(e)
 
-    def cwd(self):
+    def cwd(self, directory):
         try:
-            self.ftp.cwd(self.pub_dir)
+            self.ftp.cwd(directory)
             if self.logger:
-                self.logger.info('Successfully changed to directory: %s' %str(self.pub_dir))
+                self.logger.info('Successfully changed to directory: %s' %str(directory))
             return None
         except:
             #Need to create sub_directories one by one
-            dir_list = self.pub_dir.strip('/').split('/')
+            dir_list = directory.strip('/').split('/')
             sub_dir = ''
             for d in dir_list:
                 sub_dir = sub_dir +  '/' + d
@@ -1098,10 +1098,40 @@ class FTPClass(object):
             self.ftp.cwd(self.pub_dir)
             return None
         except:
+            error = 'Can not change to directory: %s on %s.' %(self.pub_dir, self.ftp_server)
             if self.logger:
-                self.logger.error('Can not change to directory: %s on %s.' %(self.pub_dir, self.ftp_server))
-            return 'ERROR'
+                error = 'Can not change to directory: %s on %s.' %(self.pub_dir, self.ftp_server)
+                self.logger.error(error)
+            return error
 
+    def delete_dir(self, base_dir, dir_name):
+        error = self.ftp.cwd(base_dir)
+        if error:
+            if self.logger:
+                self.logger.error(error)
+            return error
+        try:
+            self.ftp.rmd(dir_name)
+            return None
+        except:
+            error = 'Can not remove directory: %s on %s.' %(base_dir + dir_name, self.ftp_server)
+            if self.logger:
+                self.logger.error(error)
+            return error
+    '''
+    def delete_file(self, base_dir, file_name):
+        self.ftp.cwd(base_dir)
+        try:
+            self.ftp.delete(file_name)
+            return None
+        except:
+            error = 'Can not remove directory: %s on %s.' %(base_dir + dir_name, self.ftp_server)
+            if self.logger:
+                error = 'Can not remove file: %s on %s.' %(base_dir + file_name, self.ftp_server)
+                self.logger.error(error)
+            return error
+
+    '''
     def upload_file(self):
         fname = os.path.basename(self.f)
         ext = os.path.splitext(self.f)[1]
@@ -1136,7 +1166,7 @@ class FTPClass(object):
 
     def FTPUpload(self):
         error = self.login()
-        if not error:error = self.cwd()
+        if not error:error = self.cwd(self.pub_dir)
         else:return 'ERROR'
         if not error:
             self.upload_file()
@@ -1376,7 +1406,7 @@ class LargeGridDataRequest(object):
         f_ext = os.path.splitext(out_file)[1]
         f_base = os.path.splitext(out_file)[0]
         idx = 1
-        f = f_base + str(idx) + f_ext
+        f = f_base + '_' + str(idx) + f_ext
         out_files = []
         f_out = open(f, 'w+')
         if self.logger:
@@ -1410,27 +1440,27 @@ class LargeGridDataRequest(object):
             with open(temp_file, 'r') as temp:
                 f_out.write(temp.read())
                 #Check file size and open new file if needed
-                if os.stat(f).st_size > max_file_size:
-                    out_files.append(f)
-                f_out.close()
-                #transfer to FTP and delete file
-                if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
-                else: FTP = FTPClass(ftp_server, ftp_dir, f)
-                error = FTP.FTPUpload()
-                if error:
-                    if self.logger:
-                        self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
+            if os.stat(f).st_size < max_file_size:
+                continue
+            out_files.append(f)
+            logger.info('Files: %s' %str(out_files))
+            f_out.close()
+            #transfer to FTP and delete file
+            if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
+            else: FTP = FTPClass(ftp_server, ftp_dir, f)
+            error = FTP.FTPUpload()
+            if error:
+                if self.logger:
+                    self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
                     params_files_failed.append(params_file)
                     os.remove(f)
                     return []
-                os.remove(f)
-                idx+=1
-                #new file
-                f = f_base + str(idx) + f_ext
-                f_out = f_out = open(f, 'w+')
+            os.remove(f)
+            idx+=1
+            #new file
+            f = f_base +  '_' + str(idx) + f_ext
+            f_out = f_out = open(f, 'w+')
 
-            if self.logger:
-                self.logger.info('Data chunk %s completed.' %str(idx))
         if self.logger:
             self.logger.info('Data request completed')
         #Transfer last file
