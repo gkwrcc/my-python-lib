@@ -85,6 +85,8 @@ def get_display_params(params):
             display_params+=WRCCData.DISPLAY_PARAMS[k] + ': ' + WRCCData.DISPLAY_PARAMS[params[k]] + ', '
         elif key == 'grid':
             display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.GRID_CHOICES[params[key]]  + ', '
+        else:
+            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': ' + params[key] + ', '
     return display_params
 
 def get_user_info(params):
@@ -107,9 +109,9 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         display_params = get_display_params(params)
         dp = '';files=''
         for line in display_params.split(','):
-            dp+=line +'\n'
+            dp+=line +'\n' + '      '
         for f in out_files:
-            files+= f + '\n'
+            files+= f + '\n' + '      '
         message_text ='''
         Date: %s
         Dear %s,
@@ -165,7 +167,6 @@ if __name__ == '__main__' :
     cron_job_time = settings.CRON_JOB_TIME
     now = now = datetime.datetime.now()
     x_mins_ago = now - datetime.timedelta(minutes=cron_job_time)
-
     #Start Logging
     logger, log_file_name = start_logger(base_dir)
 
@@ -198,10 +199,13 @@ if __name__ == '__main__' :
         '''
 
         #Define and instantiate data request class
+        '''
         if 'select_stations_by' in params.keys():
             LDR = WRCCClasses.LargeStationDataRequest(params,logger)
         elif 'select_grid_by' in params.keys():
             LDR = WRCCClasses.LargeGridDataRequest(params,logger)
+        '''
+        LDR = WRCCClasses.LargeDataRequest(params,logger)
         #Request Data
         logger.info('Requesting data')
         LDR.get_data()
@@ -226,7 +230,7 @@ if __name__ == '__main__' :
         if not out_files:
             logger.error('ERROR: No output files were generated. Parameter file: %s.' %(os.path.basename(params_file)))
             params_files_failed.append(params_file)
-            #os.remove(params_file)
+            os.remove(params_file)
             continue
         #Notify User
         subject, message = compose_email(params, ftp_server, ftp_dir,out_files)

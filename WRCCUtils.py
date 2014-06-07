@@ -647,6 +647,29 @@ def get_bbox(shape):
     return t, bbox
 
 
+def find_num_lls(bbox,grid):
+    '''
+    Computes number of latitudes and longitudes of
+    bounding box bbox
+    grid -- PRISM 4km
+            NRCC/NRCC INT 5km
+            NARCCAP 50km
+    '''
+    box = bbox
+    if isinstance(bbox, basestring):
+        box = bbox.replace(' ','').split(',')
+    try:
+        box = [float(b) for b in box]
+    except:
+        return 1,1
+    if len(box)!=4:return 1,1
+    #1 degree ~ 111km
+    spatial_res = float(WRCCData.GRID_CHOICES[grid][2])
+    num_lats = math.ceil(111 * (abs(box[3]) - abs(box[1])) / spatial_res)
+    num_lons = math.ceil(111 *(abs(box[0]) - abs(box[2])) / spatial_res)
+    return num_lats, num_lons
+
+
 def point_in_circle(x,y,circle):
     '''
     Determine if a point is inside a given cicle
@@ -1043,7 +1066,7 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
         return 'Error! Choose one of file f or request object'
 
     if file_extension in ['.dat', '.txt']:
-        delim = form['delimiter']
+        delim = WRCCData.DELIMITERS[form['delimiter']]
         import csv
         if request:
             response = HttpResponse(mimetype='text/csv')

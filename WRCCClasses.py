@@ -18,6 +18,7 @@ from xlwt import Workbook
 import logging
 from ftplib import FTP
 import smtplib
+import gzip
 
 #Django
 from django.http import HttpResponse
@@ -1313,7 +1314,7 @@ class LargeStationDataRequest(object):
         f_out.close()
 
 
-class LargeGridDataRequest(object):
+class LargeDataRequest(object):
     '''
     This class handles large station data request freom SCENIC.
     Components:
@@ -1336,6 +1337,8 @@ class LargeGridDataRequest(object):
         #Limit of lats, lons for file writing
         self.max_lats = settings.MAX_LATS
         self.max_lons = settings.MAX_LONS
+        #Limit of stations for file writing
+        self.max_stations = settings.MAX_STATIONS
 
     def get_data(self):
         '''
@@ -1345,11 +1348,45 @@ class LargeGridDataRequest(object):
         '''
         self.request = {'data':[]}
         try:
-            self.request = AcisWS.get_grid_data(self.params,'sodlist-web')
+            if 'select_grid_by' in self.params.keys():
+                self.request = AcisWS.get_grid_data(self.params,'sodlist-web')
+            elif 'select_stations_by' in self.params.keys():
+                self.request = AcisWS.get_station_data(self.params,'sodlist-web')
         except:
             self.request['error'] = 'Invalid data request.'
 
-    def split_data(self):
+    def split_data_station(self):
+        '''
+        Splits grid data request into smaller chunks
+        for writing to file
+        request     -- results of a large station data request
+                       (MultiStnData call)
+        max_stations -- max number of stations allowed
+                       for writing to file
+        return a list of stn  indices
+        '''
+        #Sanity check
+        if 'error' in self.request.keys():return []
+        if not 'data' in self.request.keys():return []
+        if not self.request['data']:return []
+        idx_list = [0]
+        num_stations = len(self.request['data'])
+        if num_stations < int(self.max_stations):
+            div = 1
+            rem = 0
+        else:
+            div = num_stations / int(self.max_stations)
+            rem = num_stations % int(self.max_stations)
+        for idx in range(1, div + 1):
+            idx_list.append(idx * self.max_stations)
+        if rem != 0:
+            idx_list.append(idx_list[-1] + rem)
+        if self.logger:
+            self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
+        return idx_list
+
+
+    def split_data_grid(self):
         '''
         Splits grid data request into smaller chunks
         by looking at lats, lons and number of days
@@ -1396,6 +1433,26 @@ class LargeGridDataRequest(object):
             idx_list.append(idx_list[-1] + rem)
         return idx_list
 
+    def split_data(self):
+        idx_list = []
+        if 'select_grid_by' in self.params.keys():
+            idx_list = self.split_data_grid()
+        elif 'select_stations_by' in self.params.keys():
+            idx_list = self.split_data_station()
+        return idx_list
+
+    def load_file(self,f_name, ftp_server, ftp_dir, logger=None):
+        error = None
+        if logger:FTP = FTPClass(ftp_server, ftp_dir, f_name, logger)
+        else: FTP = FTPClass(ftp_server, ftp_dir, f_name)
+        error = FTP.FTPUpload()
+        if error:
+            if self.logger:
+                self.logger.error('ERROR tranferring %s to ftp server. Error %s'%(os.path.basename(f_name),error))
+            os.remove(f_name)
+        return error
+
+
     def format_write_transfer(self,params_file, params_files_failed,out_file, ftp_server, ftp_dir,max_file_size,logger=None):
         '''
         Formats data for file output.
@@ -1405,10 +1462,10 @@ class LargeGridDataRequest(object):
         '''
         f_ext = os.path.splitext(out_file)[1]
         f_base = os.path.splitext(out_file)[0]
-        idx = 1
-        f = f_base + '_' + str(idx) + f_ext
+        file_idx = 1
+        f_name = f_base + '_' + str(file_idx) + f_ext + '.gz'
         out_files = []
-        f_out = open(f, 'w+')
+        f = gzip.open(f_name, 'wb')
         if self.logger:
             self.logger.info('Splitting data into smaller chunks for formatting')
         idx_list = self.split_data()
@@ -1429,55 +1486,54 @@ class LargeGridDataRequest(object):
             temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
             if self.logger:
                 self.logger.info('Formatting data chunk %s' %str(idx))
-            results_small = WRCCUtils.format_grid_data(req_small, self.params)
+            if 'select_grid_by' in self.params.keys():
+                results_small = WRCCUtils.format_grid_data(req_small, self.params)
+            else:
+                results_small = WRCCUtils.format_station_data(req_small, self.params)
             if self.logger:
                 self.logger.info('Finished formatting data chunk %s' %str(idx))
                 self.logger.info('Writing data chunk %s to file' %str(idx))
-            WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
+            if 'select_grid_by' in self.params.keys():
+                WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
+            else:
+                WRCCUtils.write_station_data_to_file(results_small,self.params,f=temp_file)
             if self.logger:
                 self.logger.info('Finished writing data chunk %s to file' %str(idx))
-                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(f)))
+                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(f_name)))
             with open(temp_file, 'r') as temp:
-                f_out.write(temp.read())
-                #Check file size and open new file if needed
-            if os.stat(f).st_size < max_file_size:
+                f.write(temp.read())
+            #Check file size and open new file if needed
+            fs = str(round(os.stat(f_name).st_size / 1048576.0,2)) + 'MB'
+            ms = str(round(settings.MAX_FILE_SIZE / 1048576.0,2))+ 'MB'
+            self.logger.info('FILE SIZE %s , MAX FILE SIZE %s' %(fs, ms))
+            if os.stat(f_name).st_size < max_file_size:
                 continue
-            out_files.append(f)
+            try:f.close()
+            except:pass
+            if self.logger:
+                self.logger.info('FILE SIZE %s' %fs)
+            out_files.append(os.path.basename(f_name) + ' '  + fs)
             logger.info('Files: %s' %str(out_files))
-            f_out.close()
             #transfer to FTP and delete file
-            if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
-            else: FTP = FTPClass(ftp_server, ftp_dir, f)
-            error = FTP.FTPUpload()
-            if error:
-                if self.logger:
-                    self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
-                    params_files_failed.append(params_file)
-                    os.remove(f)
-                    return []
-            os.remove(f)
-            idx+=1
+            error = self.load_file(f_name, ftp_server, ftp_dir, logger)
+            if error:params_files_failed.append(params_file)
+            os.remove(f_name)
+            file_idx+=1
             #new file
-            f = f_base +  '_' + str(idx) + f_ext
-            f_out = f_out = open(f, 'w+')
-
+            f_name = f_base +  '_' + str(file_idx) + f_ext +'.gz'
+            f = gzip.open(f_name, 'wb')
         if self.logger:
             self.logger.info('Data request completed')
         #Transfer last file
-        if not os.stat(f).st_size > 0:
+        try:f.close()
+        except:pass
+        if not os.stat(f_name).st_size > 0:
             return out_files
-        out_files.append(f)
-        if logger:FTP = FTPClass(ftp_server, ftp_dir, f, logger)
-        else: FTP = FTPClass(ftp_server, ftp_dir, f)
-        error = FTP.FTPUpload()
-        if error:
-            if self.logger:
-                self.logger.error('ERROR tranferring %s to ftp server. Error %s' %(os.path.basename(params_file),error))
-            params_files_failed.append(params_file)
-            os.remove(f)
-            return []
-        f_out.close()
-        os.remove(f)
+        out_files.append(os.path.basename(f_name) + ' '  + str(round(os.stat(f_name).st_size / 1048576.0, 2)) + 'MB')
+        f.close()
+        error = self.load_file(f_name, ftp_server, ftp_dir, logger)
+        if error:params_files_failed.append(params_file)
+        os.remove(f_name)
         return out_files
 
 

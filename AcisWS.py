@@ -38,33 +38,74 @@ def make_request(url,params) :
         return json.loads(response.read())
     except urllib2.HTTPError as error:
         #if error.code == 400 : print error.msg
-        pass
+        return None
 
 #FIX me: Shouldn't need two seperate wsettings files
 def MultiStnData(params):
-    return make_request(settings.ACIS_BASE_URL+'MultiStnData',params)
+    req = {}
+    for url in settings.ACIS_SERVERS:
+        try:
+            req = make_request(url + 'MultiStnData',params)
+            if req:
+                return req
+                break
+        except:
+            continue
+    return req
 
 def StnData(params):
-    return make_request(settings.ACIS_BASE_URL+'StnData',params)
+    #return make_request(settings.ACIS_BASE_URL+'StnData',params)
+    req = {}
+    for url in settings.ACIS_SERVERS:
+        try:
+            req = make_request(url + 'StnData',params)
+            if req:
+                return req
+                break
+        except:
+            continue
+    return req
+
+def DataCall(acis_call, params):
+    req = {}
+    for url in settings.ACIS_SERVERS:
+        try:
+            req = make_request(url + acis_call,params)
+            if req:
+                return req
+                break
+        except:
+            continue
+    return req
+
 
 def StnMeta(params):
-    return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
+    #return make_request(settings.ACIS_BASE_URL+'StnMeta',params)
+    return DataCall('StnMeta', params)
 
 def GridData(params):
-    return make_request(settings.ACIS_BASE_URL+'GridData',params)
-
-def PrismData(params):
-    return make_request(settings.PRISM_TEST_URL+'GridData',params)
+    #return make_request(settings.ACIS_BASE_URL+'GridData',params)
+    return DataCall('GridData', params)
 
 def GridCalc(params):
-    return make_request(settings.ACIS_BASE_URL+'GridCalc',params)
+    #return make_request(settings.ACIS_BASE_URL+'GridCalc',params)
+    return DataCall('GridCalc', params)
 
 def General(request_type, params):
     '''
     request_type in [basin, climdiv,cwa,state, county]
     '''
-    return make_request(settings.ACIS_BASE_URL+'General' + '/' + request_type, params)
-
+    #return make_request(settings.ACIS_BASE_URL+'General' + '/' + request_type, params)
+    req ={}
+    for url in settings.ACIS_SERVERS:
+        try:
+            req = make_request(url + 'General/' + request_type,params)
+            if req:
+                return req
+                break
+        except:
+            continue
+    return req
 
 ###################################
 #Southwest CSC DATA PORTAL modules
@@ -127,8 +168,8 @@ def get_acis_bbox_of_area(search_area, val):
     sa = str(search_area)
     v = str(val)
     #Sanity check
-    if sa not in ['cwa', 'basin', 'county', 'climdiv']:
-        return None
+    if sa not in ['cwa', 'basin', 'county', 'climdiv','state']:
+        return ''
     #Make general request
     params={'id':v,"meta":"geojson,bbox,name,id"}
     try:

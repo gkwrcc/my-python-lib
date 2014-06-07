@@ -567,26 +567,27 @@ DISPLAY_PARAMS = {
     'user_name': 'User Name',
     'user_email': 'User Email'
 }
-
+#id, name, time range, resolution (km)
 GRID_CHOICES = {
-    '1': 'NRCC Interpolated (US)',
-    '2': 'NRCC Hi-Res (East of Rockies)',
-    '3': 'NARCCAP (US)',
-    '4': 'CRCM + NCEP (Historical only)',
-    '5': 'CRCM + CCSM',
-    '6': 'CRCM + CCSM3',
-    '7': 'HRM3 + NCEP  (Historical only)',
-    '8': 'HRM3 HadCM3',
-    '9': 'MM5I + NCEP (Historical only)',
-    '10': 'MM5I + CCSM',
-    '11': 'RCM3 + NCEP (Historical only)',
-    '12': 'RCM3 + CGCM3',
-    '13': 'RCM3 + GFDL',
-    '14': 'WRFG + NCEP (Historical only)',
-    '15': 'WRFG + CCSM',
-    '16': 'WRFG + CGCM3',
-    '21': 'PRISM'
+    '1': ['NRCC Interpolated (US)','',5],
+    '2': ['NRCC Hi-Res (East of Rockies)','',5],
+    '3': ['NARCCAP (US)','',50],
+    '4': ['CRCM + NCEP (Historical only)','',50],
+    '5': ['CRCM + CCSM','',50],
+    '6': ['CRCM + CCSM3','',50],
+    '7': ['HRM3 + NCEP  (Historical only)','',50],
+    '8': ['HRM3 HadCM3','',50],
+    '9': ['MM5I + NCEP (Historical only)','',50],
+    '10': ['MM5I + CCSM','',50],
+    '11': ['RCM3 + NCEP (Historical only)','',50],
+    '12': ['RCM3 + CGCM3','',50],
+    '13': ['RCM3 + GFDL','',50],
+    '14': ['WRFG + NCEP (Historical only)','',50],
+    '15': ['WRFG + CCSM','',50],
+    '16': ['WRFG + CGCM3','',50],
+    '21': ['PRISM','',50]
 }
+
 
 MONTH_CHOICES = (
     ('01', 'January'),
@@ -621,9 +622,9 @@ DATA_FORMAT_CHOICES_LTD = (
 )
 
 DATA_FORMAT = {
-    'dlm':'Delimited, .dat',
-    'clm':'Columnar, .txt',
-    'xl':'Excel, .xls',
+    'dlm':'Delimited .dat',
+    'clm':'Columnar .txt',
+    'xl':'Excel .xls',
     'html':'HTML'
 }
 
