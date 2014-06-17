@@ -53,40 +53,52 @@ def check_output_file(out_file):
         return 'No file found.'
 
 def get_display_params(params):
-    keys = ['elems_long','units', 'start_date', 'end_date','date_format', 'data_format']
+    keys = ['elements','units', 'start_date', 'end_date','date_format', 'data_format']
     if 'select_stations_by' in params.keys():
+        #keys.insert(0, 'select_stations_by')
         for k in ['show_flags', 'show_observation_time']:
             keys.append(k)
     else:
+        #keys.insert(0, 'select_grid_by')
         for k in ['grid', 'data_summary']:
             keys.append(k)
 
-    display_params = ''
-    for key, val in params.iteritems():
-        if key in  ['select_grid_by', 'select_stations_by']:
-            display_params = WRCCData.DISPLAY_PARAMS[params[key]] + ': ' + params[params[key]] + ', '+ display_params
-            display_params = WRCCData.DISPLAY_PARAMS[key] + ': '+ display_params
+    display_params = ['' for key in keys]
 
-        if key not in keys:continue
-        if  key == 'elems_long':
-            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+  ','.join(params[key]) + ', '
+    for idx, ky in enumerate(keys):
+        key = ky;val = ''
+        if key in params.keys():val = params[key]
+        if  key == 'elements':
+            elems_long = ''
+            el_list = params['elements'].replace(' ', '').split(',')
+            for el_idx, el in enumerate(el_list):
+                elems_long+= WRCCData.DISPLAY_PARAMS[el]
+                if el_idx < len(el_list):
+                    elems_long+= ', '
+            display_params[idx] = 'Elements: ' + elems_long
         elif key in ['date_format']:
             df = WRCCData.DATE_FORMAT[params[key]]
             d = 'yyyy' + df + 'mm' + df + 'dd'
             if 'temporal_resolution' in params.keys():
                 if params['temporal_resolution'] == 'mly':d = df.join(d.split(df)[0:2])
                 if params['temporal_resolution'] == 'yly':d = df.join(d.split(df)[0])
-            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': ' + d  + ', '
+            display_params[idx] = WRCCData.DISPLAY_PARAMS[key] + ': ' + d
         elif key in ['data_format']:
-            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.DATA_FORMAT[params[key]]  + ', '
+            display_params[idx] = WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.DATA_FORMAT[params[key]]
         elif key in ['show_observation_time', 'show_flags','data_summary']:
             if key == 'data_summary' and params[key] != 'none':k = params[key] + '_summary'
             else:k=key
-            display_params+=WRCCData.DISPLAY_PARAMS[k] + ': ' + WRCCData.DISPLAY_PARAMS[params[k]] + ', '
+            display_params[idx] = WRCCData.DISPLAY_PARAMS[k] + ': ' + WRCCData.DISPLAY_PARAMS[params[k]]
         elif key == 'grid':
-            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.GRID_CHOICES[params[key]]  + ', '
+            display_params[idx] = WRCCData.DISPLAY_PARAMS[key] + ': '+ WRCCData.GRID_CHOICES[params[key]][0]
         else:
-            display_params+=WRCCData.DISPLAY_PARAMS[key] + ': ' + params[key] + ', '
+            display_params[idx] = WRCCData.DISPLAY_PARAMS[key] + ': ' + params[key]
+    if 'select_grid_by' in params.keys():
+        display_params.insert(0, WRCCData.DISPLAY_PARAMS[params['select_grid_by']] + ': ' + params[params['select_grid_by']])
+        display_params.insert(0, WRCCData.DISPLAY_PARAMS['select_grid_by'])
+    elif 'select_stations_by' in params.keys():
+        display_params.insert(0, WRCCData.DISPLAY_PARAMS[params['select_stations_by']] + ': ' + params[params['select_stations_by']])
+        display_params.insert(0, WRCCData.DISPLAY_PARAMS['select_stations_by'])
     return display_params
 
 def get_user_info(params):
@@ -108,7 +120,7 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
         display_params = get_display_params(params)
         dp = '';files=''
-        for line in display_params.split(','):
+        for line in display_params:
             dp+=line +'\n' + '      '
         for f in out_files:
             files+= f + '\n' + '      '
@@ -167,13 +179,17 @@ if __name__ == '__main__' :
     cron_job_time = settings.CRON_JOB_TIME
     now = now = datetime.datetime.now()
     x_mins_ago = now - datetime.timedelta(minutes=cron_job_time)
+    d = 60*24
+    one_day_ago = now - datetime.timedelta(minutes=d)
     #Start Logging
     logger, log_file_name = start_logger(base_dir)
 
     #Get list ofparameter files
     params_files = get_params_files(base_dir)
-    if not params_files:logger.info('No parameter files found! Exiting program.');sys.exit(0)
-
+    if not params_files:
+        logger.info('No parameter files found! Exiting program.')
+        sys.exit(0)
+    logger.info('Found %s parameter files.' %str(len(params_files)))
     #Loop over parameter files, get data, format and write to ftp server, notify user
     params_files_failed = []
     for params_file in params_files:
@@ -189,22 +205,15 @@ if __name__ == '__main__' :
         logger.info('Parameters: %s' % str(params))
         #Check if params file is older than
         #cron job time --> data request completed or in progress
-        '''
         #Check if request in progress
         st=os.stat(params_file)
         mtime=datetime.datetime.fromtimestamp(st.st_mtime)
         if mtime <= x_mins_ago:
             logger.info('Data request for parameter file %s is in progress' %str(os.path.basename(params_file)))
+            if mtime <= one_day_ago:
+                os.remove(params_file)
             continue
-        '''
-
         #Define and instantiate data request class
-        '''
-        if 'select_stations_by' in params.keys():
-            LDR = WRCCClasses.LargeStationDataRequest(params,logger)
-        elif 'select_grid_by' in params.keys():
-            LDR = WRCCClasses.LargeGridDataRequest(params,logger)
-        '''
         LDR = WRCCClasses.LargeDataRequest(params,logger)
         #Request Data
         logger.info('Requesting data')
@@ -243,7 +252,7 @@ if __name__ == '__main__' :
             os.remove(params_file)
             continue
         #Remove parameter file
-        #os.remove(params_file)
+        os.remove(params_file)
 
     #Check for failed requests
     if params_files_failed:

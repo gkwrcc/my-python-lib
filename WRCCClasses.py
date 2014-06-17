@@ -1207,113 +1207,6 @@ class Mail(object):
         except Exception, e:
             return 'Email attempt to recipient %s failed with error %s' %(str(self.toaddr), str(e))
 
-class LargeStationDataRequest(object):
-    '''
-    This class handles large station data request freom SCENIC.
-    Components:
-    Keyword arguments:
-        params -- data request parameters, keys:
-                  select_station_by/select_grid_by: specifies type of data request (station data/gridded data)
-                  start_date/end_date, temporal resolution (daily/monthly/yearly)
-                  elements, units (metric/english), flags (station data only)
-                  grid (gridded data only)
-                  data_summary (temporal/spatial)
-                        temporal_summary/spatial_summary (max, min, mean, sum)
-                  date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
-        logger -- logger object
-    '''
-    def __init__(self, params, logger=None):
-        self.params = params
-        self.logger =  logger
-        #Limit of stations per request
-        self.limit = settings.STATION_REQUEST_STATION_LIMIT
-        #Limit of stations for file writing
-        self.max_stations = settings.MAX_STATIONS
-
-    def get_user_info(self):
-        if 'user_name' in self.params.keys():user_name = self.params['user_name']
-        else : user_name = 'bdaudert'
-        if 'email' in self.params.keys():user_email = self.params['email']
-        else : user_email = 'bdaudert@dri.edu'
-        return user_name, user_email
-
-    def get_data(self):
-        '''
-        ACIS data request
-        '''
-        self.request = {'data':[]}
-        try:
-            self.request = AcisWS.get_station_data(self.params,'sodlist-web')
-        except:
-            self.request['error'] = 'Invalid data request.'
-
-    def split_data(self):
-        '''
-        Splits grid data request into smaller chunks
-        for writing to file
-        request     -- results of a large station data request
-                       (MultiStnData call)
-        max_stations -- max number of stations allowed
-                       for writing to file
-        return a list of stn  indices
-        '''
-        #Sanity check
-        if 'error' in self.request.keys():return []
-        if not 'data' in self.request.keys():return []
-        if not self.request['data']:return []
-        idx_list = [0]
-        num_stations = len(self.request['data'])
-        if num_stations < int(self.max_stations):
-            div = 1
-            rem = 0
-        else:
-            div = num_stations / int(self.max_stations)
-            rem = num_stations % int(self.max_stations)
-        for idx in range(1, div + 1):
-            idx_list.append(idx * self.max_stations)
-        if rem != 0:
-            idx_list.append(idx_list[-1] + rem)
-        if self.logger:
-            self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
-        return idx_list
-
-    def format_data_and_write_to_file(self, out_file):
-        f_out = open(out_file, 'w+')
-        if self.logger:
-            self.logger.info('Splitting data into smaller chunks for formatting')
-        idx_list = self.split_data()
-        print idx_list
-        generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
-        if self.logger:
-            self.logger.info('Formatting data')
-        idx = 0
-        for data in generator:
-            idx+=1
-            req_small={}
-            for key, val in self.request.iteritems():
-                if key != 'data':
-                    req_small[key] = val
-            req_small['data'] = data
-            temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
-            if self.logger:
-                self.logger.info('Formatting data chunk %s' %str(idx))
-            results_small = WRCCUtils.format_station_data(req_small, self.params)
-            if self.logger:
-                self.logger.info('Finished formatting data chunk %s' %str(idx))
-                self.logger.info('Writing data chunk %s to file' %str(idx))
-            WRCCUtils.write_station_data_to_file(results_small,self.params,f=temp_file)
-            if self.logger:
-                self.logger.info('Finished writing data chunk %s to file' %str(idx))
-                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(out_file)))
-            with open(temp_file, 'r') as f:
-                f_out.write(f.read())
-            if self.logger:
-                self.logger.info('Data chunk %s completed.' %str(idx))
-        if self.logger:
-            self.logger.info('Data request completed')
-        f_out.close()
-
-
 class LargeDataRequest(object):
     '''
     This class handles large station data request freom SCENIC.
@@ -1339,6 +1232,15 @@ class LargeDataRequest(object):
         self.max_lons = settings.MAX_LONS
         #Limit of stations for file writing
         self.max_stations = settings.MAX_STATIONS
+        #Set data request and formatting scripts
+        if 'select_grid_by' in self.params.keys():
+            self.request_data = getattr(AcisWS, 'get_grid_data')
+            self.format_data = getattr(WRCCUtils, 'format_grid_data')
+            self.write_to_file = getattr(WRCCUtils, 'write_griddata_to_file')
+        else:
+            self.request_data = getattr(AcisWS, 'get_station_data')
+            self.format_data = getattr(WRCCUtils, 'format_station_data')
+            self.write_to_file = getattr(WRCCUtils, 'write_station_data_to_file')
 
     def get_data(self):
         '''
@@ -1348,10 +1250,7 @@ class LargeDataRequest(object):
         '''
         self.request = {'data':[]}
         try:
-            if 'select_grid_by' in self.params.keys():
-                self.request = AcisWS.get_grid_data(self.params,'sodlist-web')
-            elif 'select_stations_by' in self.params.keys():
-                self.request = AcisWS.get_station_data(self.params,'sodlist-web')
+            self.request = self.request_data(self.params,'sodlist-web')
         except:
             self.request['error'] = 'Invalid data request.'
 
@@ -1486,17 +1385,11 @@ class LargeDataRequest(object):
             temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
             if self.logger:
                 self.logger.info('Formatting data chunk %s' %str(idx))
-            if 'select_grid_by' in self.params.keys():
-                results_small = WRCCUtils.format_grid_data(req_small, self.params)
-            else:
-                results_small = WRCCUtils.format_station_data(req_small, self.params)
+            results_small = self.format_data(req_small, self.params)
             if self.logger:
                 self.logger.info('Finished formatting data chunk %s' %str(idx))
                 self.logger.info('Writing data chunk %s to file' %str(idx))
-            if 'select_grid_by' in self.params.keys():
-                WRCCUtils.write_griddata_to_file(results_small,self.params,f=temp_file)
-            else:
-                WRCCUtils.write_station_data_to_file(results_small,self.params,f=temp_file)
+            self.write_to_file(results_small,self.params,f=temp_file)
             if self.logger:
                 self.logger.info('Finished writing data chunk %s to file' %str(idx))
                 self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(f_name)))
