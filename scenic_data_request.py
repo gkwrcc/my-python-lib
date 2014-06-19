@@ -132,6 +132,8 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         The data is available here:
         %s
 
+        Please log in as Guest. You will not need a password.
+
         The file names/file sizes are:
         %s
 
@@ -144,6 +146,13 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         return subj, message_text
 
 def compose_failed_request_email(params_files_failed, log_file):
+    failed_params = ''
+    for p in params_files_failed:
+        try:
+            with open(p,'r') as f:
+                failed_params+= f.read() + '\n'
+        except:
+            pass
     mail_server = settings.DRI_MAIL_SERVER
     fromaddr = settings.CSC_FROM_ADDRESS
     name= 'Britta Daudert'
@@ -156,9 +165,13 @@ def compose_failed_request_email(params_files_failed, log_file):
         Dear Me,
         Following data requests have failed:
         %s
+
+        Parameters were:
+        %s
+
         Please consult logfile:
         %s
-        '''%(date,','.join(params_files_failed), log_file)
+        '''%(date,','.join(params_files_failed), failed_params,log_file)
     return subj, message
 
 #############

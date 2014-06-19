@@ -716,9 +716,9 @@ def get_grid_data(form_input, program):
     try:
         request = GridData(params)
     except Exception, e:
-        request['error'] = 'GridData request failed. Error: %s. Pameters: %s.' %(str(e), params)
+        request['error'] = 'GridData request failed with ERROR: %s.' %(str(e))
     if not request:
-        request = {'error':'GridData request did not return results. Please check your parameters: %s'  % str(params)}
+        request = {'error':'GridData request did not return results. Please check your parameters.'}
     return request
 
 #######################################
@@ -754,7 +754,7 @@ def get_station_list(by_type, val):
     request=StnMeta(params)
 
     if not request:
-        request = {'error':'bad request, check params: %s'  % str(params)}
+        request = {'error':'Bad request, check parameters.'}
 
     try:
         request['meta']
@@ -780,7 +780,7 @@ def get_us_meta():
     request = StnMeta(params)
 
     if not request:
-        request = {'error':'bad request, check params: %s'  % str(params)}
+        request = {'error':'Bad request, check parameters.'}
 
     return request
 
@@ -866,7 +866,7 @@ def get_sod_data(form_input, program):
             return datadict, dates, elements, coop_station_ids, station_names
             #sys.exit(1)
         else:
-            'Unknown error ocurred when getting data'
+            #Unknown error ocurred when getting data
             #sys.exit(1)
             return datadict, dates, elements, coop_station_ids, station_names
 
@@ -924,7 +924,7 @@ def get_sod_data(form_input, program):
         params_x = dict(sids=coop_station_ids, sdate=s_date, edate=e_date, elems=elts_x)
         request_x = MultiStnData(params_x)
         if not request_x:
-            request_x = {'error':'bad request, check params: %s'  % str(params_x)}
+            request_x = {'error':'Bad request, check parameters.'}
 
         try:
             request_x['data']#list of data for the stations
@@ -1005,7 +1005,7 @@ def get_sodsum_data(form_input):
         request = StnData(params)
 
         if not request:
-            request = {'error':'bad request, check params: %s'  % str(params)}
+            request = {'error':'Bad request, check parameters.'}
 
         try:
             request['meta']
@@ -1075,15 +1075,8 @@ def get_sodlist_data(form_input, program):
         request_evap = StnData(params_e)
 
         if not request_evap:
-            request_evap = {'error':'bad request, check params: %s'  % str(params_e)}
+            request_evap = {'error':'Bad request, check parameters.'}
 
-        try:
-            request_evap['meta']
-        except:
-            if request_evap['error']:
-                print '%s' % str(request_evap['error'])
-            else:
-                print 'Unknown error ocurred when getting evap data'
         try:
             request_evap['data']
             evap_data = request_evap['data']
@@ -1096,7 +1089,7 @@ def get_sodlist_data(form_input, program):
     request = StnData(params)
 
     if not request:
-        request = {'error':'bad request, check params: %s'  % str(params)}
+        request = {'error':'Bad request, check parameters.'}
 
     #Test for successful data retrieval and get metadata information
     try:
@@ -1104,16 +1097,12 @@ def get_sodlist_data(form_input, program):
         stn_name = request['meta']['name']
     except:
         if request['error']:
-            print '%s' % str(request['error'])
             stn_name = ' '
-        else:
-            print 'Unknown error ocurred. Check input values!'
 
     try:
         request['data']
         req_data = request['data']
     except:
-        print 'No data found!'
         req_data = None
 
     #get windowed data is program is sodlist

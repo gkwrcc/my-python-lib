@@ -360,6 +360,7 @@ def get_station_ids(stn_json_file_path):
     stn_ids = ''
     json_data = load_json_data_from_file(stn_json_file_path)
     if not json_data:json_data = {'stations':[]}
+    if not 'stations' in json_data.keys():json_data['stations']=[]
     name_previous = ''
     for idx,stn in enumerate(json_data['stations']):
         if stn['name'] == name_previous:
