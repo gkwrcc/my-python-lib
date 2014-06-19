@@ -1125,7 +1125,6 @@ def Sodxtrmts(**kwargs):
                     if int(summon) <= int(kwargs['max_missing_days']):
                         sumann+=valmon
                         count+=1
-
                 elif kwargs['monthly_statistic'] == 'sd':
                     sumann = 0
 
@@ -1280,15 +1279,13 @@ def Sodxtrmts(**kwargs):
                 outchr[monind] = mischr[intgr]
                 if annsav[yr][mon] != ' ':
                     outchr[monind] = annsav[yr][mon]
-
-                if (table_1[yr][mon]> 9998.5 or table_1[yr][mon] < -9998.0 or outchr[monind] =='z'):
+                if (abs(table_1[yr][mon] -  9999) < 0.001 or abs(table_1[yr][mon] + 9999.0) <0.001 or outchr[monind] =='z'):
                     if kwargs['monthly_statistic'] == 'msum' and el_type == 'hdd' and table_1[yr][mon]> 9998.5:
                         continue
                     else:
                         results[i][yr].append('-----')
                         results[i][yr].append('z')
                         continue
-
                 if kwargs['departures_from_averages']  == 'F':
                     #results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
                     if kwargs['monthly_statistic'] == 'ndays':

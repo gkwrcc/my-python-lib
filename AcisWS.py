@@ -303,8 +303,12 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         'network_codes': WRCCData.KELLY_NETWORK_CODES,
         'network_icons': WRCCData.KELLY_NETWORK_ICONS
     }
-    vX_list= ['1','2','43','3','4','10','11','7','45','44']
-    vX_tuple = '1,2,43,3,4,10,11,7,45,44'
+    if el_list:
+        vX_list = [str(el) for el in el_list]
+        vX_tuple = tuple(vX_list)
+    else:
+        vX_list= ['1','2','43','3','4','10','11','7','45','44','12']
+        vX_tuple = '1,2,43,3,4,10,11,7,45,44,12'
     shape_type = None
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     f_name = time_stamp + 'stn.json'
@@ -330,7 +334,6 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         stn_json['error'] = 'No metadata found.'
         WRCCUtils.load_data_to_json_file(f_dir + f_name, stn_json)
         return stn_json, f_name
-
     stn_meta_list = []
     #For alphabetic ordering of station names
     sorted_list =[]
@@ -346,7 +349,6 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         #sanity check
         if not stn['valid_daterange']:
             continue
-
         #check if we are looking for stations with particular elements
         if el_list is not None and time_range is not None:
             #Check if ACIS produced correct output, i.e. one valid_daterange per element
@@ -355,7 +357,6 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
             #Check if station is valid, if not, proceed to next station
             flag_invalid_station = station_invalid(el_list, vX_list, time_range, stn, constraints)
             if flag_invalid_station:continue
-
 
         stn_sids = []
         stn_networks = []
@@ -390,7 +391,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
         elev = str(stn['elev']) if 'elev' in stn.keys() else 'Elevation not listed'
         state_key = str(stn['state']).lower() if 'state' in stn.keys() else 'State not listed'
         #sort station networks so that coop is last
-        #so that coop markesr show on map
+        #so that coop markers show on map
         stn_networks_sorted = []
         for n in stn_networks:
             if n !='COOP':
