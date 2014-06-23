@@ -219,7 +219,7 @@ def check_county(form):
     err = None
     c = form['county'].replace(' ','')
     if len(c)!=5:
-        return '%s is not a valid county FIPS code. County codes are 5 digit numbers.' %c
+        return '%s is not a valid county FIPS code.' %c
     try:
         int(str(c).lstrip('0'))
     except:
@@ -232,7 +232,7 @@ def check_climate_division(form):
     if len(climdiv) != 4:
         return '%s is not a valid climate division.' %climdiv
     if climdiv[0:2].upper() not in WRCCData.STATE_CHOICES:
-        return 'First two letters should be a two letter US state abreviation.'
+        return '%s is not a valid climate division. First two letters should be a two letter US state abreviation.' %climdiv
     cd = str(climdiv[2:]).lstrip('0')
     if cd == '':
         return None
@@ -246,7 +246,7 @@ def check_county_warning_area(form):
     err = None
     cwa = form['county_warning_area']
     if len(cwa) != 3:
-        return '%s is not a valid 3-letter county warning area code.' %cwa
+        return '%s is not a valid county warning area code.' %cwa
 
     if not cwa.isalpha():
         return '%s is not a valid 3-letter county warning area code.' %cwa
@@ -256,7 +256,7 @@ def check_basin(form):
     err = None
     b = form['basin']
     if len(b)!=8:
-        return '%s is not a valid basin code. Basin codes are 8 digit numbers.' %b
+        return '%s is not a valid basin code.' %b
     try:
         int(str(b).lstrip('0'))
     except:

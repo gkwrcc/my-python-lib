@@ -548,6 +548,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
             poly_state = ''
         coords = poly['geojson']['coordinates'][0][0]
         #Remove special characters from name
+        #Overlay maps and url bars do not like hashes and other weird chars
         name = re.sub('[^a-zA-Z0-9\n\.]', ' ', poly['name'])
 
         kml_file.write('    <Placemark>\n')

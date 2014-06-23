@@ -452,7 +452,7 @@ def get_station_data(form_input, program):
         el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el)
         elems_list_short.append(el_strip)
         if el_strip in ['gdd', 'hdd', 'cdd'] and base_temp is not None:
-            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=base_temp, add='f,t'))
+            elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el_strip]['vX'], base=int(base_temp), add='f,t'))
         else:
             elems_list.append(dict(vX=WRCCData.ACIS_ELEMENTS_DICT[el]['vX'],add='f,t'))
     params = {
