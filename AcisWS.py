@@ -465,7 +465,8 @@ def get_station_data(form_input, program):
     #Deal with POR input dates
     if 'station_id' in form_input.keys():
         #params['sids'] = form_input['station_id']
-        [params['sdate'], params['edate']] = WRCCUtils.find_valid_daterange(form_input['station_id'], start_date=s_date.lower(), end_date=e_date.lower(), el_list=elems_list_short, max_or_min='max')
+        [s_date, e_date] = WRCCUtils.find_valid_daterange(form_input['station_id'], start_date=s_date.lower(), end_date=e_date.lower(), el_list=elems_list_short, max_or_min='max')
+        params['sdate'] = s_date; params['edate'] = e_date
         if not params['sdate'] or not params['edate']:
             resultsdict['error'] = 'No start/end date could be found for this station in the metadata database.'
             return resultsdict
@@ -485,6 +486,7 @@ def get_station_data(form_input, program):
         if not req['data']:
             request['error'] = 'No data found for these parameters!'
             return request
+        req['date_range'] = [s_date,e_date]
     except Exception, e:
         request['error'] = 'No data found for these parameters! Error: %s.'
         return request

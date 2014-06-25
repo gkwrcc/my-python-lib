@@ -8,7 +8,7 @@ CAPS names imply use in django forms
 '''
 from collections import defaultdict
 from collections import OrderedDict
-
+import WRCCUtils
 ###################################
 ###################################
 #General
@@ -567,25 +567,27 @@ DISPLAY_PARAMS = {
     'user_name': 'User Name',
     'user_email': 'User Email'
 }
-#id, name, time range, resolution (km)
+#id, name, time range, resolution (km), valid daterange
+
+#yesterday = WRCCUtils.set_back_date(1)
 GRID_CHOICES = {
-    '1': ['NRCC Interpolated (US)','',5],
-    '2': ['NRCC Hi-Res (East of Rockies)','',5],
-    '3': ['NARCCAP (US)','',50],
-    '4': ['CRCM + NCEP (Historical only)','',50],
-    '5': ['CRCM + CCSM','',50],
-    '6': ['CRCM + CCSM3','',50],
-    '7': ['HRM3 + NCEP  (Historical only)','',50],
-    '8': ['HRM3 HadCM3','',50],
-    '9': ['MM5I + NCEP (Historical only)','',50],
-    '10': ['MM5I + CCSM','',50],
-    '11': ['RCM3 + NCEP (Historical only)','',50],
-    '12': ['RCM3 + CGCM3','',50],
-    '13': ['RCM3 + GFDL','',50],
-    '14': ['WRFG + NCEP (Historical only)','',50],
-    '15': ['WRFG + CCSM','',50],
-    '16': ['WRFG + CGCM3','',50],
-    '21': ['PRISM','',50]
+    '1': ['NRCC Interpolated (US)','',5,[['19500101','20140624']]],
+    '2': ['NRCC Hi-Res (East of Rockies)','',5,[['20070101','20140624']]],
+    '3': ['NARCCAP (US)','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '4': ['CRCM + NCEP (Historical only)','',50,[['19700101','19991231']]],
+    '5': ['CRCM + CCSM','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '6': ['CRCM + CCSM3','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '7': ['HRM3 + NCEP  (Historical only)','',50,[['19700101','19991231']]],
+    '8': ['HRM3 HadCM3','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '9': ['MM5I + NCEP (Historical only)','',50,[['19700101','19991231']]],
+    '10': ['MM5I + CCSM','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '11': ['RCM3 + NCEP (Historical only)','',50,[['19700101','19991231']]],
+    '12': ['RCM3 + CGCM3','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '13': ['RCM3 + GFDL','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '14': ['WRFG + NCEP (Historical only)','',50,[['19700101','19991231']]],
+    '15': ['WRFG + CCSM','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '16': ['WRFG + CGCM3','',50,[['19700101','19991231'],['20400101','20691231']]],
+    '21': ['PRISM','',50,[['19810101','20140614']]]
 }
 
 

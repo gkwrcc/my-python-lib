@@ -1261,8 +1261,14 @@ def format_station_data(request, form_input):
     form_input -- parameter dictionary
     '''
     elements = get_element_list(form_input)
-    dates = get_dates(form_input['start_date'], form_input['end_date'])
-    print form_input['start_date'], form_input['end_date']
+    #Deal with por start/end_dates
+    if form_input['start_date'].lower() == 'por' or form_input['end_date'].lower() == 'por':
+        if 'date_range' in request.keys() and len(request['date_range']) == 2:
+            dates = get_dates(request['date_range'][0], request['date_range'][1])
+        else:
+            dates = get_dates(form_input['start_date'], form_input['end_date'])
+    else:
+        dates = get_dates(form_input['start_date'], form_input['end_date'])
     #Initialize output lists
     l = range(len(request['data']))
     resultsdict = {

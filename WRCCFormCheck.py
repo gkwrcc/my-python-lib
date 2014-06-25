@@ -175,6 +175,18 @@ def check_elements(form):
     return err
 '''
 
+def check_grid(form):
+    err = None
+    #Check if start/end date lie in grid date range
+    start_dt = WRCCUtils.date_to_datetime(form['start_date'])
+    end_dt =  WRCCUtils.date_to_datetime(form['end_date'])
+    dr_list = WRCCData.GRID_CHOICES[str(form[grid])][3]
+    for dr in dr_list:
+        #if start_dt >i WRCCUtils.date_to_datetime(dr[0]) and end_dt < WRCCUtils.date_to_datetime(dr[1]):
+        pass
+
+    return err
+
 def check_state(form):
     err = None
     if form['state'].upper() not in WRCCData.STATE_CHOICES:
