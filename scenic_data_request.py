@@ -116,8 +116,8 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         user_name, user_email = get_user_info(params)
         subj = 'Data request %s' % params['output_file_name']
         now = datetime.datetime.now()
-        date = now.strftime( '%d/%m/%Y %H:%M' )
-        pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%d/%m/%Y' )
+        date = now.strftime( '%Y-%m-%d %H:%M' )
+        pick_up_latest = (now + datetime.timedelta(days=25)).strftime( '%m%Y-%m-%d' )
         display_params = get_display_params(params)
         dp = '';files=''
         for line in display_params:
@@ -127,12 +127,15 @@ def compose_email(params, ftp_server, ftp_dir, out_files):
         message_text ='''
         Date: %s
         Dear %s,
-        Your data requests has been processed :-).
-
+        Your data requests has been processed.
+         ^ ^
+        (O,O)
+        (   )
+        -"-"-
         The data is available here:
         %s
 
-        Please log in as Guest. You will not need a password.
+        Please connect as Guest. You will not need a password.
 
         The file names/file sizes are:
         %s
