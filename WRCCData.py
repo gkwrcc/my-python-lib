@@ -8,7 +8,35 @@ CAPS names imply use in django forms
 '''
 from collections import defaultdict
 from collections import OrderedDict
-import WRCCUtils
+import datetime
+
+'''
+FIX ME: get web server error when
+Importing WRCCUtils
+#from WRCCUtils import set_back_date
+#today = set_back_date(0)
+'''
+
+def set_back_date(days_back):
+    '''
+    Calculates today - days_back
+    and returns the back date in format
+    yyyymmdd
+    '''
+    try:
+        int(days_back)
+    except:
+        return '99990101'
+    tdy = datetime.datetime.today()
+    #Choose default start_date 4 weeks back
+    b = datetime.datetime.today() - datetime.timedelta(days=int(days_back))
+    yr_b = str(b.year);mon_b = str(b.month);day_b = str(b.day)
+    if len(mon_b) == 1:mon_b = '0%s' % mon_b
+    if len(day_b) == 1:day_b = '0%s' % day_b
+    back_date = '%s%s%s' % (yr_b, mon_b, day_b)
+    return back_date
+today = set_back_date(0)
+
 ###################################
 ###################################
 #General
@@ -571,8 +599,8 @@ DISPLAY_PARAMS = {
 
 #yesterday = WRCCUtils.set_back_date(1)
 GRID_CHOICES = {
-    '1': ['NRCC Interpolated (US)','',5,[['19500101','20140624']]],
-    '2': ['NRCC Hi-Res (East of Rockies)','',5,[['20070101','20140624']]],
+    '1': ['NRCC Interpolated (US)','',5,[['19500101',today]]],
+    '2': ['NRCC Hi-Res (East of Rockies)','',5,[['20070101',today]]],
     '3': ['NARCCAP (US)','',50,[['19700101','19991231'],['20400101','20691231']]],
     '4': ['CRCM + NCEP (Historical only)','',50,[['19700101','19991231']]],
     '5': ['CRCM + CCSM','',50,[['19700101','19991231'],['20400101','20691231']]],
@@ -587,7 +615,7 @@ GRID_CHOICES = {
     '14': ['WRFG + NCEP (Historical only)','',50,[['19700101','19991231']]],
     '15': ['WRFG + CCSM','',50,[['19700101','19991231'],['20400101','20691231']]],
     '16': ['WRFG + CGCM3','',50,[['19700101','19991231'],['20400101','20691231']]],
-    '21': ['PRISM','',50,[['19810101','20140614']]]
+    '21': ['PRISM','',50,[['19810101',today]]]
 }
 
 

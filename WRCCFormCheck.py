@@ -9,6 +9,10 @@ import datetime
 import re
 import WRCCData,WRCCUtils
 
+today = datetime.datetime.today()
+stn_earliest = '18500101'
+stn_earliest_dt = WRCCUtils.date_to_datetime(stn_earliest)
+
 def check_start_year(form):
     err = None
     yr = form['start_year']
@@ -26,6 +30,21 @@ def check_start_year(form):
             return 'Start Year is later then End Year.'
     except:
         pass
+    #Check is start date is bogus
+    if int(yr) < int(stn_ealiest[0:4]) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
+        return 'Start year should be later than earliest record found: %s.' %stn_earliest
+    if 'select_grid_by' in form.keys():
+        flag = False
+        grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
+        for dr in grid_dr:
+            if int(grid_dr[0][0:4]) <= int(yr) and int(e_yr) <= int(grid_dr[1][0:4]):
+                flag = False
+                break
+            else:
+                flag = True
+                continue
+        if flag:
+            return 'User date range is not in valid date range of this grid.'
     return err
 
 def check_end_year(form):
@@ -45,6 +64,21 @@ def check_end_year(form):
             return 'End Year is earlier then Start Year.'
     except:
         pass
+    #Check if end year is greater than this year
+    if int(yr) > int(today.year) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
+        return 'End Year should be current year or earlier.'
+    if 'select_grid_by' in form.keys():
+        flag = False
+        grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
+        for dr in grid_dr:
+            if int(grid_dr[0][0:4]) <= int(s_yr) and int(yr) <= int(grid_dr[1][0:4]):
+                flag = False
+                break
+            else:
+                flag = True
+                continue
+        if flag:
+            return 'User date range is not in valid date range of this grid.'
     return err
 
 def check_start_date(form):
@@ -73,11 +107,25 @@ def check_start_date(form):
         ed = datetime.datetime(int(e_date[0:4]), int(e_date[4:6].lstrip('0')), int(e_date[6:8].lstrip('0')))
     except:
         return err
-    try:
-        if ed < sd:
-            return 'Start Date is later then End Year.'
-    except:
-        pass
+    if ed < sd:
+        return 'Start Date is later then End Year.'
+    #Check is start date is bogus
+    if sd < stn_earliest_dt and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
+        return 'Start date should be later than earliest record found: %s.' %stn_earliest
+    if 'select_grid_by' in form.keys():
+        flag = False
+        grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
+        for dr in grid_dr:
+            grid_s = WRCCUtils.date_to_datetime(dr[0])
+            grid_e = WRCCUtils.date_to_datetime(dr[1])
+            if grid_s <= sd and ed <= grid_e:
+                flag = False
+                break
+            else:
+                flag = True
+                continue
+        if flag:
+            return 'User date range is not in valid date range of this grid.'
     return err
 
 def check_end_date(form):
@@ -106,12 +154,25 @@ def check_end_date(form):
         ed = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
     except:
         return err
-    try:
-        if ed < sd:
-            return 'Start Date is later then End Year.'
-    except:
-        pass
-
+    if ed < sd:
+        return 'Start Date is later then End Year.'
+        #Check is start date is bogus
+    if ed > today and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
+        return 'End date should be today or earlier.'
+    if 'select_grid_by' in form.keys():
+        flag = False
+        grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
+        for dr in grid_dr:
+            grid_s = WRCCUtils.date_to_datetime(dr[0])
+            grid_e = WRCCUtils.date_to_datetime(dr[1])
+            if grid_s <= sd and ed <= grid_e:
+                flag = False
+                break
+            else:
+                flag = True
+                continue
+        if flag:
+            return 'User date range is not in valid date range of this grid.'
     return err
 
 def check_degree_days(form):
@@ -174,18 +235,6 @@ def check_elements(form):
                 err = '%s is not a valid element. Please consult with the helpful question mark!' %el
     return err
 '''
-
-def check_grid(form):
-    err = None
-    #Check if start/end date lie in grid date range
-    start_dt = WRCCUtils.date_to_datetime(form['start_date'])
-    end_dt =  WRCCUtils.date_to_datetime(form['end_date'])
-    dr_list = WRCCData.GRID_CHOICES[str(form[grid])][3]
-    for dr in dr_list:
-        #if start_dt >i WRCCUtils.date_to_datetime(dr[0]) and end_dt < WRCCUtils.date_to_datetime(dr[1]):
-        pass
-
-    return err
 
 def check_state(form):
     err = None
