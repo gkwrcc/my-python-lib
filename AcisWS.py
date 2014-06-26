@@ -448,6 +448,7 @@ def get_station_data(form_input, program):
     elements = WRCCUtils.get_element_list(form_input, program)
     elems_list = []
     elems_list_short  = []
+    resultsdict = {}
     for el in elements:
         el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el)
         elems_list_short.append(el_strip)

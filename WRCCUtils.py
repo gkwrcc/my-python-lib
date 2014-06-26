@@ -1270,7 +1270,10 @@ def format_station_data(request, form_input):
     else:
         dates = get_dates(form_input['start_date'], form_input['end_date'])
     #Initialize output lists
-    l = range(len(request['data']))
+    if 'data' in request.keys() and isinstance(request['data'],list):
+        l = range(len(request['data']))
+    else:
+        l =[]
     resultsdict = {
         'dates':dates,
         'elements':elements,
