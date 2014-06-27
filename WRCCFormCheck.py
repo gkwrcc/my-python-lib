@@ -10,7 +10,7 @@ import re
 import WRCCData,WRCCUtils
 
 today = datetime.datetime.today()
-stn_earliest = '18500101'
+stn_earliest = '18450101'
 stn_earliest_dt = WRCCUtils.date_to_datetime(stn_earliest)
 
 def check_start_year(form):

@@ -1083,6 +1083,11 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
                 #Can' open user given file, create emergency writer object
                 writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=delim,quoting=csv.QUOTE_NONE)
                 response = 'Error!' + str(e)
+        if 'error' in resultsdict.keys() and resultsdict['error']:
+            row = [str(resultsdict['error'])]
+            writer.writerow(row)
+            row =[]
+            writer.writerow(row)
         for stn, dat in enumerate(resultsdict['stn_data']):
             #NOTE: row writer does not like delimiter characters in string,
             #need to set space char to be used in header string
@@ -1149,6 +1154,9 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
         response = None
     elif file_extension == '.xls': #Excel
         wb = Workbook()
+        if 'error' in resultsdict.keys() and resultsdict['error']:
+            ws = wb.add_sheet('ERROR')
+            ws.write(0,0,str(resultsdict['error']))
         for stn, dat in enumerate(resultsdict['stn_data']):
             #ws = wb.add_sheet('Station_%s_%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0], str(stn)))
             ws = wb.add_sheet('%s' %(str(resultsdict['stn_ids'][stn][0]).split(' ')[0]))
@@ -1270,6 +1278,7 @@ def format_station_data(request, form_input):
     else:
         dates = get_dates(form_input['start_date'], form_input['end_date'])
     #Initialize output lists
+
     if 'data' in request.keys() and isinstance(request['data'],list):
         l = range(len(request['data']))
     else:
