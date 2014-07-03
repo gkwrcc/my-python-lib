@@ -31,7 +31,7 @@ def check_start_year(form):
     except:
         pass
     #Check is start date is bogus
-    if int(yr) < int(stn_ealiest[0:4]) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
+    if int(yr) < int(stn_earliest[0:4]) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
         return 'Start year should be later than earliest record found: %s.' %stn_earliest
     if 'select_grid_by' in form.keys():
         flag = False

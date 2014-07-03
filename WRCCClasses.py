@@ -919,7 +919,7 @@ class GridFigure(object) :
             base_temp = int(self.params['elems'][0]['name'][-2:])
         except:
             base_temp = None
-        title+=' ' + WRCCData.DISPLAY_PARAMS[el_strip]
+        title+=' ' + WRCCData.DISPLAY_PARAMS[el_strip] + ' (' + WRCCData.UNITS_ENGLISH[el_strip] + ')'
         if base_temp:
             title+= ' Base Temperature: ' + str(base_temp)
         area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
