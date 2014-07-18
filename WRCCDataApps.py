@@ -961,6 +961,11 @@ def Sodxtrmts(**kwargs):
                                     value = nval_x - nval_n
                                 elif el_type == 'avgt':
                                     value = (nval_x + nval_n)/2.0
+                                elif el_type == 'pet':
+                                    #Maybe needs to be doy -1
+                                    lat = kwargs['lls'][i][1]
+                                    lon = kwargs['lls'][i][0]
+                                    value = WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy - 1 ,'english')
                                 elif el_type in ['hdd','cdd', 'gdd']:
                                     ave = (nval_x + nval_n)/2.0
                                     if el_type == 'hdd':

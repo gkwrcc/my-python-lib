@@ -90,6 +90,7 @@ def datetime_to_date(dt, seperator):
     except:
         d = '00'
     return y + str(seperator) + m + str(seperator) + d
+
 def get_start_date(time_unit, end_date, number):
     '''
     Given a time unit (days, months or years),
@@ -209,6 +210,30 @@ def is_leap_year(year):
         return True
     else:
         return False
+
+###############################
+#Coordinate system conversions
+##############################
+def geoll2ddmmss(lat,lon):
+    try:
+        latitude = float(lat)
+        longitude = float(lon)
+    except:
+        latitude = 99.99
+        longitude = -999.99
+    #Convert lat/lon to ddmmss
+    for idx, l in enumerate([lat,lon]):
+        dd = int(abs(float(l)))
+        d_60 = abs((abs(float(l)) - dd))*60
+        mm = int(d_60)
+        ss = int(abs((mm - d_60))*60)
+        if len(str(ss)) == 1:ss = '0' + str(ss)
+        if len(str(mm))==1:mm = '0' + str(mm)
+        if idx ==0:
+            lat_ddmmss = '%s%s%s' %(str(dd),str(mm),str(ss))
+        if idx ==1:
+            lon_ddmmss = '%s%s%s' %(str(dd),str(mm),str(ss))
+    return [lat_ddmmss,lon_ddmmss]
 
 ##########################
 #SPECIAL FUNCTIONS
@@ -3135,3 +3160,42 @@ def Cagamma(rdata, numdat, pnlist, numpn):
     for i in range(numpn):
         psd[i] = Gampctle(pnlist[i], scale, shape)
     return psd
+
+def compute_pet(lat,lon,maxt,mint,doy,units):
+    '''
+    Hargreaves P.E.T. Calculation
+    Adopted from Kelly's program sodxtrmtsE.f
+    lat,lon -- geo lat, lon
+    maxt    -- maximum temperature
+    mint    -- minimum temperature
+    units   -- english or metric
+    '''
+    lat_ddmmss, lon_ddmmss = geoll2ddmmss(lat,lon)
+    latd = int(lat_ddmmss[0:2])
+    latm = int(lat_ddmmss[2:4])
+    slat = latd - latm /60
+    pi = 3.141592653589793
+    tx = maxt
+    tn = mint
+    if units == 'english':
+        tx = ((tx-32)*5.0/9)
+        tn = ((tn-32)*5.0/9)
+    td = tx-tn
+    ta = (tx+tn)/2
+    theta = slat*pi/180
+    dec = 23.5*math.cos(2*pi*(doy-172)/365)*pi/180
+    a = -math.tan(theta)*math.tan(dec)
+    h = math.acos(a)
+    rvec = 1-0.01676*math.cos(2*pi*(doy-3)/365)
+    itd1 = (1440/pi)*1.959/(rvec*rvec)
+    itd2 = h*math.sin(theta)*math.sin(dec)+math.cos(theta)*math.cos(dec)*math.sin(h)
+    ra = itd1*itd2
+    harg = 0.0023*ra*sqrt(td)*(ta+17.8)
+    xl = 595-0.51*ta
+    #harg : PeT in mm/day
+    harg = 10*harg/xl
+    if units == 'english':
+        value = harg / 25.4
+    else:
+        value = harg
+    return value

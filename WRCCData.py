@@ -184,7 +184,8 @@ UNITS_METRIC = {
     'gdd':'C',
     'evap': 'mm',
     'wdmv': 'km',
-    'elev':'m'
+    'elev':'m',
+    'pet':'mm/day'
 }
 
 UNITS_ENGLISH = {
@@ -201,7 +202,8 @@ UNITS_ENGLISH = {
     'gdd':'F',
     'evap': 'in',
     'wdmv': 'Mi',
-    'elev':'ft'
+    'elev':'ft',
+    'pet':'in/day',
 }
 
 UNITS_LONG={
@@ -446,9 +448,9 @@ DISPLAY_PARAMS = {
     'station_ID': 'Station ID',
     'station_ids': 'Station IDs',
     'station_IDs':'Station IDs',
-    'location': 'Location(lon,lat)',
+    'location': 'Location (lon,lat)',
     'loc': 'Location(lon,lat)',
-    'point': 'Location(lon,lat)',
+    'point': 'Location (lon,lat)',
     'lat': 'Latitude',
     'lon': 'Longitude',
     'shape': 'Custom Shape',
@@ -514,6 +516,7 @@ DISPLAY_PARAMS = {
     'gddxx': 'Growing Degree Days Base xx',
     'wdmv': 'Wind Movement',
     'evap': 'Pan Evaporation',
+    'pet': 'Potential ET',
     #Other
     'temporal_resolution': 'Temporal Resolution',
     'temporal': 'Temporal Summary',
@@ -728,7 +731,8 @@ MICHELES_ELEMENT_NAMES = {
     'gdd':'Gdd',
     'corn':'Corn',
     'evap':'Evap',
-    'wdmv':'Wdmv'
+    'wdmv':'Wdmv',
+    'pet':'Potential ET'
 }
 
 SOD_ELEMENT_LIST_BY_APP = {
@@ -894,7 +898,8 @@ SOD_ELEMENT_LIST_BY_APP = {
               'hdd':['maxt','mint'],
               'gdd':['maxt','mint'],
               'evap':['evap'],
-              'wdmv':['wdmv']
+              'wdmv':['wdmv'],
+              'pet':['maxt','mint']
                 }
 }
 
@@ -934,9 +939,10 @@ SXTR_ELEMENT_CHOICES = (
     ('gdd', 'DailyGrowing degree days'),
     ('evap', 'Daily Evaporation'),
     ('wdmv', 'Daily Wind Movement'),
+    ('pet', 'Potential ET'),
 )
 
-SXTR_ELEMENT_LIST = ['pcpn','snow','snwd','maxt','mint','avgt','dtr','hdd', 'cdd','gdd','evap','wdmv']
+SXTR_ELEMENT_LIST = ['pcpn','snow','snwd','maxt','mint','avgt','dtr','hdd', 'cdd','gdd','evap','wdmv','pet']
 
 SXTR_ANALYSIS_CHOICES = (
     ('mmax', 'Monthly Maximum'),

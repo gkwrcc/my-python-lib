@@ -311,6 +311,7 @@ class SODDataJob(object):
             'avgt':['maxt', 'mint'],
             'dtr':['maxt', 'mint'],
             'dd_raw':['maxt', 'mint'],
+            'pet':['maxt', 'mint'],
             #Sodsum
             'multi':['pcpn','snow','snwd','maxt','mint','obst'],
             #Single Element
@@ -666,14 +667,16 @@ class SODDataJob(object):
         elements = self.get_element_list()
         station_ids, station_names = self.get_station_ids_names()
         dates = self.get_dates_list()
+        meta_dict = self.get_station_meta()
         #Set up resultsdict
         resultsdict = {
                     'data':[],
                     'dates':dates,
                     'elements':elements,
                     'station_ids':station_ids,
-                    'station_names':station_names}
-
+                    'station_names':station_names,
+                    'lls':meta_dict['lls']
+        }
         #Make data request
         data_params = self.set_request_params()
         request = AcisWS.MultiStnData(data_params)
@@ -705,7 +708,8 @@ class SODApplication(object):
                     'data':self.data['data'],
                     'elements':self.data['elements'],
                     'dates':self.data['dates'],
-                    'station_names':self.data['station_names']
+                    'station_names':self.data['station_names'],
+                    'lls':self.data['lls']
                     }
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
