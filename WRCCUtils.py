@@ -3173,7 +3173,8 @@ def compute_pet(lat,lon,maxt,mint,doy,units):
     lat_ddmmss, lon_ddmmss = geoll2ddmmss(lat,lon)
     latd = int(lat_ddmmss[0:2])
     latm = int(lat_ddmmss[2:4])
-    slat = latd - latm /60
+    slat = latd - latm /60.0
+    #slat = lat
     pi = 3.141592653589793
     tx = maxt
     tn = mint

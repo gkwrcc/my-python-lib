@@ -405,6 +405,7 @@ def soddyrec_wrapper(argv):
     #Assign input parameters:
     stn_id = str(argv[0]);element = str(argv[1])
     start_date = format_date(str(argv[2]));end_date = format_date(str(argv[3]))
+    start_user = format_date(str(argv[2]));end_user = format_date(str(argv[3]))
     #Sanity checks
     #Station ID check, if not alpha numeric, people coming from old pages and
     #we need to redirect them
@@ -413,13 +414,25 @@ def soddyrec_wrapper(argv):
     except:
         format_soddyrec_results_web([],{'redirect':''},{})
         sys.exit(1)
+    #Find valid daterange
+    valid_daterange = por_to_valid_daterange(stn_id)
+
     #Change POR start/end year to 8 digit start/end dates
     if start_date.upper() == 'POR' or end_date.upper() == 'POR':
-        valid_daterange = por_to_valid_daterange(stn_id)
         if start_date.upper() == 'POR':
             start_date = valid_daterange[0]
+        else:
+            #check that start date is later than por_start
+            #else use valid daterange
+            if WRCCUtils.date_to_datetime(start_date) < WRCCUtils.date_to_datetime(valid_daterange[0]):
+                start_date = valid_daterange[0]
         if end_date.upper() == 'POR':
             end_date = valid_daterange[1]
+        else:
+            #check that end date is earlier than por_end
+            #else use valid_daterange
+            if WRCCUtils.date_to_datetime(end_date) > WRCCUtils.date_to_datetime(valid_daterange[0]):
+                end_date = valid_daterange[1]
     if element not in ['all','tmp','wtr','pcpn','snow','snwd','maxt','mint','hdd','cdd']:
         format_soddyrec_results_web([],{'error':'Invalid element: %s' %element},{})
         sys.exit(1)
@@ -435,6 +448,8 @@ def soddyrec_wrapper(argv):
                 'sid':stn_id,
                 'start_date':start_date,
                 'end_date':end_date,
+                'start_user':start_user,
+                'end_user':end_user,
                 'element':element
                 }
     SR_wrapper = Wrapper('Soddyrec', data_params)
@@ -486,7 +501,16 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         print ' The year given is the year of latest occurrence.'
     s = data_params['start_date'][4:6] + '/' + data_params['start_date'][6:8] + '/' + data_params['start_date'][0:4]
     e = data_params['end_date'][4:6] + '/' + data_params['end_date'][6:8] + '/' + data_params['end_date'][0:4]
-    print ' Period requested -- Begin :  %s -- End :  %s' %(s, e)
+    if data_params['start_user'].upper() == 'POR':
+        s_user ='POR'
+    else:
+        s_user = data_params['start_user'][4:6] + '/' + data_params['start_user'][6:8] + '/' + data_params['start_user'][0:4]
+    if data_params['end_user'].upper() == 'POR':
+        e_user = 'POR'
+    else:
+        e_user = data_params['end_user'][4:6] + '/' + data_params['end_user'][6:8] + '/' + data_params['end_user'][0:4]
+    print ' Period requested -- Begin :  %s -- End :  %s' %(s_user, e_user)
+    print ' Period      used -- Begin :  %s -- End :  %s' %(s, e)
     print ''
     print 'Cooling degree threshold =   65.00  Heating degree threshold =   65.00'
     print ''
@@ -510,8 +534,12 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     for el_idx, el in enumerate(el_list):
         el_name = WRCCData.ACIS_ELEMENTS_DICT[el]['name_long']
         start ='|';end=''
-        if len(el_name)<=27:
-            left = 27 - len(el_name)
+        if el in ['maxt', 'mint']:
+            max_l = 42
+        else:
+            max_l = 27
+        if len(el_name)<=max_l:
+            left = max_l - len(el_name)
             if left%2 == 0:
                 for k in range(left/2):
                     start+='-';end+='-'
@@ -524,6 +552,8 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         table_header+=el_name
         table_header+=end
         table_header_2+='    AVG     NO   HIGH     YR'
+        if el in ['maxt', 'mint']:
+            table_header_2+='    LOW     YR'
     print table_header
     print table_header_2
     #Data
@@ -534,6 +564,8 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         for el_idx, el in enumerate(el_list):
             for k in range(2,6):
                 row+='%7s' %results[0][el_idx][doy][k]
+            if el in ['maxt', 'mint']:
+                row+='%7s %7s' %(results[0][el_idx][doy][6],results[0][el_idx][doy][7])
         print row
 
 def format_sodumm_results_txt(table_name, results, start_year, end_year, station_id, station_name, station_state):

@@ -963,9 +963,9 @@ def Sodxtrmts(**kwargs):
                                     value = (nval_x + nval_n)/2.0
                                 elif el_type == 'pet':
                                     #Maybe needs to be doy -1
-                                    lat = kwargs['lls'][i][1]
-                                    lon = kwargs['lls'][i][0]
-                                    value = WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy - 1 ,'english')
+                                    lat = kwargs['lls'][i][0]
+                                    lon = kwargs['lls'][i][1]
+                                    value = round(WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy,'english'),2)
                                 elif el_type in ['hdd','cdd', 'gdd']:
                                     ave = (nval_x + nval_n)/2.0
                                     if el_type == 'hdd':
@@ -3528,7 +3528,6 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
     #result[stn_id][el] = [[month=1, day=1, ave, no, high_or_low, yr], [month=1, day=2, ave,..]..]
     #for all 365 days a year
     results = defaultdict(dict)
-    #Loop over stations
     for i, stn in enumerate(coop_station_ids):
         #results[i] = [[] for el in elements]
         for j, el in enumerate(elements):
@@ -3541,16 +3540,26 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
                 row=[mon, day]
                 #Loop over summaries: mean, max, min
                 for smry_idx in range(smry_start_idx, smry_end_idx):
+                    if not data[i]:
+                        row.append(-9999)
+                        row.append(0)
+                        continue
                     val = data[i][smry_idx][k][0]
                     if smry_idx % 3 == 0:
                         #we are on mean summary, record years missing and compute number of years with records
-                        mcnt = data[i][smry_idx][k][2]
                         num_years = int(dates[-1][0:4]) - int(dates[0][0:4])
+                        try:
+                            mcnt = int(data[i][smry_idx][k][2])
+                        except:
+                            mcnt = num_years
                         row.append(val)
                         row.append(num_years - mcnt)
                     else:
                         #high and low, record year of occurrence
-                        year = data[i][smry_idx][k][1][0:4]
+                        try:
+                            year = data[i][smry_idx][k][1][0:4]
+                        except:
+                            year = data[i][smry_idx][k][1]
                         row.append(val)
                         row.append(year)
                 results[i][j].append(row)

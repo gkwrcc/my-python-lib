@@ -646,8 +646,10 @@ def get_sod_data(form_input, program):
     datadict = defaultdict(list)
     for i, stn in enumerate(coop_station_ids):
         if program == 'Soddyrec':
-            yr_list = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
-            datadict[i] = yr_list
+            #yr_list = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
+            #yr_list = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for i in range(3*len(elements))]
+            #datadict[i] = yr_list
+            datadict[i] = []
         elif program in ['Sodrun', 'Sodrunr']:
             datadict[i] = []
         else:
