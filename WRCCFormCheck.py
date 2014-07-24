@@ -25,14 +25,20 @@ def check_start_year(form):
         int(yr)
     except:
         return 'Year should be a four digit entry. You entered %s' %yr
+
+    # Make sure Start Year is eralier than End Year
     try:
         if int(e_yr) < int(yr):
             return 'Start Year is later then End Year.'
     except:
         pass
-    #Check is start date is bogus
-    if int(yr) < int(stn_earliest[0:4]) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
-        return 'Start year should be later than earliest record found: %s.' %stn_earliest
+
+    #Check station data dates
+    if 'select_stations_by' in form.keys() or 'station_id' in form.keys():
+        if int(yr) < int(stn_earliest[0:4]):
+            return 'Start year should be later than earliest record found: %s.' %stn_earliest
+
+    #Check grid data dates
     if 'select_grid_by' in form.keys():
         flag = False
         grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
@@ -64,9 +70,13 @@ def check_end_year(form):
             return 'End Year is earlier then Start Year.'
     except:
         pass
-    #Check if end year is greater than this year
-    if int(yr) > int(today.year) and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
-        return 'End Year should be current year or earlier.'
+
+    #Check station data dates
+    if 'select_stations_by' in form.keys() or 'station_id' in form.keys():
+        if int(yr) > int(today.year):
+            return 'End Year should be current year or earlier.'
+
+    #Check grid data dates
     if 'select_grid_by' in form.keys():
         flag = False
         grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
@@ -87,6 +97,7 @@ def check_start_date(form):
     e_date = form['end_date'].replace('-','').replace('/','').replace(':','')
     if date.lower() == 'por' and 'station_id' in form.keys():
         return err
+
     if len(date)!=8:
         if date.lower() == 'por':
             return '%s is not a valid option for a multi-station request.' %form['start_date']
@@ -96,9 +107,20 @@ def check_start_date(form):
         int(date)
     except:
         return '%s is not a valid date.' %form['start_date']
+
+    #Check month
+    if int(date[4:6]) < 1 or int(date[4:6]) > 12:
+        return 'Not a valid month.'
+    #Check day
+    if int(date[6:8]) < 1 or int(date[4:6]) > 31:
+        return 'Not a valid day.'
+
+
     #Check for leap year issue
     if not WRCCUtils.is_leap_year(date[0:4]) and date[4:6] == '02' and date[6:8] == '29':
         return '%s is not a leap year. Change start date to February 28.' %date[0:4]
+
+    #Check that start date is earlier than end date
     try:
         sd = datetime.datetime(int(date[0:4]), int(date[4:6].lstrip('0')), int(date[6:8].lstrip('0')))
     except:
@@ -109,12 +131,22 @@ def check_start_date(form):
         return err
     if ed < sd:
         return 'Start Date is later then End Year.'
-    #Check is start date is bogus
-    if sd < stn_earliest_dt and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
-        return 'Start date should be later than earliest record found: %s.' %stn_earliest
+
+    #Check station  data dates
+    if 'select_stations_by' in form.keys() or 'station_id' in form.keys():
+        if int(date[0:4]) < int(stn_earliest[0:4]):
+            return 'Not a valid Start Date. Year must be later than %s.' %(stn_earliest[0:4])
+
+    #Check grid data dates
     if 'select_grid_by' in form.keys():
         flag = False
         grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]
+        #For Prism we need to check if monthy/yearly resolution
+        #and pick proper daterange
+        if str(form['grid']) == '21' and form['temporal_resolution'] == 'dly':
+            grid_dr = [grid_dr[1]]
+        else:
+            grid_dr = [grid_dr[0]]
         for dr in grid_dr:
             grid_s = WRCCUtils.date_to_datetime(dr[0])
             grid_e = WRCCUtils.date_to_datetime(dr[1])
@@ -143,9 +175,19 @@ def check_end_date(form):
         int(date)
     except:
         return 'Date should be an eight digit entry. You entered %s' %date
+
+    #Check month
+    if int(date[4:6]) < 1 or int(date[4:6]) > 12:
+        return 'Not a valid month.'
+    #Check day
+    if int(date[6:8]) < 1 or int(date[4:6]) > 31:
+        return 'Not a valid day.'
+
     #Check for leap year issue
     if not WRCCUtils.is_leap_year(date[0:4]) and date[4:6] == '02' and date[6:8] == '29':
         return '%s is not a leap year. Change end date to February 28.' %date[0:4]
+
+    #Check that start date is ealier than end date
     try:
         sd = datetime.datetime(int(s_date[0:4]), int(s_date[4:6].lstrip('0')), int(s_date[6:8].lstrip('0')))
     except:
@@ -156,9 +198,14 @@ def check_end_date(form):
         return err
     if ed < sd:
         return 'Start Date is later then End Year.'
-        #Check is start date is bogus
-    if ed > today and ('select_stations_by' in form.keys() or 'station_id' in form.keys()):
-        return 'End date should be today or earlier.'
+
+    #Check station data dates
+    if 'select_stations_by' in form.keys() or 'station_id' in form.keys():
+        #Check year
+        if int(date[0:4]) > today.year:
+            return 'Not a valid End Date. Year should be this year or earlier.'
+
+    #Check grid data dates
     if 'select_grid_by' in form.keys():
         flag = False
         grid_dr = WRCCData.GRID_CHOICES[str(form['grid'])][3]

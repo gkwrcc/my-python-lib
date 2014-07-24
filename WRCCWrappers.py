@@ -418,21 +418,11 @@ def soddyrec_wrapper(argv):
     valid_daterange = por_to_valid_daterange(stn_id)
 
     #Change POR start/end year to 8 digit start/end dates
-    if start_date.upper() == 'POR' or end_date.upper() == 'POR':
-        if start_date.upper() == 'POR':
-            start_date = valid_daterange[0]
-        else:
-            #check that start date is later than por_start
-            #else use valid daterange
-            if WRCCUtils.date_to_datetime(start_date) < WRCCUtils.date_to_datetime(valid_daterange[0]):
-                start_date = valid_daterange[0]
-        if end_date.upper() == 'POR':
-            end_date = valid_daterange[1]
-        else:
-            #check that end date is earlier than por_end
-            #else use valid_daterange
-            if WRCCUtils.date_to_datetime(end_date) > WRCCUtils.date_to_datetime(valid_daterange[0]):
-                end_date = valid_daterange[1]
+    #Check if yuser dates lie outside of por for station
+    if start_date.upper() == 'POR' or WRCCUtils.date_to_datetime(start_date) < WRCCUtils.date_to_datetime(valid_daterange[0]):
+        start_date = valid_daterange[0]
+    if end_date.upper() == 'POR' or WRCCUtils.date_to_datetime(end_date) > WRCCUtils.date_to_datetime(valid_daterange[1]):
+        end_date = valid_daterange[1]
     if element not in ['all','tmp','wtr','pcpn','snow','snwd','maxt','mint','hdd','cdd']:
         format_soddyrec_results_web([],{'error':'Invalid element: %s' %element},{})
         sys.exit(1)
