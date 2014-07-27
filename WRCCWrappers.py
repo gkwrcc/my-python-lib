@@ -395,17 +395,20 @@ def soddyrec_wrapper(argv):
                 list     --> python list of list
                 txt_list --> output looks like Kelly's commandline output
     Examples (web):
-    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231
-    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231+html
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por+html
+    Example text output
+    python WRCCWrappers.py soddyrec 266779 all 20000101 20101231 txt
     '''
     #Sanity Check
-    if len(argv) != 4:
+    if len(argv) != 5:
         format_soddyrec_results_web([],{'error':'Invalid Request'},{})
         sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0]);element = str(argv[1])
     start_date = format_date(str(argv[2]));end_date = format_date(str(argv[3]))
     start_user = format_date(str(argv[2]));end_user = format_date(str(argv[3]))
+    output_format = str(argv[4])
     #Sanity checks
     #Station ID check, if not alpha numeric, people coming from old pages and
     #we need to redirect them
@@ -440,18 +443,22 @@ def soddyrec_wrapper(argv):
                 'end_date':end_date,
                 'start_user':start_user,
                 'end_user':end_user,
-                'element':element
+                'element':element,
                 }
     SR_wrapper = Wrapper('Soddyrec', data_params)
     #Get data
     data = SR_wrapper.get_data()
     #run app
     results = SR_wrapper.run_app(data)
-    format_soddyrec_results_web(results,data_params,SR_wrapper)
+    if output_format == 'txt':
+        #NOTE: header not generated with text output
+        format_soddyrec_results_txt(results,SR_wrapper,data_params)
+    else:
+        format_soddyrec_results_web(results,SR_wrapper,data_params)
 ########
 #Utils
 #######
-def format_soddyrec_results_web(results, data_params, wrapper):
+def format_soddyrec_results_web(results,wrapper,data_params):
     '''
     Generates Soddyrec web content
     '''
