@@ -36,7 +36,7 @@ class Wrapper:
         #AcisWS.get_sod_data(self.params, self.app_name)
         DJ = WRCCClasses.SODDataJob(self.app_name,self.params)
         #self.station_ids, self.station_names = DJ.get_station_ids_names()
-        data = DJ.get_data()
+        data = DJ.get_data_station()
         meta_dict = DJ.get_station_meta()
         self.station_names = meta_dict['names']
         self.station_states = meta_dict['states']
@@ -49,7 +49,6 @@ class Wrapper:
         self.station_countys = meta_dict['countys']
         if 'valid_dateranges' in meta_dict.keys():
             self.station_valid_dateranges = meta_dict['valid_dateranges']
-        #self.station_names, self.station_states, self.station_ids, self.station_networks, self.station_lls, self.station_elevs,self.station_uids, self.station_climdivs, self.station_countys = DJ.get_station_meta()
         return data
 
     def run_app(self, data):
@@ -496,6 +495,7 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         print ' For temperature and precipitation, multi-day accumulations'
         print ' are not considered either for records or averages.'
         print ' The year given is the year of latest occurrence.'
+        print ''
     s = data_params['start_date'][4:6] + '/' + data_params['start_date'][6:8] + '/' + data_params['start_date'][0:4]
     e = data_params['end_date'][4:6] + '/' + data_params['end_date'][6:8] + '/' + data_params['end_date'][0:4]
     if data_params['start_user'].upper() == 'POR':
@@ -516,6 +516,7 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     print 'LO    Lowest  value of indicated quantity for this day of year'
     print 'YR    Latest year of occurrence of the extreme value'
     print 'NO    Number of years with data for this day of year.'
+    print '      Units: English (inches and degrees F)'
     print ''
     header_row = '    '
     if data_params['element'] == 'all':

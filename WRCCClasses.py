@@ -358,12 +358,32 @@ class SODDataJob(object):
             el = None
         return el
 
+    def set_locations_list(self,params):
+        '''
+        Converts string of lon, lat pairs into list of lon, lat pairs
+        '''
+        loc_list = []
+        if 'location' in params.keys():
+            loc_list.append(params['location'])
+        if 'locations' in params.keys():
+            if isinstance(params['locations'], basestring):
+                loc_list = params['locations'].split(',')
+                lon_list = [loc_list[2*j] for j in range(len(loc_list) / 2)]
+                lat_list = [loc_list[2*j + 1] for j in range(len(loc_list) / 2)]
+                for idx,lon in enumerate(lon_list):
+                    loc_list.append('%s,%s' %(lon, lat_list[idx]))
+            elif isinstance(params['locations'], list):
+                loc_list = params['locations']
+        return loc_list
+
     def set_area_params(self):
         area = None; val=None
         if 'sid' in self.params.keys():area = 'sids';val = self.params['sid']
         if 'station_id' in self.params.keys():area = 'sids';val = self.params['station_id']
         if 'sids' in self.params.keys():area = 'sids';val = self.params['sids']
         if 'station_ids' in self.params.keys():area = 'sids';val = self.params['station_ids']
+        if 'location' in self.params.keys():area='location';val=self.params['location']
+        if 'locations' in self.params.keys():area='location';val=self.params['locations']
         if 'county' in self.params.keys():area = 'county';val = self.params['county']
         if 'climdiv' in self.params.keys():area = 'climdiv';val = self.params['climdiv']
         if 'cwa' in self.params.keys():area = 'cwa';val = self.params['cwa']
@@ -464,6 +484,14 @@ class SODDataJob(object):
         self.station_ids = stn_ids
         return stn_ids, stn_names
 
+    def get_grid_meta(self):
+        meta_dict = {
+            'locations':[],
+            'elevs': []
+        }
+        meta_dict['locations'] = set_location_list(self.data_params)
+        return meta_dict
+
     def get_station_meta(self):
         '''
         Finds type of search area
@@ -506,7 +534,7 @@ class SODDataJob(object):
                     meta_dict['lls'].append([-999.99,99.99])
                 if 'valid_daterange' in stn.keys():
                     meta_dict['valid_dateranges'] = stn['valid_daterange']
-                #find other meta data info
+                #Find other meta data info
                 #NOTE: ACIS quirk: sometimes other meta data attributes don't show up
                 keys = ['state', 'elev', 'uid', 'climdiv', 'county']
                 for key in keys:
@@ -517,7 +545,6 @@ class SODDataJob(object):
                         meta_dict[meta_dict_key].append(' ')
         self.station_ids = meta_dict['ids']
         return meta_dict
-        #return meta_dict['names'], meta_dict['states'], meta_dict['ids'], meta_dict['networks'], meta_dict['lls'], meta_dict['elevs'], meta_dict['uids'], meta_dict['climdivs'], meta_dict['countys']
 
     def get_dates_list(self):
         '''
@@ -527,12 +554,14 @@ class SODDataJob(object):
         dates = []
         s_date, e_date = self.set_start_end_date()
         if s_date and e_date and len(s_date) == 8 and len(e_date) == 8:
-            #convert to datetimes
-            if self.app_name in ['Soddyrec', 'Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']:
-                #data is grouped by year so we need to change start and end_dates
-                #to match whole year
+            #Some apps need date changes
+            l = ['Soddyrec', 'Soddynorm', 'Soddd', 'Sodpad', 'Sodsumm', 'Sodpct', 'Sodthr', 'Sodxtrmts', 'Sodpiii']
+            if self.app_name in l:
+                #Data is grouped by year so we need to change start and end_dates
+                #To match whole year
                 s_date = s_date[0:4] + '0101'
                 e_date = e_date[0:4] + '1231'
+            #Convert to datetimes
             start_date = datetime.datetime(int(s_date[0:4]), int(s_date[4:6]), int(s_date[6:8]))
             end_date = datetime.datetime(int(e_date[0:4]), int(e_date[4:6]), int(e_date[6:8]))
             for n in range(int ((end_date - start_date).days +1)):
@@ -544,7 +573,7 @@ class SODDataJob(object):
                 if len(n_day) == 1:n_day='0%s' % n_day
                 acis_next_date = '%s%s%s' %(n_year,n_month,n_day)
                 dates.append(acis_next_date)
-                #note, these apps are grouped by year and return a 366 day year even for non-leap years
+                #Note, these apps are grouped by year and return a 366 day year even for non-leap years
                 if self.app_name in ['Sodpad', 'Sodsumm', 'Soddyrec', 'Soddynorm', 'Soddd']:
                     if dates[-1][4:8] == '0228' and not WRCCUtils.is_leap_year(int(dates[-1][0:4])):
                         dates.append(dates[-1][0:4]+'0229')
@@ -604,8 +633,77 @@ class SODDataJob(object):
         params = {area:val, 'sdate':sdate, 'edate':edate,'elems':elems}
         return params
 
+    def find_leap_yr_indices(self):
+        '''
+        Finds indices of leap years given start/end_year
+        Needed to fomat grid data most efficiently
+        '''
+        leap_indices =[]
+        s_yr = int(self.data_params['start_date'][0:4])
+        e_yr = int(self.data_params['start_date'][0:4])
+        yrs = range(s_yr, e_yr + 1)
+        num_years = e_yr - s_yr + 1
+        max_num_leap = num_years / 4
+        idx = 0
+        #Find first leap year
+        for yr in range(s_yr, e_yr + 1):
+            if WRCCUtils.is_leap_year(yr):break
+            idx+=1
+        leap_indices.append(idx)
+        while idx < len(yrs):
+            idx*=4
+            leap_indices.append(idx)
+        return leap_indices, yrs
 
-    def format_data(self, request, station_ids, elements):
+    def format_data_grid(self, request, locations,elements):
+        '''
+        Formats output of data request dependent on
+        application
+        For each location i
+        request[i]['meta'] = {'lat', 'lon','elev'}
+        request[i]['data'] = [[date_1, el1, el2,...], ['date_2', el_1, el_2,..]...]
+        We need to convert to staton data request format that is grouped by year
+        '''
+        #Set up data output dictonary
+        error = ''
+        if self.app_name == 'Sodsum':
+            data = {}
+        else:
+            data = [[] for i in locations]
+        for i, loc in enumerate(locations):
+            if self.app_name == 'Soddyrec':
+                data[i] = [[['#', '#', '#', '#', '#', '#','#', '#'] for k in range(366)] for el in elements]
+            elif self.app_name in ['Sodrun', 'Sodrunr', 'Sodsum']:
+                data[i] = []
+            else:
+                data[i] = [[] for el in elements]
+
+        #Sanity checks on request object
+        if not request:
+            error = 'Bad request, check params: %s'  % str(self.params)
+            return data, error
+        if 'error' in request.keys():
+            error = request['error']
+            return data, error
+        if not 'data' in request.keys():
+            error = 'No data found for parameters: %s' % str(self.params)
+            return data, error
+        leap_indices,year_list =self.find_leap_yr_indices()
+        for loc_idx, loc in enumerate(locations):
+            for el_idx, element in enumerate(elements):
+                el_data = []
+                for yr_idx, yr in enumerate(year_list):
+                    yr_data =[]
+                    #Feb 29 not recorded as M for non-leap years.
+                    # Need to insert for gouping by year
+                    if idx in leap_indices:length =  366
+                    else:length=365
+                    yr_data = request['data'][loc_idx][366*yr_idx:length*yr_idx + length]
+
+
+        return data, error
+
+    def format_data_station(self, request, station_ids, elements):
         '''
         Formats output of data request dependent on
         application
@@ -663,7 +761,10 @@ class SODDataJob(object):
                     data[index] = stn_data['data']
         return data, error
 
-    def get_data(self):
+    def get_data_station(self):
+        '''
+        Request SOD data from ACIS data for a station
+        '''
         elements = self.get_element_list()
         station_ids, station_names = self.get_station_ids_names()
         dates = self.get_dates_list()
@@ -680,7 +781,34 @@ class SODDataJob(object):
         #Make data request
         data_params = self.set_request_params()
         request = AcisWS.MultiStnData(data_params)
-        resultsdict['data'], resultsdict['error'] = self.format_data(request, station_ids, elements)
+        resultsdict['data'], resultsdict['error'] = self.format_data_station(request, station_ids, elements)
+        return resultsdict
+
+    def get_data_grid(self):
+        '''
+        Request SOD data from ACIS for a gridpoint
+        '''
+        elements = self.get_element_list()
+        locations_list = self.set_locations_list(params)
+        dates = self.get_dates_list()
+        meta_dict = self.get_grid_meta()
+        #Set up resultsdict
+        data = [[] for loc in locations]
+        resultsdict = {
+                    'data':[],
+                    'dates':dates,
+                    'elements':elements,
+                    'locations':locations_list,
+                    'lls':[]
+        }
+        #Make data request
+        #Each location requires separate request
+        for i,loc in enumerate(locations_list):
+            data_params = self.set_request_params()
+            data_params['location'] = loc
+            request = AcisWS.GridData(data_params)
+            data[i] = request
+        resultsdict['data'], resultsdict['error'] = self.format_data_grid(request, locations, elements)
         return resultsdict
 
 class SODApplication(object):
