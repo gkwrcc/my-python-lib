@@ -293,6 +293,7 @@ class SODDataJob(object):
         self.params = data_params
         self.app_specific_params = app_specific_params
         self.app_name = app_name
+        self.station_ids = None;self.station_names=None
         self.el_type_element_dict = {
             #Sodsumm
             'all_sodsumm':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
@@ -382,8 +383,9 @@ class SODDataJob(object):
         if 'station_id' in self.params.keys():area = 'sids';val = self.params['station_id']
         if 'sids' in self.params.keys():area = 'sids';val = self.params['sids']
         if 'station_ids' in self.params.keys():area = 'sids';val = self.params['station_ids']
-        if 'location' in self.params.keys():area='location';val=self.params['location']
-        if 'locations' in self.params.keys():area='location';val=self.params['locations']
+        if 'loc' in self.params.keys():area='loc';val=self.params['loc']
+        if 'location' in self.params.keys():area='loc';val=self.params['location']
+        if 'locations' in self.params.keys():area='loc';val=self.params['locations']
         if 'county' in self.params.keys():area = 'county';val = self.params['county']
         if 'climdiv' in self.params.keys():area = 'climdiv';val = self.params['climdiv']
         if 'cwa' in self.params.keys():area = 'cwa';val = self.params['cwa']
@@ -428,8 +430,9 @@ class SODDataJob(object):
 
     def set_start_end_date(self):
         s_date = None; e_date = None
-        if not self.station_ids:
-            return s_date, e_date
+        if 'station_id' in self.params.keys():
+            if not self.station_ids:
+                return s_date, e_date
         #Format yyyy, yyyymm data into yyyymmdd
         if len(self.params['start_date']) == 4:
             s_date = self.params['start_date'] + '0101'
@@ -486,10 +489,20 @@ class SODDataJob(object):
 
     def get_grid_meta(self):
         meta_dict = {
-            'locations':[],
-            'elevs': []
+            'ids':[''],
+            'names':[''],
+            'states':[''],
+            'lls':[],
+            'elevs': [],
+            'uids':[''],
+            'networks':[''],
+            'climdivs':[''],
+            'countys':[''],
+            'valid_daterange':[['00000000','00000000']]
         }
-        meta_dict['locations'] = set_location_list(self.data_params)
+        meta_dict['location_list'] = self.set_locations_list(self.params)
+        meta_dict['ids'] = [[str(l[0]) + '_' + str(l[1])] for l in meta_dict['location_list']]
+        meta_dict['lls'] = [[l] for l in meta_dict['location_list']]
         return meta_dict
 
     def get_station_meta(self):
@@ -631,6 +644,9 @@ class SODDataJob(object):
         sdate, edate = self.set_start_end_date()
         elems = self.set_request_elements()
         params = {area:val, 'sdate':sdate, 'edate':edate,'elems':elems}
+        if 'grid' in self.params.keys():
+            params['grid'] = self.params['grid']
+            params['meta'] = 'll, elev'
         return params
 
     def find_leap_yr_indices(self):
@@ -639,8 +655,8 @@ class SODDataJob(object):
         Needed to fomat grid data most efficiently
         '''
         leap_indices =[]
-        s_yr = int(self.data_params['start_date'][0:4])
-        e_yr = int(self.data_params['start_date'][0:4])
+        s_yr = int(self.params['start_date'][0:4])
+        e_yr = int(self.params['end_date'][0:4])
         yrs = range(s_yr, e_yr + 1)
         num_years = e_yr - s_yr + 1
         max_num_leap = num_years / 4
@@ -651,7 +667,7 @@ class SODDataJob(object):
             idx+=1
         leap_indices.append(idx)
         while idx < len(yrs):
-            idx*=4
+            idx+=4
             leap_indices.append(idx)
         return leap_indices, yrs
 
@@ -676,31 +692,39 @@ class SODDataJob(object):
             elif self.app_name in ['Sodrun', 'Sodrunr', 'Sodsum']:
                 data[i] = []
             else:
-                data[i] = [[] for el in elements]
+                pass
+                #data[i] = [[] for el in elements]
 
         #Sanity checks on request object
         if not request:
             error = 'Bad request, check params: %s'  % str(self.params)
             return data, error
-        if 'error' in request.keys():
-            error = request['error']
-            return data, error
-        if not 'data' in request.keys():
-            error = 'No data found for parameters: %s' % str(self.params)
-            return data, error
         leap_indices,year_list =self.find_leap_yr_indices()
         for loc_idx, loc in enumerate(locations):
+            loc_request = request[loc_idx]
+            if 'error' in loc_request.keys():
+                error = loc_request['error']
+                continue
+            if not 'data' in loc_request.keys():
+                error = 'No data found for parameters: %s' % str(self.params)
+                continue
             for el_idx, element in enumerate(elements):
-                el_data = []
+                start_idx = 0
+                yr_data = []
                 for yr_idx, yr in enumerate(year_list):
-                    yr_data =[]
+                    length = 365
                     #Feb 29 not recorded as M for non-leap years.
                     # Need to insert for gouping by year
-                    if idx in leap_indices:length =  366
+                    if yr_idx in leap_indices:length =  366
                     else:length=365
-                    yr_data = request['data'][loc_idx][366*yr_idx:length*yr_idx + length]
-
-
+                    d = loc_request['data'][start_idx:start_idx + length]
+                    start_idx = start_idx + length
+                    #Only pick relevant element data
+                    d = [d[el_idx + 1] for d in d]
+                    #Add missing leap year value if not leap year
+                    if length == 365:d.insert(59,'M')
+                    yr_data.append(d)
+                    data[loc_idx].append(yr_data)
         return data, error
 
     def format_data_station(self, request, station_ids, elements):
@@ -789,26 +813,37 @@ class SODDataJob(object):
         Request SOD data from ACIS for a gridpoint
         '''
         elements = self.get_element_list()
-        locations_list = self.set_locations_list(params)
+        locations_list = self.set_locations_list(self.params)
         dates = self.get_dates_list()
         meta_dict = self.get_grid_meta()
         #Set up resultsdict
-        data = [[] for loc in locations]
         resultsdict = {
                     'data':[],
                     'dates':dates,
                     'elements':elements,
-                    'locations':locations_list,
-                    'lls':[]
+                    'location_list':locations_list,
+                    'lls':meta_dict['lls']
         }
         #Make data request
         #Each location requires separate request
+        #request = {'meta':{'lat':'', 'lon':'','elev':''},'data':[]}
+        data = [{} for loc in locations_list]
         for i,loc in enumerate(locations_list):
             data_params = self.set_request_params()
-            data_params['location'] = loc
-            request = AcisWS.GridData(data_params)
-            data[i] = request
-        resultsdict['data'], resultsdict['error'] = self.format_data_grid(request, locations, elements)
+            data_params['loc'] = loc
+            req = AcisWS.GridData(data_params)
+
+            '''
+            try:
+                req = AcisWS.GridData(data_params)
+                req['meta'];req['data']
+            except Exception, e:
+                data[i]['error'] = str(e)
+                continue
+            '''
+            data[i]['meta'] = req['meta']
+            data[i]['data']= req['data']
+        resultsdict['data'], resultsdict['error'] = self.format_data_grid(data, locations_list, elements)
         return resultsdict
 
 class SODApplication(object):
@@ -832,13 +867,17 @@ class SODApplication(object):
     def run_app(self):
         app_params = {
                     'app_name':self.app_name,
-                    'coop_station_ids': self.data['station_ids'],
                     'data':self.data['data'],
                     'elements':self.data['elements'],
                     'dates':self.data['dates'],
-                    'station_names':self.data['station_names'],
                     'lls':self.data['lls']
                     }
+        if 'station_ids' in self.data.keys():
+            app_params['coop_station_ids'] = self.data['station_ids']
+            app_params['station_names'] = self.data['station_names'],
+        if 'location_list' in self.data.keys():
+            app_params['location_list'] = self.data['location_list']
+            app_params['station_names'] = self.data['location_list'],
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
         #Sanity check, make sure data has data

@@ -841,8 +841,11 @@ def Sodxtrmts(**kwargs):
             skew = int(skew)
             for k in range(1,14):
                 piii[skew].append(int(line[5*k:5*k+5]))
-    #Loop over stations
-    for i, stn in enumerate(kwargs['coop_station_ids']):
+    #Loop over stations or locations
+    l=[]
+    if 'location_list' in kwargs.keys():l = kwargs['location_list']
+    if 'coop_station_ids' in kwargs.keys():l = kwargs['coop_station_ids']
+    for i, stn in enumerate(l):
         elements = kwargs['elements']
         el_type = kwargs['el_type'] # maxt, mint, avgt, dtr (daily temp range)
         el_data = kwargs['data'][i]
