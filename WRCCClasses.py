@@ -680,6 +680,7 @@ class SODDataJob(object):
         request[i]['data'] = [[date_1, el1, el2,...], ['date_2', el_1, el_2,..]...]
         We need to convert to staton data request format that is grouped by year
         '''
+        leap_indices,year_list =self.find_leap_yr_indices()
         #Set up data output dictonary
         error = ''
         if self.app_name == 'Sodsum':
@@ -692,14 +693,12 @@ class SODDataJob(object):
             elif self.app_name in ['Sodrun', 'Sodrunr', 'Sodsum']:
                 data[i] = []
             else:
-                pass
                 #data[i] = [[] for el in elements]
-
+                data[i] = [[] for yr in  year_list]
         #Sanity checks on request object
         if not request:
             error = 'Bad request, check params: %s'  % str(self.params)
             return data, error
-        leap_indices,year_list =self.find_leap_yr_indices()
         for loc_idx, loc in enumerate(locations):
             loc_request = request[loc_idx]
             if 'error' in loc_request.keys():
@@ -708,6 +707,7 @@ class SODDataJob(object):
             if not 'data' in loc_request.keys():
                 error = 'No data found for parameters: %s' % str(self.params)
                 continue
+            '''
             for el_idx, element in enumerate(elements):
                 start_idx = 0
                 yr_data = []
@@ -724,7 +724,25 @@ class SODDataJob(object):
                     #Add missing leap year value if not leap year
                     if length == 365:d.insert(59,'M')
                     yr_data.append(d)
-                    data[loc_idx].append(yr_data)
+                    data[loc_idx][el_idx].append(yr_data)
+            '''
+            start_idx = 0
+            for yr_idx, yr in enumerate(year_list):
+                yr_data = [[] for el in elements]
+                length = 365
+                #Feb 29 not recorded as M for non-leap years.
+                # Need to insert for gouping by year
+                if yr_idx in leap_indices:length =  366
+                else:length=365
+                d = loc_request['data'][start_idx:start_idx + length]
+                start_idx = start_idx + length
+                for el_idx, element in enumerate(elements):
+                    #Only pick relevant element data
+                    el_data = [day_data[el_idx + 1] for day_data in d]
+                    #Add missing leap year value if not leap year
+                    if length == 365:el_data.insert(59,'M')
+                    yr_data[el_idx] = el_data
+                data[loc_idx][yr_idx] = yr_data
         return data, error
 
     def format_data_station(self, request, station_ids, elements):

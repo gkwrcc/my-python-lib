@@ -926,6 +926,8 @@ def Sodxtrmts(**kwargs):
                         else:
                             try:
                                 value = float(val)
+                                if abs(float(val) + 999.0)<0.001:
+                                    value = xmiss
                             except:
                                 value = xmiss
                     elif el_type in ['pcpn', 'snow', 'snwd', 'evap']:
@@ -941,11 +943,15 @@ def Sodxtrmts(**kwargs):
                             try:
                                 value = float(val)
                                 value = value +100
+                                if abs(float(val) + 999.0)<0.001:
+                                    value = xmiss
                             except:
                                 value = xmiss
                         else:
                             try:
                                 value = float(val)
+                                if abs(float(val) + 999.0)<0.001:
+                                    value = xmiss
                             except:
                                 value = xmiss
                     else:
@@ -960,23 +966,26 @@ def Sodxtrmts(**kwargs):
                             try:
                                 nval_x = int(val_x)
                                 nval_n = int(val_n)
-                                if el_type == 'dtr':
-                                    value = nval_x - nval_n
-                                elif el_type == 'avgt':
-                                    value = (nval_x + nval_n)/2.0
-                                elif el_type == 'pet':
-                                    #Maybe needs to be doy -1
-                                    lat = kwargs['lls'][i][0]
-                                    lon = kwargs['lls'][i][1]
-                                    value = round(WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy,'english'),2)
-                                elif el_type in ['hdd','cdd', 'gdd']:
-                                    ave = (nval_x + nval_n)/2.0
-                                    if el_type == 'hdd':
-                                        value = float(kwargs['base_temperature']) - ave
-                                    else:
-                                        value = ave - float(kwargs['base_temperature'])
-                                    if value < 0:
-                                        value = 0
+                                if abs(float(nval_n) + 999.0)<0.001 or abs(float(nval_x) + 999.0)<0.001:
+                                    value = xmiss
+                                else:
+                                    if el_type == 'dtr':
+                                        value = nval_x - nval_n
+                                    elif el_type == 'avgt':
+                                        value = (nval_x + nval_n)/2.0
+                                    elif el_type == 'pet':
+                                        #Maybe needs to be doy -1
+                                        lat = kwargs['lls'][i][0]
+                                        lon = kwargs['lls'][i][1]
+                                        value = round(WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy,'english'),2)
+                                    elif el_type in ['hdd','cdd', 'gdd']:
+                                        ave = (nval_x + nval_n)/2.0
+                                        if el_type == 'hdd':
+                                            value = float(kwargs['base_temperature']) - ave
+                                        else:
+                                            value = ave - float(kwargs['base_temperature'])
+                                        if value < 0:
+                                            value = i
                             except:
                                 value = xmiss
                     if kwargs['monthly_statistic'] in ['mmax', 'mmin']:
