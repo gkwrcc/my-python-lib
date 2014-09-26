@@ -364,17 +364,16 @@ class SODDataJob(object):
         Converts string of lon, lat pairs into list of lon, lat pairs
         '''
         loc_list = []
-        if 'location' in params.keys():
-            loc_list.append(params['location'])
-        if 'locations' in params.keys():
-            if isinstance(params['locations'], basestring):
-                loc_list = params['locations'].split(',')
-                lon_list = [loc_list[2*j] for j in range(len(loc_list) / 2)]
-                lat_list = [loc_list[2*j + 1] for j in range(len(loc_list) / 2)]
-                for idx,lon in enumerate(lon_list):
-                    loc_list.append('%s,%s' %(lon, lat_list[idx]))
-            elif isinstance(params['locations'], list):
-                loc_list = params['locations']
+        for key in ['locations', 'location']:
+            if key in params.keys():
+                if isinstance(params[key], basestring):
+                    ll_list = params[key].split(',')
+                    lon_list = [ll_list[2*j] for j in range(len(ll_list) / 2)]
+                    lat_list = [ll_list[2*j + 1] for j in range(len(ll_list) / 2)]
+                    for idx,lon in enumerate(lon_list):
+                        loc_list.append('%s,%s' %(lon, lat_list[idx]))
+                elif isinstance(params[key], list):
+                    loc_list = params[key]
         return loc_list
 
     def set_area_params(self):
@@ -489,7 +488,7 @@ class SODDataJob(object):
 
     def get_grid_meta(self):
         meta_dict = {
-            'ids':[''],
+            'ids':['Lon, Lat'],
             'names':[''],
             'states':[''],
             'lls':[],
@@ -501,7 +500,7 @@ class SODDataJob(object):
             'valid_daterange':[['00000000','00000000']]
         }
         meta_dict['location_list'] = self.set_locations_list(self.params)
-        meta_dict['ids'] = [[str(l[0]) + '_' + str(l[1])] for l in meta_dict['location_list']]
+        meta_dict['names'] = meta_dict['location_list']
         meta_dict['lls'] = [[l] for l in meta_dict['location_list']]
         return meta_dict
 
@@ -849,16 +848,12 @@ class SODDataJob(object):
         for i,loc in enumerate(locations_list):
             data_params = self.set_request_params()
             data_params['loc'] = loc
-            req = AcisWS.GridData(data_params)
-
-            '''
             try:
                 req = AcisWS.GridData(data_params)
                 req['meta'];req['data']
             except Exception, e:
                 data[i]['error'] = str(e)
                 continue
-            '''
             data[i]['meta'] = req['meta']
             data[i]['data']= req['data']
         resultsdict['data'], resultsdict['error'] = self.format_data_grid(data, locations_list, elements)
@@ -1225,15 +1220,15 @@ class Logger(object):
         logger.setLevel(logging.DEBUG)
         #Create file and shell handlers
         fh = logging.FileHandler(self.base_dir + self.log_file_name)
-        sh = logging.StreamHandler()
+        #sh = logging.StreamHandler()
         fh.setLevel(logging.DEBUG)
-        sh.setLevel(logging.DEBUG)
+        #sh.setLevel(logging.DEBUG)
         #create formatter and add it to handler
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d in %(filename)s - %(message)s')
         fh.setFormatter(formatter)
-        sh.setFormatter(formatter)
+        #sh.setFormatter(formatter)
         logger.addHandler(fh)
-        logger.addHandler(sh)
+        #logger.addHandler(sh)
         return logger
 
 class FTPClass(object):

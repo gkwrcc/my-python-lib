@@ -128,14 +128,14 @@ ACIS_ELEMENTS ={
               '44': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':44},
               '45': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
               '-44': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':44},
-              '91': {'name': 'mly_maxt', 'name_long':'Maximum Monthly Temperature', 'vX':91},
-              '92': {'name': 'mly_mint', 'name_long':'Minimum Monthly Temperature', 'vX':92},
-              '99': {'name':'mly_avgt', 'name_long': 'Average Monthly Temperature', 'vX':99},
-              '94': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation', 'vX':94},
-              '95': {'name': 'yly_maxt', 'name_long':'Maximum Yearly Temperature', 'vX':95},
-              '96': {'name': 'yly_mint', 'name_long':'Minimum Yearly Temperature', 'vX':96},
-              '100': {'name':'yly_avgt', 'name_long': 'Average Yearly Temperature', 'vX':100},
-              '98': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation', 'vX':98}
+              '91': {'name': 'mly_maxt', 'name_long':'Maximum Monthly Temperature (F/C)', 'vX':91},
+              '92': {'name': 'mly_mint', 'name_long':'Minimum Monthly Temperature (F/C)', 'vX':92},
+              '99': {'name':'mly_avgt', 'name_long': 'Average Monthly Temperature (F/C)', 'vX':99},
+              '94': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation (in/mm)', 'vX':94},
+              '95': {'name': 'yly_maxt', 'name_long':'Maximum Yearly Temperature (F/C)', 'vX':95},
+              '96': {'name': 'yly_mint', 'name_long':'Minimum Yearly Temperature (F/C)', 'vX':96},
+              '100': {'name':'yly_avgt', 'name_long': 'Average Yearly Temperature (F/C)', 'vX':100},
+              '98': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation (in/mm)', 'vX':98}
               }
 
 ACIS_ELEMENTS_DICT = {
@@ -207,8 +207,8 @@ UNITS_ENGLISH = {
 }
 
 UNITS_LONG={
-    'C':'Degree Celsius',
-    'F':'Degree Fahrenheit',
+    'C':'Degrees Celsius',
+    'F':'Degrees Fahrenheit',
     'in':'Inches',
     'mm':'Millimiter',
     'Mi':'Miles',
@@ -280,9 +280,10 @@ DELIMITERS = {
     ',':',',
     'tab':chr(9),
     '   ':chr(9),
+    '\t':chr(9),
     'colon': ':',
     ':': ':',
-    'space': ' ',
+    'space':' ',
     ' ': ' ',
     'pipe':'|',
     '|':'|'

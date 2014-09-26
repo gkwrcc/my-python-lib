@@ -975,8 +975,12 @@ def Sodxtrmts(**kwargs):
                                         value = (nval_x + nval_n)/2.0
                                     elif el_type == 'pet':
                                         #Maybe needs to be doy -1
-                                        lat = kwargs['lls'][i][0]
-                                        lon = kwargs['lls'][i][1]
+                                        if len(kwargs['lls'][i]) == 2:
+                                            lat = kwargs['lls'][i][0]
+                                            lon = kwargs['lls'][i][1]
+                                        else:
+                                            lat = kwargs['lls'][i][0].split(',')[1]
+                                            lon = kwargs['lls'][i][0].split(',')[0]
                                         value = round(WRCCUtils.compute_pet(lat,lon,nval_x,nval_n,doy,'english'),2)
                                     elif el_type in ['hdd','cdd', 'gdd']:
                                         ave = (nval_x + nval_n)/2.0

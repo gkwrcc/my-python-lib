@@ -1117,20 +1117,23 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             #NOTE: row writer does not like delimiter characters in string,
             #need to set space char to be used in header string
             stn_name = str(resultsdict['stn_names'][stn])
-            header_seperator = ':'
+            header_seperator = ': '
+            '''
             if delim == ' ':
                 stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
+            '''
             if delim== ':':
                 header_seperator = ' '
-            row = ['*StationName' + header_seperator + stn_name, 'State' + header_seperator + str(resultsdict['stn_state'][stn])]
+            row = ['*StationName',stn_name,'State',str(resultsdict['stn_state'][stn])]
             writer.writerow(row)
-            row = ['*StationID' + header_seperator + str(resultsdict['stn_ids'][stn][0]).split(' ')[0],'Latitude'+ header_seperator+str(resultsdict['stn_lat'][stn]),'Longitude'+ header_seperator+str(resultsdict['stn_lon'][stn]),'Elevation(' + elev_unit + ')' + header_seperator+str(resultsdict['stn_elev'][stn])]
+            row = ['*StationID', str(resultsdict['stn_ids'][stn][0]).split(' ')[0],'Latitude',str(resultsdict['stn_lat'][stn]),'Longitude', str(resultsdict['stn_lon'][stn]),'Elevation (' + elev_unit + ')',str(resultsdict['stn_elev'][stn])]
             writer.writerow(row)
-            row = ['*Units'+ header_seperator,form['units']]
+            row = ['*Units',form['units']]
+
             writer.writerow(row)
             row = []
             writer.writerow(row)
-            row = ['*DataFlags' + header_seperator + 'M=Missing' + header_seperator + 'T=Trace' + header_seperator + 'S=Subsequent' + header_seperator + 'A=Accumulated']
+            row = ['*DataFlags','M=Missing', 'T=Trace', 'S=Subsequent', 'A=Accumulated']
             writer.writerow(row)
             row = []
             writer.writerow(row)
