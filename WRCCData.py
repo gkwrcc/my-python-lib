@@ -65,10 +65,10 @@ NETWORK_CODES = {
                 '5':'ICAO',
                 '6':'GHCN',
                 '7':'NWSLI',
-                '8':'RCC',
+                #'8':'RCC',
                 '9':'ThreadEx',
                 '10':'CoCoRaHS',
-                '11':'Misc'
+                #'11':'Misc'
                 }
 NETWORK_ICONS = {
             '1': 'yellow-dot',
@@ -78,10 +78,10 @@ NETWORK_ICONS = {
             '5': 'ltblue-dot',
             '6': 'orange-dot',
             '7': 'pink-dot',
-            '8': 'yellow',
+            #'8': 'yellow',
             '9':'green',
             '10':'purple',
-            '11': 'red'
+            #'11': 'red'
             }
 
 KELLY_NETWORK_CODES = {
@@ -93,9 +93,9 @@ KELLY_NETWORK_CODES = {
             '6':'WMO',
             '7':'WBAN',
             '8':'CoCoRaHS',
-            '9':'RCC',
+            #'9':'RCC',
             '10':'Threadex',
-            '11':'Misc'
+            #'11':'Misc'
             }
 
 KELLY_NETWORK_ICONS = {
@@ -106,10 +106,10 @@ KELLY_NETWORK_ICONS = {
             '5': 'green-dot',
             '6': 'purple-dot',
             '7': 'yellow-dot',
-            '8': 'purple',
+            #'8': 'purple',
             '9':'yellow',
             '10':'green',
-            '11': 'red'
+            #'11': 'red'
             }
 
 
