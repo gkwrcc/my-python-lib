@@ -10,7 +10,10 @@ Defines classes used in the my_acis project
 import time, re, os
 import json
 from cStringIO import StringIO
-import cairo
+try:
+    import cairo
+except:
+    import cairocffi as cairo
 import base64
 import datetime
 import csv
@@ -643,9 +646,11 @@ class SODDataJob(object):
         sdate, edate = self.set_start_end_date()
         elems = self.set_request_elements()
         params = {area:val, 'sdate':sdate, 'edate':edate,'elems':elems}
-        if 'grid' in self.params.keys():
+        if 'station_id' not in self.params.keys() and 'sid' not in self.params.keys():
             params['grid'] = self.params['grid']
             params['meta'] = 'll, elev'
+        else:
+            params['meta'] = 'name,state,sids,ll,elev,uid,county,climdiv'
         return params
 
     def find_leap_yr_indices(self):

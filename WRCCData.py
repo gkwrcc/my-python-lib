@@ -78,7 +78,7 @@ NETWORK_ICONS = {
             '5': 'ltblue-dot',
             '6': 'orange-dot',
             '7': 'pink-dot',
-            #'8': 'yellow',
+            '8': 'yellow',
             '9':'green',
             '10':'purple',
             #'11': 'red'
@@ -106,8 +106,8 @@ KELLY_NETWORK_ICONS = {
             '5': 'green-dot',
             '6': 'purple-dot',
             '7': 'yellow-dot',
-            #'8': 'purple',
-            '9':'yellow',
+            '8': 'purple',
+            #'9':'yellow',
             '10':'green',
             #'11': 'red'
             }
@@ -416,8 +416,8 @@ AREA_DEFAULTS = {
     'stnids':'266779,050848',
     'climdiv':'Northwestern, NV01',
     'climate_division':'Northwestern, NV01',
-    'cwa':'Las Vegas, VEF',
-    'county_warning_area':'Las Vegas, VEF',
+    'cwa':'Las Vegas NV, VEF',
+    'county_warning_area':'Las Vegas NV, VEF',
     'bbox':'-115,34,-114,35',
     'bounding_box':'-115,34,-114,35',
     'state':'nv',
@@ -934,6 +934,7 @@ SXTR_ELEMENT_CHOICES = (
     ('maxt', 'Daily Maximum Temperature '),
     ('mint', 'Daily Minimum Temperature'),
     ('avgt', 'Daily Mean Temperature'),
+    ('obst', 'Observation Time Temperature'),
     ('dtr', 'Daily Temperature Range'),
     ('hdd', 'Daily Heating Degree Days'),
     ('cdd', 'Daily Cooling Degree Days'),

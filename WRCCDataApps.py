@@ -918,7 +918,7 @@ def Sodxtrmts(**kwargs):
                 for nda in range(mon_len):
                     #Find day of year
                     doy = WRCCUtils.compute_doy_leap(str(mon + 1),str(nda + 1))
-                    if el_type in ['maxt', 'mint', 'wdmv']:
+                    if el_type in ['maxt', 'mint', 'obst','wdmv']:
                         dat = el_data[nyeart][0][doy-1]
                         val, flag = WRCCUtils.strip_data(dat)
                         if flag == 'M':

@@ -198,6 +198,7 @@ def get_meta_data(search_area, val,vX_list=None):
             for vX in vX_list:
                 elems.append({'vX':vX})
             meta_params['elems'] = elems
+            meta_params['meta'] += ',valid_daterange'
         request = StnMeta(meta_params)
         if 'error' in request.keys() or not 'meta' in request.keys() or not request:
             return {}
@@ -305,7 +306,7 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     }
     if el_list:
         vX_list = [str(el) for el in el_list]
-        vX_tuple = tuple(vX_list)
+        vX_tuple = ','.join(vX_list)
     else:
         vX_list= ['1','2','43','3','4','10','11','7','45','44','12']
         vX_tuple = '1,2,43,3,4,10,11,7,45,44,12'
@@ -313,9 +314,8 @@ def station_meta_to_json(by_type, val, el_list=None, time_range=None, constraint
     time_stamp = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_')
     f_name = time_stamp + 'stn.json'
     f_dir = settings.TEMP_DIR
-
-    #Set up metedata requet
-    params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange',"elems":vX_tuple}
+    #Set up metedata request
+    params = {'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange','elems':vX_tuple}
     params[WRCCData.STN_AREA_FORM_TO_PARAM[by_type]] = val
     if by_type == 'sw_states':params['state'] = 'az,ca,co,nm,nv,ut'
     #Find bbox for custom shapes
