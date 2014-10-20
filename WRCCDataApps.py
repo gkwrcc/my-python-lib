@@ -786,6 +786,10 @@ def Sodxtrmts(**kwargs):
     dates = kwargs['dates']
     if not dates:
         return results, fa_results
+    if kwargs['units'] == 'metric':
+        ucv = getattr(WRCCUtils, 'convert_to_metric')
+    else:
+        ucv = getattr(WRCCUtils, 'convert_nothing')
     start_year = int(dates[0][0:4])
     end_year = int(dates[-1][0:4])
     #Initialize analysis parameters
@@ -1056,12 +1060,12 @@ def Sodxtrmts(**kwargs):
 
                         if value > -9998.0:
                             sumda+=1
-                            if kwargs['less_greater_or_between'] == 'l' and value < float(kwargs['threshold_for_less_or_greater']):
+                            if kwargs['less_greater_or_between'] == 'l' and ucv(el_type,value) < float(kwargs['threshold_for_less_or_greater']):
                                 summ+=1
-                            elif kwargs['less_greater_or_between'] == 'g' and value > float(kwargs['threshold_for_less_or_greater']):
+                            elif kwargs['less_greater_or_between'] == 'g' and ucv(el_type,value) > float(kwargs['threshold_for_less_or_greater']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
-                            elif kwargs['less_greater_or_between'] == 'b' and value > float(kwargs['threshold_low_for_between']) and value <= float(kwargs['threshold_high_for_between']):
+                            elif kwargs['less_greater_or_between'] == 'b' and ucv(el_type, value) > float(kwargs['threshold_low_for_between']) and ucv(el_type, value) <= float(kwargs['threshold_high_for_between']):
                                 summ+=1
                                 if flag != ' ':annflg[mon] = flag
 
@@ -1218,7 +1222,7 @@ def Sodxtrmts(**kwargs):
                 if kwargs['monthly_statistic'] == 'ndays':
                     results[i][num_yrs].append('%d' % int(round(mean_out[monind])))
                 else:
-                    results[i][num_yrs].append('%.2f' % round(mean_out[monind],2))
+                    results[i][num_yrs].append('%.2f' % round(ucv(el_type, mean_out[monind]),2))
                 #New
                 results[i][num_yrs].append(' ')
             else:
@@ -1234,14 +1238,14 @@ def Sodxtrmts(**kwargs):
                     if kwargs['monthly_statistic'] == 'ndays':
                         results[i][num_yrs+1].append('%d' % int(round(numpy.sqrt((summ2 - summ**2/count)/(count -1)))))
                     else:
-                        results[i][num_yrs+1].append('%.2f' % round(numpy.sqrt((summ2 - summ**2/count)/(count -1)),2))
+                        results[i][num_yrs+1].append('%.2f' % round(ucv(el_type, numpy.sqrt((summ2 - summ**2/count)/(count -1))),2))
                     #New
                     results[i][num_yrs+1].append(' ')
                 except:
                     pass
-                h1 = float(summ)/float(count)
-                h2 = float(summ2)/float(count)
-                h3 = float(summ3)/float(count)
+                h1 = float(ucv(el_type,summ))/float(count)
+                h2 = float(ucv(el_type, summ2))/float(count)
+                h3 = float(ucv(el_type, summ3))/float(count)
                 xm2 = h2 - h1*h1
                 xm3 = h3 - 3.0*h1*h2 + 2.0*h1*h1*h1
                 if abs(xm2) > 0.00001:
@@ -1264,13 +1268,13 @@ def Sodxtrmts(**kwargs):
             if kwargs['monthly_statistic'] == 'ndays':
                 results[i][num_yrs+3].append('%d' % int(round(xmax)))
             else:
-                results[i][num_yrs+3].append('%.2f' % xmax)
+                results[i][num_yrs+3].append('%.2f' % ucv(el_type, xmax))
             #New
             results[i][num_yrs+3].append(' ')
             if kwargs['monthly_statistic'] == 'ndays':
                 results[i][num_yrs+4].append('%d' % int(round(xmin)))
             else:
-                results[i][num_yrs+4].append('%.2f' % round(xmin,2))
+                results[i][num_yrs+4].append('%.2f' % round(ucv(el_type, xmin),2))
             #New
             results[i][num_yrs+4].append(' ')
             if kwargs['monthly_statistic'] == 'ndays':
@@ -1308,15 +1312,15 @@ def Sodxtrmts(**kwargs):
                         results[i][yr].append('z')
                         continue
                 if kwargs['departures_from_averages']  == 'F':
-                    #results[i][yr].append('%.2f%s' % (table_1[yr][mon], outchr[monind]))
+                    #results[i][yr].append('%.2f%s' % (ucv(el_type, table_1[yr][mon]), outchr[monind]))
                     if kwargs['monthly_statistic'] == 'ndays':
                         results[i][yr].append('%d' % int(table_1[yr][mon]))
                     else:
-                        results[i][yr].append('%.2f' % table_1[yr][mon])
+                        results[i][yr].append('%.2f' % ucv(el_type, table_1[yr][mon]))
                     results[i][yr].append('%s' % outchr[monind])
                 else:
-                    #results[i][yr].append('%.2f%s' % ((table_1[yr][mon] - mean_out[monind]), outchr[monind]))
-                    results[i][yr].append('%.2f' % (table_1[yr][mon] - mean_out[monind]))
+                    #results[i][yr].append('%.2f%s' % (ucv(el_type, (table_1[yr][mon] - mean_out[monind])), outchr[monind]))
+                    results[i][yr].append('%.2f' % (ucv(el_type, (table_1[yr][mon] - mean_out[monind]))))
                     results[i][yr].append('%s' % outchr[monind])
             #End month loop
         #End of year loop
@@ -2520,6 +2524,10 @@ def Sodsumm(**kwargs):
     else:
         max_missing_days = int(kwargs['max_missing_days'])
     elements = kwargs['elements']
+    if kwargs['units'] == 'metric':
+        ucv = getattr(WRCCUtils, 'convert_to_metric')
+    else:
+        ucv = getattr(WRCCUtils, 'convert_nothing')
     dates = kwargs['dates']
     if kwargs['el_type'] == 'all':tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
     if kwargs['el_type'] == 'both':tables = ['temp', 'prsn']
@@ -2549,9 +2557,15 @@ def Sodsumm(**kwargs):
         for table in tables:
             results[i][table] = []
             if table == 'temp':
-                results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=90', '<=32', '<=32', '<=0'])
+                if kwargs['units'] == 'metric':
+                    results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=32', '<=0', '<=0', '<=-17'])
+                else:
+                    results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=90', '<=32', '<=32', '<=0'])
             elif table == 'prsn':
-                results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.01', '>=0.10', '>=0.50', '>=1.00', 'Mean', 'High', 'Yr'])
+                if kwargs['units'] == 'metric':
+                    results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.25', '>=2.5', '>=13', '>=25', 'Mean', 'High', 'Yr'])
+                else:
+                    results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.01', '>=0.10', '>=0.50', '>=1.00', 'Mean', 'High', 'Yr'])
             elif table in ['hdd', 'cdd']:
                 results[i][table].append(['Base', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ann'])
             elif table in ['gdd', 'corn']:
@@ -2564,12 +2578,20 @@ def Sodsumm(**kwargs):
         base_list = {}
         val_list_d =  defaultdict(list)
         #Degree day base tables
-        base_list['hdd'] = [65, 60, 57, 55,50]
-        base_list['cdd'] = [55, 57, 60, 65, 70]
-        base_list['gdd'] = [40, 45, 50, 55, 60]
-        base_list['corn'] = [50]
-        val_list_d['hdd'] = [[65], [60], [57], [55], [50]]
-        val_list_d['cdd'] = [[55], [57], [60], [65], [70]]
+        if kwargs['units'] == 'metric':
+            base_list['hdd'] = [18, 16, 14, 13,10]
+            base_list['cdd'] = [13, 14, 16, 18, 21]
+            base_list['gdd'] = [4, 7, 10, 13, 14]
+            base_list['corn'] = [10]
+            val_list_d['hdd'] = [[18], [16], [14], [13], [10]]
+            val_list_d['cdd'] = [[13], [14], [16], [18], [21]]
+        else:
+            base_list['hdd'] = [65, 60, 57, 55,50]
+            base_list['cdd'] = [55, 57, 60, 65, 70]
+            base_list['gdd'] = [40, 45, 50, 55, 60]
+            base_list['corn'] = [50]
+            val_list_d['hdd'] = [[65], [60], [57], [55], [50]]
+            val_list_d['cdd'] = [[55], [57], [60], [65], [70]]
         for tbl in ['gdd', 'corn']:
             val_list_d[tbl]=[]
             for base in base_list[tbl]:
@@ -2751,7 +2773,7 @@ def Sodsumm(**kwargs):
                     #Kelly's algorithm
                     #Kelly just adds up months and averages the averaged values
                     if cat_idx < 12:
-                        val_list.append('%.1f' % round(ave,1))
+                        val_list.append('%.1f' % round(ucv(el,ave),1))
                     else:
                         if cat_idx == 12:m_idx = range(1,13)
                         if cat_idx == 13:m_idx =[12,1,2]
@@ -2763,14 +2785,13 @@ def Sodsumm(**kwargs):
                             s_ave+= float(results[i]['temp'][m][el_idx+1])
                         s_ave = round(s_ave / len(m_idx),1)
                         #s_ave = s_ave/ len(m_idx)
-                        val_list.append('%.1f' % s_ave)
-
-                val_list.append(int(round(max_max,0)))
+                        val_list.append('%.1f' % ucv(el, s_ave))
+                val_list.append(int(round(ucv('maxt',max_max),0)))
                 if cat_idx >=12:
                     val_list.append('%s%s%s' % (date_max[0:4],date_max[4:6],date_max[6:8]))
                 else:
                     val_list.append('%s/%s' % (date_max[6:8], date_max[0:4]))
-                val_list.append(int(round(min_min,0)))
+                val_list.append(int(round(ucv('mint',min_min),0)))
                 if cat_idx >=12:
                     val_list.append('%s%s%s' % (date_min[0:4],date_min[4:6],date_min[6:8]))
                 else:
@@ -2812,9 +2833,9 @@ def Sodsumm(**kwargs):
                     ave_high = -99.0
                     yr_low = '0000'
                     yr_high = '0000'
-                val_list.append('%.1f' %ave_high)
+                val_list.append('%.1f' %ucv('avgt',ave_high))
                 val_list.append(yr_high)
-                val_list.append('%.1f' %ave_low)
+                val_list.append('%.1f' %ucv('avgt',ave_low))
                 val_list.append(yr_low)
 
                 #4) Threshold days for maxt, mint
@@ -2895,9 +2916,9 @@ def Sodsumm(**kwargs):
                             if numpy.isnan(m):
                                 m=-99.0
                             if el == 'snow':
-                                val_list.append('%.1f' % round(m,2))
+                                val_list.append('%.1f' % round(ucv(el,m),2))
                             else:
-                                val_list.append('%.2f' % round(m,3))
+                                val_list.append('%.2f' % round(ucv(el,m),3))
                         else:
                             if cat_idx == 12:m_idx = range(1,13)
                             if cat_idx == 13:m_idx =[12,1,2]
@@ -2909,10 +2930,10 @@ def Sodsumm(**kwargs):
                                 s_ave+= float(results[i]['prsn'][m][1])
                             if el == 'snow':
                                 s_ave = round(s_ave,1)
-                                val_list.append('%.1f' % s_ave)
+                                val_list.append('%.1f' % ucv(el, s_ave))
                             else:
                                 s_ave = round(s_ave,2)
-                                val_list.append('%.2f' % s_ave)
+                                val_list.append('%.2f' % ucv(el,s_ave))
                     except:
                         val_list.append('-99.0')
                     if sum_yr:
@@ -2936,15 +2957,15 @@ def Sodsumm(**kwargs):
                             prec_low = 99.0
                             yr_low = '0000'
                     if el == 'snow':
-                        val_list.append('%.1f' %round(prec_high,2))
+                        val_list.append('%.1f' %round(ucv('pcpn',prec_high),2))
                     else:
-                        val_list.append('%.2f' %round(prec_high,2))
+                        val_list.append('%.2f' %round(ucv('pcpn',prec_high),2))
                     val_list.append(yr_high)
                     if el == 'pcpn':
                         if el == 'snow':
-                            val_list.append('%.1f' %round(prec_low,2))
+                            val_list.append('%.1f' %round(ucv('pcpn',prec_low),2))
                         else:
-                            val_list.append('%.2f' %round(prec_low,2))
+                            val_list.append('%.2f' %round(ucv('pcpn',prec_low),2))
                         val_list.append(yr_low)
                         #2) Daily Prec max
                         prec_max = max(el_data['pcpn'])

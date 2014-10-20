@@ -228,8 +228,6 @@ def check_degree_days(form):
         return err
     el_list = form['degree_days'].replace(' ','').split(',')
     for el in el_list:
-        if len(el) != 5:
-            return '%s is not a valid degree day element.' %el
         #strip degree day digits
         el_strip = re.sub(r'(\d+)(\d+)', '', el)
         base_temp = el[3:]

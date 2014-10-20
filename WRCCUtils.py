@@ -396,19 +396,22 @@ def get_station_ids(stn_json_file_path):
             stn_ids+=','
     return stn_ids
 
+def convert_nothing(element,value):
+    return value
+
 def convert_to_metric(element, value):
     el,base_temp = get_el_and_base_temp(element)
     try:
         float(value)
     except:
         return value
-    if el in ['maxt','mint','avgt','obst', 'yly_maxt', 'yly_mint', 'mly_maxt', 'mly_mint']:
+    if el in ['maxt','mint','avgt','obst', 'yly_maxt', 'yly_mint', 'mly_maxt', 'mly_mint', 'dtr']:
         v = round((float(value) - 32.0)*5.0/9.0,1)
     elif el in ['hdd','cdd','gdd']:
         #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
         #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
         v = int(round(float(value)*10.0/18.0))
-    elif el in ['pcpn','snow','snwd','evap','yly_pcpn', 'mly_pcpn']:
+    elif el in ['pcpn','snow','snwd','evap','yly_pcpn', 'mly_pcpn', 'pet', 'evap']:
         v = round(float(value)*25.4,2)
     elif el in ['wdmv']:
         v = round(float(value)*1.60934,1)
@@ -1718,10 +1721,16 @@ def get_el_and_base_temp(el):
     '''
     element = el
     base_temp = None
-    el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
-    b = el[-2:len(el)]
+    #el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
+    el_strip = re.sub(r'(\d+)(\.?)(\d+)', '', el)
+    #b = el[-2:len(el)]
     try:
-        base_temp = int(b)
+        b = el[3:]
+    except:
+        b = None
+    try:
+        float(b)
+        base_temp = b
         element = el_strip
     except:
         if b == 'dd' and el in ['hdd', 'cdd']:
