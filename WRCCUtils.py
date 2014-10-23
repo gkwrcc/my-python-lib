@@ -504,7 +504,6 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
     The kml file is put into dir_location. dir_location is an
     absolute path on local host
     '''
-    #Check if kml file already exists in dir_loc
     if str(dir_location)[-1]!='/':
         dr = str(dir_location) + '/'
     elif str(dir_location)[0]!='/':
@@ -512,6 +511,7 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
     else:
         dr = str(dir_location)
     '''
+    #Check if kml file already exists in dir_loc
     try:
         with open(dr + kml_file_name):
             pass
@@ -528,7 +528,6 @@ def generate_kml_file(area_type, state, kml_file_name, dir_location):
                 return 'Success'
     except IOError:
         pass
-
     #Make General call to get the geojson for the input params
     req = AcisWS.make_gen_call_by_state(WRCCData.SEARCH_AREA_FORM_TO_ACIS[str(area_type)], str(state))
     #Sanity Check:
@@ -926,7 +925,7 @@ def write_griddata_to_file(data, form, f=None, request=None):
         else: #file f given
             try:
                 csvfile = open(f, 'w+')
-                writer = csv.writer(csvfile, delimiter=delim )
+                writer = csv.writer(csvfile, delimiter=delim)
                 response = None
             except Exception, e:
                 #Can' open user given file, create emergency writer object
@@ -936,9 +935,9 @@ def write_griddata_to_file(data, form, f=None, request=None):
         #Find length of date values
         #header
         header_seperator = ':'
-        if delim== ':':
+        if delim == ':':
             header_seperator = ' '
-        row = ['*'+ str(WRCCData.DISPLAY_PARAMS[form['select_grid_by']]),str(form[form['select_grid_by']])]
+        row = ['*AreaType',WRCCData.DISPLAY_PARAMS[form['select_grid_by']],form[form['select_grid_by']]]
         writer.writerow(row)
         if form['data_summary'] == 'none':
             row = ['*'+'DataSummary','None']
@@ -1194,8 +1193,8 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             #Header
             ws.write(0,0,'Stn Name');ws.write(0,1,'Stn ID');ws.write(0,2,'State');ws.write(0,3,'Lat');ws.write(0,4,'Lon');ws.write(0,5,'Elev');
             ws.write(1,0,str(resultsdict['stn_names'][stn]))
-            ws.write(1,1,str(resultsdict['stn_state'][stn]))
-            ws.write(1,2,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
+            ws.write(1,1,str(resultsdict['stn_ids'][stn][0]).split(' ')[0])
+            ws.write(1,2,str(resultsdict['stn_state'][stn]))
             ws.write(1,3,str(resultsdict['stn_lat'][stn]))
             ws.write(1,4,str(resultsdict['stn_lon'][stn]))
             ws.write(1,5,str(resultsdict['stn_elev'][stn]))
