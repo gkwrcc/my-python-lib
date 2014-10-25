@@ -294,6 +294,14 @@ def check_state(form):
     '''
     return err
 
+def check_bounding_box(form):
+    err = None
+    bbox = form['bounding_box'].replace(' ', '').split(',')
+    if float(bbox[0]) < -172.0 or float(bbox[2]) > -60:
+        return 'Longitude range is too large.'
+    if float(bbox[1]) < 13.0 or float(bbox[3]) > 77.0:
+        return 'Latitude range is too large.'
+
 def check_station_id(form):
     err = None
     s = form['station_id']
