@@ -1078,7 +1078,8 @@ class GridFigure(object) :
         self.ctx = ctx = cairo.Context(out_img)
         # set background color
         ctx.set_source_rgb(255,239,213)
-        ctx.paint()
+        ctx.fill()
+        #ctx.paint()
         # place image
         ctx.set_source_surface(in_img,pad_w/2,self.image_offset)
         ctx.paint()
@@ -1113,15 +1114,15 @@ class GridFigure(object) :
             title+= ' Base Temperature: ' + str(base_temp)
         area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
         area_description+= ': ' + self.params[self.params['select_grid_by']].upper()
-        date_str = '%s to %s' % (self.params['sdate'], self.params['edate'])
+        date_str = 'Start Date: %s End Date: %s' % (self.params['sdate'], self.params['edate'])
         if self.params['image']['width']<301:
             ctx.set_font_size(8.)
             h = 10
         elif self.params['image']['width']>300 and self.params['image']['width']<501:
-            ctx.set_font_size(10.)
+            ctx.set_font_size(14.)
             h=20
         else:
-            ctx.set_font_size(12.)
+            ctx.set_font_size(16.)
             h=30
         #ctx.set_source_rgb(.8,.1,.1)
         ctx.move_to(0,0)
