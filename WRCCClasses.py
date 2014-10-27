@@ -646,7 +646,7 @@ class SODDataJob(object):
         sdate, edate = self.set_start_end_date()
         elems = self.set_request_elements()
         params = {area:val, 'sdate':sdate, 'edate':edate,'elems':elems}
-        if 'station_id' not in self.params.keys() and 'sid' not in self.params.keys():
+        if 'station_id' not in self.params.keys() and 'sid' not in self.params.keys() and 'sids' not in self.params.keys():
             params['grid'] = self.params['grid']
             params['meta'] = 'll, elev'
         else:
@@ -892,10 +892,10 @@ class SODApplication(object):
                     }
         if 'station_ids' in self.data.keys():
             app_params['coop_station_ids'] = self.data['station_ids']
-            app_params['station_names'] = self.data['station_names'],
+            app_params['station_names'] = self.data['station_names']
         if 'location_list' in self.data.keys():
             app_params['location_list'] = self.data['location_list']
-            app_params['station_names'] = self.data['location_list'],
+            app_params['station_names'] = self.data['location_list']
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
         #Sanity check, make sure data has data

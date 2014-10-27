@@ -3373,7 +3373,8 @@ def Soddd(**kwargs):
                         results[i][day].append(0)
     return results
 
-def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_type, filter_days):
+#def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_type, filter_days):
+def Soddynorm(**kwargs):
     '''
     FINDS DAILY NORMALS FOR EACH DAY OF THE YEAR FOR EACH STATION
     OVER A MULTI YEAR PERIOD. IT USES EITHER A GAUSSIAN FILTER OR RUNNING MEAN.
@@ -3382,25 +3383,25 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
     #results[stn_id] = [[doy =1, mon=1, day=1, maxt_ave, yrs, mint_ave, yrs, pcpn_ave, yrs, sd_maxt, sd_mint],[doy=2, ...]...]
     results = defaultdict(list)
     #Loop over stations
-    for i, stn in enumerate(coop_station_ids):
+    for i, stn in enumerate(kwargs['coop_station_ids']):
         #Find long-term daily averages of each element
         #for each day of the year, el_data_list will hold [average, yrs_in record, standard deviation]
-        el_data_list = [[] for el in elements]
-        el_data_list2 = [[] for el in elements]
-        for j, el in enumerate(elements):
+        el_data_list = [[] for el in kwargs['elements']]
+        el_data_list2 = [[] for el in kwargs['elements']]
+        for j, el in enumerate(kwargs['elements']):
             if el == 'pcpn':
                 el_data_list2[j] = [['0.0', '0'] for day in range(366)] #holds filtered data
             else:
                 el_data_list2[j] = [['0.0','0.0','0'] for day in range(366)]
         #el_data_list_f = [[] for el in elements] #filtered data
-        results[i] = [[] for el in elements]
+        results[i] = [[] for el in kwargs['elements']]
         #Check for empty data
-        if data[i] == [[],[],[]]:
+        if kwargs['data'][i] == [[],[],[]]:
             continue
-        for j,el in enumerate(elements):
-            if not data[i][j]:
+        for j,el in enumerate(kwargs['elements']):
+            if not kwargs['data'][i][j]:
                 continue
-            el_data = data[i][j]
+            el_data = kwargs['data'][i][j]
             if el == 'pcpn': #deal with S, A and T flags
                 s_count = 0
                 for yr in range(len(el_data)):
@@ -3485,15 +3486,15 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
                     #el_data_list.append([ave, str(yr_count)])
 
             #implement filter if needed, average of the averages and of the std
-            if filter_type == 'gauss':
-                fltr = WRCCUtils.bcof(int(filter_days) - 1, normlz=True)
+            if kwargs['filter_type'] == 'gauss':
+                fltr = WRCCUtils.bcof(int(kwargs['filter_days']) - 1, normlz=True)
             else:
-                fltr = [1.0/int(filter_days) for k in range(int(filter_days))]
-            if int(filter_days)%2 == 0:
-                nlow = -1 * (int(filter_days)/2 - 1)
-                nhigh = int(filter_days)/2
+                fltr = [1.0/int(kwargs['filter_days']) for k in range(int(kwargs['filter_days']))]
+            if int(kwargs['filter_days'])%2 == 0:
+                nlow = -1 * (int(kwargs['filter_days'])/2 - 1)
+                nhigh = int(kwargs['filter_days'])/2
             else:
-                nlow = -1 * (int(filter_days) - 1)/2
+                nlow = -1 * (int(kwargs['filter_days']) - 1)/2
                 nhigh = -1 * nlow
 
             for doy in range(366):
@@ -3553,7 +3554,7 @@ def Soddynorm(data, dates, elements, coop_station_ids, station_names, filter_typ
         for doy in range(366):
             mon, day = WRCCUtils.compute_mon_day(doy+1)
             results[i].append([str(doy+1), str(mon), str(day)])
-            for j, el in enumerate(elements):
+            for j, el in enumerate(kwargs['elements']):
                 for k in el_data_list2[j][doy]:
                     results[i][-1].append(k)
     return results

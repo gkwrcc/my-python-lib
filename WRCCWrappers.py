@@ -80,10 +80,9 @@ def sodxtrmts_wrapper(argv):
             departure from averages:
                 T  --> True
                 F  --> False
-
-    Example (web) with base_temp:
+    Examples
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+hdd+60+mave+5+01+F
-    Example (web) with base_temp:
+
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+maxt+none+mave+5+01+F
     '''
     #Sanity Check
@@ -172,11 +171,13 @@ def sodxtrmts_wrapper(argv):
                 'start_date':start_year,
                 'end_date':end_year,
                 'element':element,
+                'units':'english',
                 'base_temperature':base_temp
                 }
     app_params = {
                 'el_type':element,
                 'base_temperature':base_temp,
+                'units':'english',
                 'max_missing_days':max_missing_days,
                 'start_month':start_month,
                 'monthly_statistic': monthly_statistic,
@@ -205,7 +206,8 @@ def sodsum_wrapper(argv):
                 pcpn, snow, snwd, maxt, mint, obst, multi (all 6)
             output format choices:
                 html --> html output for display on WRCC pages
-    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+por+multi
+    Example:
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+por+multi
     '''
     #Sanity Check
     if len(argv) != 4:
@@ -279,8 +281,8 @@ def sodsumm_wrapper(argv):
     Explaination:
             table_name choices:
                 temp, prsn, hdd, cdd, gdd, corn
-    Example (commandline): python WRCCWrappers.py sodsumm 266779 temp 2000 2012 5
-    Example (web): http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
+    Example
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
     '''
     #Sanity Check on input parameter number
     if len(argv) != 5:
@@ -340,12 +342,14 @@ def sodsumm_wrapper(argv):
     #Define parameters
     data_params = {
                 'sid':stn_id,
+                'units':'english',
                 'start_date':start_year,
                 'end_date':end_year,
                 'element':'all'
                 }
     app_params = {
                 'el_type':tbls,
+                'units':'english',
                 'max_missing_days':max_missing_days,
                 }
     try:
@@ -375,9 +379,10 @@ def sodsumm_wrapper(argv):
 
 def soddyrec_wrapper(argv):
     '''
-    argv -- stn_id_id element_type start_date end_date
+    argv -- stn_id element_type start_date end_date
 
     Explaination:
+            stn_id -- station identifier
             start/end date are 8 digits long, e.g 20100102
             element_type choices:
                 all  -- generates tables for  maxt, mint, pcpn, snow, snwd, hdd, cdd,
@@ -391,8 +396,8 @@ def soddyrec_wrapper(argv):
                 hdd  -- generates tables for Heating Degree Days,
                 cdd  -- generates tables for Cooling Degree Days
             output format choices:
-                list     --> python list of list
-                txt_list --> output looks like Kelly's commandline output
+                html --> WRCC web output
+                txt --> output looks like Kelly's commandline output
     Examples (web):
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231+html
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por+html
@@ -401,7 +406,7 @@ def soddyrec_wrapper(argv):
     '''
     #Sanity Check
     if len(argv) != 5:
-        format_soddyrec_results_web([],{'error':'Invalid Request'},{})
+        format_soddyrec_results_web([],{},{'error':'Invalid Request'})
         sys.exit(1)
     #Assign input parameters:
     stn_id = str(argv[0]);element = str(argv[1])
@@ -414,7 +419,7 @@ def soddyrec_wrapper(argv):
     try:
         int(stn_id)
     except:
-        format_soddyrec_results_web([],{'redirect':''},{})
+        format_soddyrec_results_web([],{},{'redirect':''})
         sys.exit(1)
     #Find valid daterange
     valid_daterange = por_to_valid_daterange(stn_id)
@@ -426,13 +431,13 @@ def soddyrec_wrapper(argv):
     if end_date.upper() == 'POR' or WRCCUtils.date_to_datetime(end_date) > WRCCUtils.date_to_datetime(valid_daterange[1]):
         end_date = valid_daterange[1]
     if element not in ['all','tmp','wtr','pcpn','snow','snwd','maxt','mint','hdd','cdd']:
-        format_soddyrec_results_web([],{'error':'Invalid element: %s' %element},{})
+        format_soddyrec_results_web([],{},{'error':'Invalid element: %s' %element})
         sys.exit(1)
     if len(start_date) != 8:
-        format_soddyrec_results_web([],{'error':'Invalid start_date: %s' %start_date},{})
+        format_soddyrec_results_web([],{},{'error':'Invalid start_date: %s' %start_date})
         sys.exit(1)
     if len(end_date) != 8:
-        format_soddyrec_results_web([],{'error':'Invalid end_date: %s' %end_date},{})
+        format_soddyrec_results_web([],{},{'error':'Invalid end_date: %s' %end_date})
         sys.exit(1)
 
     #Define parameters
@@ -454,9 +459,124 @@ def soddyrec_wrapper(argv):
         format_soddyrec_results_txt(results,SR_wrapper,data_params)
     else:
         format_soddyrec_results_web(results,SR_wrapper,data_params)
+
+def soddynorm_wrapper(argv):
+    '''
+    argv -- stn_id start_year end_year filter_type filter_days
+
+    Explaination:
+            start/end year --> start/end year of analysis
+            filter_type    --> rm or gauss (running mean or Gaussian)
+            filter_days --> number of days to compute running mean/gaussian over
+    Examples:
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddynorm+266779+1950+2000+rm+9
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddynorm+266779+por+por+gauss+5
+    '''
+    #Sanity Check
+    if len(argv) != 5:
+        format_soddynorm_results_web([],{},{'error':'Invalid Request'})
+        sys.exit(1)
+    #Assign input parameters:
+    stn_id = str(argv[0])
+    start_year = format_date(str(argv[1]));end_year = format_date(str(argv[2]))
+    filter_type = str(argv[3])
+    filter_days = str(argv[4])
+    #Sanity checks
+    #Station ID check, if not alpha numeric, people coming from old pages and
+    #we need to redirect them
+    try:
+        int(stn_id)
+    except:
+        format_soddynorm_results_web([],{},{'redirect':''})
+        sys.exit(1)
+    #Find valid daterange
+    valid_daterange = por_to_valid_daterange(stn_id)
+    #Change POR start/end year to 8 digit start/end dates
+    #Check if yuser dates lie outside of por for station
+    if start_year.upper() == 'POR' or WRCCUtils.date_to_datetime(start_year + '0101') < WRCCUtils.date_to_datetime(valid_daterange[0]):
+        start_year = valid_daterange[0][0:4]
+    if end_year.upper() == 'POR' or WRCCUtils.date_to_datetime(end_year + '1231') > WRCCUtils.date_to_datetime(valid_daterange[1]):
+        end_year = valid_daterange[1][0:4]
+    if filter_type not in ['rm','gauss']:
+        format_soddynorm_results_web([],{},{'error':'Invalid filter type: %s' %filter_type})
+        sys.exit(1)
+    if len(start_year) != 4:
+        format_soddynorm_results_web([],{'error':'Invalid start_year: %s' %start_year},{})
+        sys.exit(1)
+    if len(end_year) != 4:
+        format_soddynorm_results_web([],{},{'error':'Invalid end_year: %s' %end_year})
+        sys.exit(1)
+
+    #Define parameters
+    data_params = {
+                'sid':stn_id,
+                'start_date':start_year,
+                'end_date':end_year,
+                }
+    app_params = {
+        'filter_type':filter_type,
+        'filter_days':filter_days
+    }
+    SN_wrapper = Wrapper('Soddynorm', data_params, app_specific_params=app_params)
+    #Get data
+    data = SN_wrapper.get_data()
+    #run app
+    results = SN_wrapper.run_app(data)
+    '''
+    try:
+        SN_wrapper = Wrapper('Soddynorm', data_params, app_specific_params=app_params)
+        #Get data
+        data = SN_wrapper.get_data()
+        #run app
+        results = SN_wrapper.run_app(data)
+    except:
+        format_soddynorm_results_web({},{},data_params)
+        sys.exit(1)
+    '''
+    format_soddynorm_results_web(results,SN_wrapper,data_params)
 ########
 #Utils
 #######
+def format_soddynorm_results_txt(results, wrapper,data_params):
+    print ' DOY  MON DY  TMAX  #YRS  TMIN  #YRS PRECIP #YRS SD MAX SD MIN'
+    for doy_data in results[0][3:]:
+        #Reorder
+        data_str = ''
+        for i in [0,1,2,3,5,6,8,9,10,4,7]:
+            if i <= 2 or i == 10:
+                data_str+= '%4s' %str(doy_data[i])
+            elif i in [4,7]:
+                data_str+= '%8s' %str(doy_data[i])
+            elif i == 9:
+                data_str+= '%7s' %str(doy_data[i])
+            else:
+                data_str+= '%6s' %str(doy_data[i])
+        print data_str
+
+def format_soddynorm_results_web(results,wrapper,data_params):
+    '''
+    Generates Soddyrec web content
+    '''
+    print_html_header()
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif 'error' in data_params.keys():
+        print_error(data_params['error'])
+    elif not results or not results[0]:
+        print_error('No data found!')
+    else:
+        print '<TITLE>' +  wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '30 Year Daily Summary ,' + data_params['start_date'] + '-' + data_params['end_date'] +' (WRCC)</TITLE>'
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<H1>' +  wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '</H1>'
+        print '<H3>30 Year Daily Temperature and Precipitation Summary </H3>'
+        print '<H3>STATION ' + wrapper.station_ids[0] + ' AVERAGES FROM AVAILABLE YEARS IN PERIOD ' + data_params['start_date'] + ' TO ' + data_params['end_date'] + ' .</H3>'
+        print '<PRE>'
+        format_soddynorm_results_txt(results, wrapper,data_params)
+        print '</PRE>'
+        print '<address>Western Regional Climate Center, <A HREF="mailto:wrcc@dri.edu">wrcc@dri.edu </A> </address>'
+        print '</BODY>'
+        print '</HTML>'
+
 def format_soddyrec_results_web(results,wrapper,data_params):
     '''
     Generates Soddyrec web content
@@ -468,7 +588,7 @@ def format_soddyrec_results_web(results,wrapper,data_params):
         print_error(data_params['error'])
     elif not wrapper or not results:
         print '<CENTER>'
-        print '<H1><FONT COLOR="RED">No data found!</FONT></H1>'
+        print '<H1>No data found!</H1>'
         print '</CENTER>'
         print '</BODY>'
         print '</HTML>'
@@ -847,7 +967,7 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
         print '<H3> (<B>' + data_params['sid'] + '</B>) </H3>'
         if data_params['element'] in ['hdd', 'cdd', 'gdd']:
             print '<H4>   Base Temperature = ' + str(data_params['base_temperature'])+' F</H4>'
-        if not data or not results or not results[0]:
+        if not results or not results[0]:
             print '<H1>No Data found!</H1>'
             print '<H3>Start Year: ' + user_start_year + ', End Year:' + user_end_year +'</H3>'
             print '</CENTER>'
@@ -1048,7 +1168,7 @@ def print_error(error):
     print '<HEAD><TITLE>' + error + '</TITLE></HEAD>'
     print '<BODY BGCOLOR="#FFFFFF">'
     print '<CENTER>'
-    print '<H1><FONT COLOR="RED">' + error + '</FONT></H1>'
+    print '<H1><FONT COLOR>' + error + '</FONT></H1>'
     print '</CENTER>'
     print '<PRE>'
     print '</PRE>'
@@ -1085,7 +1205,7 @@ def format_date(date):
 #########
 if __name__ == "__main__":
     program = sys.argv[1]
-    programs = ['sodsumm', 'sodxtrmts','soddyrec', 'sodsum']
+    programs = ['sodsumm', 'sodxtrmts','soddyrec', 'sodsum','soddynorm']
     if program not in programs:
         print 'First argument to WRCCWrappers should be valid progam name.'
         print 'Programs: ' + str(programs)
