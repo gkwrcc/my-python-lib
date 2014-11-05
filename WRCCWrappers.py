@@ -276,13 +276,30 @@ def sodsum_wrapper(argv):
 
 def sodsumm_wrapper(argv):
     '''
-    argv -- stn_id table_name start_year end_year max_missing_days
+    argv -- stn_id table_name start_year end_year max_missing_days tabular_summary
 
-    Explaination:
+    Arguments:
+            stn_id:
+                6 digit coop id recognized by ACIS
             table_name choices:
-                temp, prsn, hdd, cdd, gdd, corn
-    Example
+                temp, prsn, hdd, cdd, gdd, corn,ts_tps,ts_tp
+                    temp   -- temperature stats (maxt/mint/avgt)
+                    prsn   -- precip/snow stats
+                    hdd    -- heating degeree days stats
+                    cdd    -- heating degeree days stats
+                    gdd    -- heating degeree days stats
+                    corn   -- heating degeree days stats
+                    ts_tps -- tabular summmary for temp/precip/snow (Period of Record Data Tables)
+                    ts_tp  -- tabular summmary for temp/precip (1981/1971/1961 -2000 tabular summaries)
+            start/end year:
+                start/end year fo analysis
+            max_missing_days:
+                maximum number of missing days allowed
+
+    Examples
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+ts_tps+por+por+5
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+ts_tp+1971+2000+5
     '''
     #Sanity Check on input parameter number
     if len(argv) != 5:
@@ -294,6 +311,8 @@ def sodsumm_wrapper(argv):
         tbls = 'hc'
     elif table_name == 'gdd':
         tbls = 'g'
+    elif table_name in ['ts_tps','ts_tp']:
+        tbls = 'both'
     else:
         tbls =  table_name
     start_year = str(argv[2]);end_year = str(argv[3])
@@ -336,7 +355,7 @@ def sodsumm_wrapper(argv):
         format_sodsumm_results_web([],'',{'error':'Invalid Max Missing Days: %s' %argv[4] }, '0000', '0000', '', '','')
         sys.exit(1)
     #More Sanity checks
-    if table_name not in ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']:
+    if table_name not in ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn', 'ts_tps','ts_tp']:
         format_sodsumm_results_web([],'',{'error':'Invalid Table Name: %s' %table_name }, '0000', '0000','','','')
         sys.exit(1)
     #Define parameters
@@ -370,11 +389,14 @@ def sodsumm_wrapper(argv):
     if not data or ('error' in data.keys() and data['error']) or not results:
         format_sodsumm_results_web([],table_name, {'error': 'No Data found!'}, start_year, end_year, stn_id, 'No Data found for Station ID: ' + stn_id,'')
         #results = []
-
+        print_sodsumm_footer_web(app_params)
         sys.exit(1)
     else:
-        format_sodsumm_results_web(results,table_name, data_params,start_year, end_year, SS_wrapper.station_ids[0], SS_wrapper.station_names[0],SS_wrapper.station_states[0])
-    print_sodsumm_footer_web(app_params)
+        if table_name not in ['ts_tps','ts_tp']:
+            format_sodsumm_results_web(results,table_name,data_params,SS_wrapper)
+            print_sodsumm_footer_web(app_params)
+        else:
+            format_sodsumm_tabular_results_web(results,table_name,data_params,SS_wrapper)
 
 
 def soddyrec_wrapper(argv):
@@ -743,7 +765,96 @@ def format_sodumm_results_txt(table_name, results, start_year, end_year, station
                     row+='%6s' %str(val)
             print row + row_end
 
-def format_sodsumm_results_web(results, table_name, data_params, start_year, end_year, station_id, station_name, station_state):
+def format_sodsumm_tabular_results_web(results,table_name,data_params,wrapper):
+    '''
+    table_name options
+        ts_tps -- tabular summary for temp/precip/snow
+        ts_tp  -- tabular_summary for temp/precip only
+    '''
+    station_name = wrapper.station_names[0]
+    station_id = wrapper.station_ids[0]
+    station_state = wrapper.station_states[0]
+    start_year = data_params['start_date']
+    end_year = data_params['end_date']
+    print_html_header()
+    if 'redirect' in data_params.keys():
+        print_redirect()
+    elif 'error' in data_params.keys():
+        print_error(data_params['error'])
+    else:
+        title = '<TITLE> ' + station_name + ', ' + station_state
+        if table_name == 'ts_tps':
+            title += ' Period of Record Monthly '
+        else:
+            title+= ' ' + start_year + '-' + end_year
+        title += ' Climate Summary </TITLE>'
+        print title
+        print '<BODY BGCOLOR="#FFFFFF">'
+        print '<H1> ' + station_name + ', ' + station_state + ' (' + station_id + ') </H1>'
+        if table_name == 'ts_tps':
+            print '<H3>Period of Record Monthly Climate Summary </H3>'
+            print '<H4>Period of Record : '+ start_year + ' to ' + end_year + ' </H4>'
+        else:
+            print '<H3>' + start_year + '-' + end_year + ' Climate Summary </H3>'
+        print '<TABLE>'
+        print '<CENTER>'
+        print '<TR WIDTH=100%>'
+        print '<TD></TD>'
+        print '<TD WIDTH=6%>Jan</TD>'
+        print '<TD WIDTH=6%>Feb</TD>'
+        print '<TD WIDTH=6%>Mar</TD>'
+        print '<TD WIDTH=6%>Apr</TD>'
+        print '<TD WIDTH=6%>May</TD>'
+        print '<TD WIDTH=6%>Jun</TD>'
+        print '<TD WIDTH=6%>Jul</TD>'
+        print '<TD WIDTH=6%>Aug</TD>'
+        print '<TD WIDTH=6%>Sep</TD>'
+        print '<TD WIDTH=6%>Oct</TD>'
+        print '<TD WIDTH=6%>Nov</TD>'
+        print '<TD WIDTH=6%>Dec</TD>'
+        print '<TD WIDTH=6%>Annual</TD>'
+        print '</TR>'
+        print '</CENTER>'
+        if results and results[0]:
+            #Maxt row
+            print '<TR>'
+            print '<TD> Average Max. Temperature (F)</TD>'
+            for mon_idx, mon_vals in enumerate(results[0]['temp'][1:14]):
+                    print '<TD>' + mon_vals[1] + '</TD>'
+            print '</TR>'
+            #Mint row
+            print '<TR>'
+            print '<TD> Average Min. Temperature (F)</TD>'
+            for mon_idx, mon_vals in enumerate(results[0]['temp'][1:14]):
+                    print '<TD>' + mon_vals[2] + '</TD>'
+            print '</TR>'
+            #Precip Row
+            print '<TR>'
+            print '<TD> Average Total Precipitation (in.)</TD>'
+            for mon_idx, mon_vals in enumerate(results[0]['prsn'][1:14]):
+                    print '<TD>' + mon_vals[1] + '</TD>'
+            print '</TR>'
+            if table_name == 'ts_tps':
+                #Snowfall
+                print '<TR>'
+                print '<TD> Average Total Snowfall (in.)</TD>'
+                for mon_idx, mon_vals in enumerate(results[0]['prsn'][1:14]):
+                    print '<TD>' + mon_vals[-3] + '</TD>'
+                print '</TR>'
+                #Missing snowdepth!!
+        print '</TABLE>'
+        if table_name == 'ts_tp':
+            print '<BR />'
+            print '<U>Unofficial values </U>based on averages/sums of smoothed daily data.  Information is computed from available daily data during the ' + start_year + '-' + end_year + ' period.  Smoothing, missing data and observation-time changes may cause these ' + start_year + '-' + end_year + ' values to differ from official NCDC values.  This table is presented for use at locations that do not have official NCDC data.  No adjustments are made for missing data or time of observation.  Check <A HREF="http://wrcc.dri.edu/cgi-bin/cliNORMNCDC2000.pl?nv6779">NCDC normals</A> table for official data.'
+        print '</BODY>'
+        print '</HTML>'
+
+def format_sodsumm_results_web(results,table_name,data_params,wrapper):
+    station_name = wrapper.station_names[0]
+    station_id = wrapper.station_ids[0]
+    station_state = wrapper.station_states[0]
+    start_year = data_params['start_date']
+    end_year = data_params['end_date']
     print_html_header()
     if 'redirect' in data_params.keys():
         print_redirect()
@@ -1022,7 +1133,7 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
                         elif  str(val) == '9999.00':
                             v = '9999'
                         else:
-                            v = val
+                            v = str(val)
                         if idx == 0:
                             row+='<TD ALIGN=CENTER WIDTH=8%>'
                         elif idx % 2 == 0:
