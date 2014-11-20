@@ -780,16 +780,17 @@ def Sodxtrmts(**kwargs):
     THIS PROGRAM PRODUCES MONTHLY AND ANNUAL TIME SERIES FOR A
     LARGE NUMBER OF PROPERTIES DERIVED FROM THE SOD DAILY DATA SET.
     '''
+    units = 'english'
+    if 'units' in kwargs.keys():units = kwargs['units']
     mon_lens = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     results = defaultdict(list)
     fa_results = defaultdict(list)
     dates = kwargs['dates']
     if not dates:
         return results, fa_results
-    if kwargs['units'] == 'metric':
+    ucv = getattr(WRCCUtils, 'convert_nothing')
+    if units == 'metric':
         ucv = getattr(WRCCUtils, 'convert_to_metric')
-    else:
-        ucv = getattr(WRCCUtils, 'convert_nothing')
     start_year = int(dates[0][0:4])
     end_year = int(dates[-1][0:4])
     #Initialize analysis parameters
@@ -2519,15 +2520,16 @@ def Sodsumm(**kwargs):
     THIS PROGRAM SUMMARIZES VARIOUS CLIMATIC DATA IN A FORMAT IDENTICAL WITH
     THAT OF MICIS - THE MIDWEST CLIMATE INFORMATION SYSTEM
     '''
+    units = 'english'
+    if 'units' in kwargs.keys():units = kwargs['units']
     if not kwargs['max_missing_days']:
         max_missing_days = 0
     else:
         max_missing_days = int(kwargs['max_missing_days'])
     elements = kwargs['elements']
-    if kwargs['units'] == 'metric':
+    ucv = getattr(WRCCUtils, 'convert_nothing')
+    if units == 'metric':
         ucv = getattr(WRCCUtils, 'convert_to_metric')
-    else:
-        ucv = getattr(WRCCUtils, 'convert_nothing')
     dates = kwargs['dates']
     if kwargs['el_type'] == 'all':tables = ['temp', 'prsn', 'hdd', 'cdd', 'gdd', 'corn']
     if kwargs['el_type'] == 'both':tables = ['temp', 'prsn']
@@ -2557,12 +2559,12 @@ def Sodsumm(**kwargs):
         for table in tables:
             results[i][table] = []
             if table == 'temp':
-                if kwargs['units'] == 'metric':
+                if units == 'metric':
                     results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=32', '<=0', '<=0', '<=-17'])
                 else:
                     results[i]['temp'].append(['Time','Max', 'Min', 'Mean', 'High', 'Date', 'Low', 'Date', 'High', 'Yr', 'Low', 'Yr', '>=90', '<=32', '<=32', '<=0'])
             elif table == 'prsn':
-                if kwargs['units'] == 'metric':
+                if units == 'metric':
                     results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.25', '>=2.5', '>=13', '>=25', 'Mean', 'High', 'Yr'])
                 else:
                     results[i]['prsn'].append(['Time','Mean', 'High', 'Yr', 'Low', 'Yr', '1-Day Max', 'Date', '>=0.01', '>=0.10', '>=0.50', '>=1.00', 'Mean', 'High', 'Yr'])
@@ -2578,7 +2580,7 @@ def Sodsumm(**kwargs):
         base_list = {}
         val_list_d =  defaultdict(list)
         #Degree day base tables
-        if kwargs['units'] == 'metric':
+        if units == 'metric':
             base_list['hdd'] = [18, 16, 14, 13,10]
             base_list['cdd'] = [13, 14, 16, 18, 21]
             base_list['gdd'] = [4, 7, 10, 13, 14]

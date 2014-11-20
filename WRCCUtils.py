@@ -392,7 +392,7 @@ def get_station_ids(stn_json_file_path):
             continue
         name_previous = stn['name']
         stn_ids+=stn['sids'][0]
-        if idx < len(json_data['stations']) - 1:
+        if idx < len(json_data['stations']) - 2:
             stn_ids+=','
     return stn_ids
 
@@ -406,7 +406,7 @@ def convert_to_metric(element, value):
     except:
         return value
     if el in ['maxt','mint','avgt','obst', 'yly_maxt', 'yly_mint', 'mly_maxt', 'mly_mint', 'dtr']:
-        v = round((float(value) - 32.0)*5.0/9.0,1)
+        v = int(round((float(value) - 32.0)*5.0/9.0))
     elif el in ['hdd','cdd','gdd']:
         #Since a temperature difference of 1C is equivalent to a temperature difference of 1.8F,
         #Fahrenheit-based degree days are 1.8 times bigger than their equivalent Celsius-based degree days.
@@ -853,15 +853,23 @@ def u_convert(data):
         return data
 
 def load_data_to_json_file(path_to_file, data):
+    '''
+    It's better to fail than to pass so that users and I know something is up
+    when this call fails --> Nov 3 2014 --> premission issue after
+    sofware upgrades on cyclone1 and blizzard
+    '''
+    with open(path_to_file, 'w+') as f:
+        json.dump(data, f)
+    '''
     try:
         with open(path_to_file, 'w+') as f:
             json.dump(data, f)
     except:
         pass
+    '''
 
 def load_json_data_from_file(path_to_json_file):
     json_data = None
-
     try:
         with open(path_to_json_file, 'r') as json_f:
             json_data = u_convert(json.loads(json_f.read()))
@@ -937,14 +945,14 @@ def write_griddata_to_file(data, form, f=None, request=None):
         header_seperator = ':'
         if delim == ':':
             header_seperator = ' '
-        row = ['*AreaType',WRCCData.DISPLAY_PARAMS[form['select_grid_by']],form[form['select_grid_by']]]
+        row = ['*SearchArea',WRCCData.DISPLAY_PARAMS[form['select_grid_by']],form[form['select_grid_by']]]
         writer.writerow(row)
         if form['data_summary'] == 'none':
             row = ['*'+'DataSummary','None']
         else:
             row = ['*DataSummary',form['data_summary']+'_'+form[form['data_summary'] + '_summary']]
         writer.writerow(row)
-        row = ['*Units',form['units']]
+        row=[]
         writer.writerow(row)
         if form['data_summary'] == 'spatial':
             row = ['*Date']
@@ -1115,25 +1123,21 @@ def write_station_data_to_file(resultsdict, form, f=None, request=None):
             writer.writerow(row)
             row =[]
             writer.writerow(row)
+        #Serach params header:
+        row = ['*SearchArea',WRCCData.DISPLAY_PARAMS[form['select_stations_by']],form[form['select_stations_by']]]
+        writer.writerow(row)
         for stn, dat in enumerate(resultsdict['stn_data']):
             #NOTE: row writer does not like delimiter characters in string,
             #need to set space char to be used in header string
             stn_name = str(resultsdict['stn_names'][stn])
             header_seperator = ': '
-            '''
-            if delim == ' ':
-                stn_name = ' '.join(str(resultsdict['stn_names'][stn]).split(' '))
-            '''
             if delim== ':':
                 header_seperator = ' '
+            row=[]
+            writer.writerow(row)
             row = ['*StationName',stn_name,'State',str(resultsdict['stn_state'][stn])]
             writer.writerow(row)
             row = ['*StationID', str(resultsdict['stn_ids'][stn][0]).split(' ')[0],'Latitude',str(resultsdict['stn_lat'][stn]),'Longitude', str(resultsdict['stn_lon'][stn]),'Elevation (' + elev_unit + ')',str(resultsdict['stn_elev'][stn])]
-            writer.writerow(row)
-            row = ['*Units',form['units']]
-
-            writer.writerow(row)
-            row = []
             writer.writerow(row)
             row = ['*DataFlags','M=Missing', 'T=Trace', 'S=Subsequent', 'A=Accumulated']
             writer.writerow(row)
@@ -1710,7 +1714,7 @@ def metadict_to_display(metadata, key_order_list):
 
     return meta
 
-def get_el_and_base_temp(el):
+def get_el_and_base_temp(el, units='english'):
     '''
     strips base temp xx from gddxx ( hddxx, cddxx)
     return element name gdd( hdd, cdd) and base temp xx
@@ -1720,8 +1724,8 @@ def get_el_and_base_temp(el):
     '''
     element = el
     base_temp = None
-    #el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
-    el_strip = re.sub(r'(\d+)(\.?)(\d+)', '', el)
+    el_strip = re.sub(r'(\d+)(\d+)', '', el)   #strip digits from gddxx, hddxx, cddxx
+    #el_strip = re.sub(r'(\d+)(\.?)(\d+)', '', el)
     #b = el[-2:len(el)]
     try:
         b = el[3:]
@@ -1732,11 +1736,17 @@ def get_el_and_base_temp(el):
         base_temp = b
         element = el_strip
     except:
-        if b == 'dd' and el in ['hdd', 'cdd']:
+        if not b and el in ['hdd', 'cdd']:
             base_temp = '65'
-        elif b == 'dd' and el == 'gdd':
+            if units == 'metric':
+                base_temp = '18'
+        elif not b and el == 'gdd':
             base_temp = '50'
+            if units == 'metric':
+                base_temp = '10'
     return element, base_temp
+
+
 
 
 def format_stn_meta(meta_dict):
