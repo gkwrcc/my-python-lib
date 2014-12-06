@@ -17,22 +17,143 @@ except:
 import base64
 import datetime
 import csv
-from xlwt import Workbook
+try:
+    from xlwt import Workbook
+except:
+    pass
 import logging
 from ftplib import FTP
 import smtplib
 import gzip
 
-#Django
-from django.http import HttpResponse
-#Settings
-#from django.conf import settings
-import my_acis.settings as settings
+try:
+    #Django
+    from django.http import HttpResponse
+except:
+    pass
+try:
+    #Settings
+    #from django.conf import settings
+    import my_acis.settings as settings
+except:
+    try:
+        import my_acis_settings
+    except:
+        pass
 
 #WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
+class DataComparer(object):
+    '''
+    Compare historic station data with gridded data at a lat/lon coordinate.
+    The closest gridpoint to lat/lon and the closest
+    station to lat/lo are found
+    Data is obtained for both.
 
+    Keywork arguments:
+    params: Dictionary containing request parameters:
+            location: lon, lat
+            grid: grid ID
+            start_date/end_date of request
+            elements: comma seperated list of element abbreviations
+            degree_days: comma separated list of degree days with irregular base temperatures
+            units: metric or english
+    '''
+    def __init__(self, params):
+        self.location = params['location']
+        self.grid = params['grid']
+        self.start_date = params['start_date']
+        self.end_date = params['end_date']
+        self.elements = params['elements']
+        self.degree_days = None
+        if self.degree_days in params.keys():
+            self.degree_days = params['degree_days']
+        self.units = params['units']
+
+    def get_bbox(self,length):
+        '''
+        Returns bounding box around location
+        Bounding box = (lon-length, lat - length,lon+length, lat+length)
+        '''
+        lat = self.location.split(',')[1]
+        lon = self.location.split(',')[0]
+        lower_left = str(float(lon) - float(length)) + ',' + str(float(lat) - float(length))
+        upper_right = str(float(lon) + float(length)) + ',' + str(float(lat) + float(length))
+        bbox = lower_left + ',' + upper_right
+        return bbox
+
+    def combine_elements(self):
+        if not self.degree_days:
+            return self.elements
+        if self.units == 'english':
+            return self.elements + ',' + self.degree_days
+        dd_els = ''
+        for dd_idx, dd in enumerate(self.degree_days.split(',')):
+            el = dd[0:3]
+            val = dd[3:]
+            new_val = int(round(WRCCUtils.convert_to_english(el,val)))
+            dd_els+=el+new_val
+            if dd_idx < len(self.degree_days.split(',')) - 1:
+                dd_els+=','
+        return self.elements + ',' + dd_els
+
+    def find_closest_station(self):
+        length = 0.01
+        station = None
+        while not station:
+            bbox = self.get_bbox(length)
+            meta_params = {
+                'bbox':bbox,
+                "meta":"name,state,sids,ll,elev,uid,county,climdiv,valid_daterange",
+            }
+            meta_params['elems'] = self.combine_elements()
+            try:
+                req = AcisWS.StnMeta(meta_params)
+                req['meta']
+            except:
+                req = {'meta':[]}
+            if not req['meta']:
+                length = 2.0*length
+                continue
+            if len(req['meta']) == 1:
+                station = req['meta'][0]
+                continue
+            lat = float(self.location.split(',')[1])
+            lon = float(self.location.split(',')[0])
+            stn_lat = None
+            stn_lon = None
+            dist = 999999999.0;idx = None
+            for stn_idx, stn in enumerate(req['meta']):
+                try:
+                    stn_lat = req['meta'][stn_idx]['ll'][1]
+                    stn_lon = req['meta'][stn_idx]['ll'][0]
+                except:
+                    continue
+                #Checkvalid_dateranges
+                #If one exists, ok to proceed
+                if not 'valid_daterange' in req['meta'][stn_idx]:
+                    continue
+                vd_found = False
+                for vd  in req['meta'][stn_idx]['valid_daterange']:
+                    if vd:
+                        vd_found = True
+                        break
+                    else:
+                        continue
+                if not vd_found:
+                    continue
+
+                try:
+                    dist_temp = abs(stn_lat - lat) + abs(stn_lon - lon)
+                except:
+                    continue
+
+                if dist_temp < dist:
+                    dist = dist_temp;idx = stn_idx
+            if not idx:
+                return {}
+            return req['meta'][idx]
 
 class DownloadDataJob(object):
     '''
