@@ -16,9 +16,15 @@ from ftplib import FTP
 from math import sqrt
 import colorsys
 
-from django.http import HttpResponse, HttpResponseRedirect
-from xlwt import Workbook
+try:
+    from django.http import HttpResponse, HttpResponseRedirect
+except:
+    pass
 
+try:
+    from xlwt import Workbook
+except:
+    pass
 import WRCCClasses, AcisWS, WRCCData, WRCCUtils
 ####################################
 #FUNCTIONS
@@ -728,8 +734,9 @@ def point_in_circle(x,y,circle):
 def point_in_poly(x,y,poly):
     '''
     Determine if a point is inside a given polygon or not
-    Polygon is a list of (x,y) pairs. This function
-    returns True or False.  The algorithm is called
+    Polygon is a list of (x,y) or [x,y] pairs.
+    Points lying on the boundary are excluded.
+    This function returns True or False. The algorithm is called
     the "Ray Casting Method".
     '''
     n = len(poly)

@@ -7,7 +7,7 @@ Defines classes used in the my_acis project
 ##############################################################################
 # import modules required by Acis
 #import  pprint, time
-import time, re, os
+import time, datetime, re, os
 import json
 from cStringIO import StringIO
 try:
@@ -37,7 +37,7 @@ try:
     import my_acis.settings as settings
 except:
     try:
-        import my_acis_settings
+        import my_acis_settings as settings
     except:
         pass
 
@@ -66,10 +66,21 @@ class DataComparer(object):
         self.start_date = params['start_date']
         self.end_date = params['end_date']
         self.elements = params['elements']
+        if isinstance(self.elements,list):
+            self.elements  = ','.join(self.elements)
         self.degree_days = None
-        if self.degree_days in params.keys():
+        if 'degree_days' in params.keys():
             self.degree_days = params['degree_days']
         self.units = params['units']
+
+    def hms_to_seconds(self,date_string):
+        #Convert python date string to javascript milliseconds
+        t = date_string.replace('-','').replace(':','').replace('/','')
+        y = int(t[0:4]);m = int(t[4:6]);d = int(t[6:8])
+        dt = datetime.datetime(y,m,d)
+        #Python does seconds so we need to multiply by 1000
+        s = int(time.mktime(dt.timetuple())) *1000
+        return s
 
     def get_bbox(self,length):
         '''
@@ -93,21 +104,54 @@ class DataComparer(object):
             el = dd[0:3]
             val = dd[3:]
             new_val = int(round(WRCCUtils.convert_to_english(el,val)))
-            dd_els+=el+new_val
+            dd_els+=el+str(new_val)
             if dd_idx < len(self.degree_days.split(',')) - 1:
                 dd_els+=','
         return self.elements + ',' + dd_els
 
+    def check_valid_daterange(self,vd):
+        '''
+        Checks if valid daterange of station for an element
+        lies between start and end date of request
+        '''
+        sd = self.start_date.replace('-','').replace('/','').replace(':','')
+        ed = self.end_date.replace('-','').replace('/','').replace(':','')
+        vds = vd[0].replace('-','')
+        vde = vd[1].replace('-','')
+        sd_dt = datetime.datetime(int(sd[0:4]),int(sd[4:6]),int(sd[6:8]))
+        ed_dt = datetime.datetime(int(ed[0:4]),int(ed[4:6]),int(ed[6:8]))
+        vds_dt = datetime.datetime(int(vds[0:4]),int(vds[4:6]),int(vds[6:8]))
+        vde_dt = datetime.datetime(int(vde[0:4]),int(vde[4:6]),int(vde[6:8]))
+        if vde_dt< sd_dt:
+            return False
+        if vds_dt >=ed_dt:
+            return False
+        if vds_dt <= sd_dt and sd_dt < vde_dt:
+            return True
+        if sd_dt <= vds_dt and vde_dt <= ed_dt:
+            return True
+        if vds_dt <= ed_dt and vds_dt>=sd_dt:
+            return True
+        if sd_dt <= vde_dt and vde_dt <= ed_dt:
+            return True
+        return False
+
     def find_closest_station(self):
+        '''
+        Finds closest station to lon/lat grid coordinate
+        such that each element's valid daterange is overlapping
+        with start/end date period of request
+        '''
         length = 0.01
-        station = None
-        while not station:
+        stn_meta = {}
+        els = self.combine_elements()
+        while not stn_meta:
             bbox = self.get_bbox(length)
             meta_params = {
                 'bbox':bbox,
                 "meta":"name,state,sids,ll,elev,uid,county,climdiv,valid_daterange",
             }
-            meta_params['elems'] = self.combine_elements()
+            meta_params['elems'] = els
             try:
                 req = AcisWS.StnMeta(meta_params)
                 req['meta']
@@ -115,10 +159,15 @@ class DataComparer(object):
                 req = {'meta':[]}
             if not req['meta']:
                 length = 2.0*length
-                continue
+                if length >2:
+                    return {}
+                else:
+                    continue
+            '''
             if len(req['meta']) == 1:
-                station = req['meta'][0]
+                stn_meta = req['meta'][0]
                 continue
+            '''
             lat = float(self.location.split(',')[1])
             lon = float(self.location.split(',')[0])
             stn_lat = None
@@ -134,16 +183,22 @@ class DataComparer(object):
                 #If one exists, ok to proceed
                 if not 'valid_daterange' in req['meta'][stn_idx]:
                     continue
-                vd_found = False
-                for vd  in req['meta'][stn_idx]['valid_daterange']:
+                for vd in req['meta'][stn_idx]['valid_daterange']:
+                    vd_found = False
                     if vd:
-                        vd_found = True
-                        break
+                        valid_dr = self.check_valid_daterange(vd)
+                        if valid_dr:
+                            vd_found = True
+                            #stn_meta = req['meta'][stn_idx]
+                            continue
+                        else:
+                            break
                     else:
-                        continue
+                        break
                 if not vd_found:
                     continue
-
+                else:
+                    return req['meta'][stn_idx]
                 try:
                     dist_temp = abs(stn_lat - lat) + abs(stn_lon - lon)
                 except:
@@ -151,9 +206,99 @@ class DataComparer(object):
 
                 if dist_temp < dist:
                     dist = dist_temp;idx = stn_idx
+                    stn_meta = req['meta'][idx]
             if not idx:
-                return {}
-            return req['meta'][idx]
+                length = 2*length
+                continue
+        return stn_meta
+
+    def get_data(self):
+        #Grid Data
+        els =  self.combine_elements()
+        data_params = {
+            'loc': self.location,
+            'grid':self.grid,
+            'elems': els,
+            'sdate': self.start_date,
+            'edate': self.end_date,
+            'meta':'ll,elev'
+        }
+        try:
+            gdata = AcisWS.GridData(data_params)
+        except Exception, e:
+            gdata = {'data':[], 'meta': [],'error': str(e)}
+        stn_meta = self.find_closest_station()
+        if not stn_meta or 'sids' not in stn_meta.keys():
+            err = 'No station could be found near given lon,lat: %s' %str(self.location)
+            sdata = {'data':[], 'meta': [], 'error': err}
+        else:
+            del data_params['loc']
+            del data_params['grid']
+            data_params['sid'] = str(stn_meta['sids'][0].split(' ')[0])
+            data_params['meta'] = 'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'
+            try:
+                sdata = AcisWS.StnData(data_params)
+            except Exception, e:
+                sdata = {'data':[], 'meta': [],'error': str(e)}
+        return gdata, sdata
+
+    def get_graph_data(self,gdata,sdata):
+        '''
+        For each element return series data [date, val] for both grid and station data.
+        Returns dict {el1:[[Date1, el_val1],[Date,el_val2],...], 'el2':...}
+        '''
+        els = self.combine_elements()
+        gloc = str(round(gdata['meta']['lon'],2)) + ', ' + str(round(gdata['meta']['lat'],2))
+        sloc = ','.join([str(round(s,2)) for s in sdata['meta']['ll']])
+        sname = str(sdata['meta']['name'])
+        sid = str(sdata['meta']['sids'][0].split(' ')[0])
+        graph_data = {
+            'grid_location':gloc,
+            'stn_location':sloc,
+            'stn_id': sid,
+            'state': str(sdata['meta']['state']),
+            'units':self.units,
+            'start_date':self.start_date,
+            'end_date':self.end_date,
+            'elements': els,
+            'elements_long':{},
+            'data': {}
+        }
+        for el_idx,el in enumerate(els.split(',')):
+            el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el,units=self.units)
+            graph_data['elements_long'][el] = WRCCData.ACIS_ELEMENTS_DICT[el_strip]['name_long']
+            if self.units == 'metric':
+                graph_data['elements_long'][el] += ' (' + WRCCData.UNITS_METRIC[el_strip] + ')'
+            else:
+                graph_data['elements_long'][el] += ' (' + WRCCData.UNITS_ENGLISH[el_strip] + ')'
+            if base_temp:
+                graph_data['elements_long'][el] += ' Base Temp: ' + str(base_temp)
+
+            grid_data = [];station_data = [];dates = []
+            for date_idx, data in enumerate(gdata['data']):
+                try:
+                    if self.units == 'english':
+                        gd = float(data[el_idx + 1])
+                    else:
+                        gd = WRCCUtils.convert_to_metric(el_strip,float(data[el_idx + 1]))
+                except:
+                    gd = None
+                try:
+                    if self.units == 'english':
+                        sd = float(sdata['data'][date_idx][el_idx + 1])
+                    else:
+                        sd = WRCCUtils.convert_to_metric(el_strip,float(sdata['data'][date_idx][el_idx + 1]))
+                except:
+                    sd = None
+                if el_idx == 0:
+                    dates.append(str(data[0]))
+                int_time = self.hms_to_seconds(str(data[0]))
+                grid_data.append([int(int_time),gd])
+                station_data.append([int(int_time),sd])
+            graph_data['data'][el] = [grid_data,station_data]
+        graph_data['dates'] = dates
+        return graph_data
+
 
 class DownloadDataJob(object):
     '''

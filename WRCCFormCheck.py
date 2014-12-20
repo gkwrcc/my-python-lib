@@ -145,7 +145,7 @@ def check_start_date(form):
         #and pick proper daterange
         if str(form['grid']) == '21' and form['temporal_resolution'] == 'dly':
             grid_dr = [grid_dr[1]]
-        else:
+        elif str(form['grid']) == '21' and form['temporal_resolution'] != 'dly':
             grid_dr = [grid_dr[0]]
         for dr in grid_dr:
             grid_s = WRCCUtils.date_to_datetime(dr[0])
@@ -157,7 +157,7 @@ def check_start_date(form):
                 flag = True
                 continue
         if flag:
-            return 'User date range is not in valid date range of this grid.'
+            return 'Date range is not in valid date range of this grid.'
     return err
 
 def check_end_date(form):

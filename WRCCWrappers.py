@@ -631,11 +631,11 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     '''
     Generates soddyrec text output that matches Kelly's commandline output
     '''
-    print ' Daily Records for station %s %s           state: %s' %(data_params['sid'], wrapper.station_names[0], wrapper.station_states[0])
+    print ' Daily Records for station %s  %s                  state: %s' %(data_params['sid'], wrapper.station_names[0], wrapper.station_states[0])
     print ''
     if data_params['element'] in ['all', 'tmp','wtr', 'pcpn','maxt', 'mint']:
         print ' For temperature and precipitation, multi-day accumulations'
-        print ' are not considered either for records or averages.'
+        print '   are not considered either for records or averages.'
         print ' The year given is the year of latest occurrence.'
         print ''
     s = data_params['start_date'][4:6] + '/' + data_params['start_date'][6:8] + '/' + data_params['start_date'][0:4]
@@ -648,10 +648,10 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         e_user = 'POR'
     else:
         e_user = data_params['end_user'][4:6] + '/' + data_params['end_user'][6:8] + '/' + data_params['end_user'][0:4]
-    print ' Period requested -- Begin :  %s -- End :  %s' %(s_user, e_user)
-    print ' Period      used -- Begin :  %s -- End :  %s' %(s, e)
+    print ' Period requested -- Begin : %s -- End : %s' %(s_user, e_user)
+    print ' Period      used -- Begin : %s -- End : %s' %(s, e)
     print ''
-    print 'Cooling degree threshold =   65.00  Heating degree threshold =   65.00'
+    print '  Cooling degree threshold =   65.00  Heating degree threshold =   65.00'
     print ''
     print 'AVG   Multi-year unsmoothed average of the indicated quantity'
     print 'HI    Highest value of indicated quantity for this day of year'
@@ -670,10 +670,16 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     else:
         el_list =[data_params['element']]
     table_header = '      '
-    table_header_2 = ' MO DY'
+    table_header_2 = 'MO DY'
     for el_idx, el in enumerate(el_list):
-        el_name = WRCCData.ACIS_ELEMENTS_DICT[el]['name_long']
-        start ='|';end=''
+        el_name = WRCCData.ACIS_ELEMENTS_DICT_SR[el]['name_long']
+        if el in ['hdd']:
+            el_name = 'Heat'
+        if el in ['cdd']:
+            el_name = 'Cool'
+        start ='|---';end='---'
+
+        '''
         if el in ['maxt', 'mint']:
             max_l = 42
         else:
@@ -688,24 +694,45 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
                 for k in range((left-1)/2):
                     start+='-';end+='-'
                 end+='-'
+        '''
         table_header+=start
         table_header+=el_name
         table_header+=end
-        table_header_2+='    AVG     NO   HIGH     YR'
+        if el in ['pcpn','snow','snwd']:
+            table_header_2+='   AVG  NO  HI   YR'
+        else:
+            table_header_2+=' AVG  NO  HI   YR'
         if el in ['maxt', 'mint']:
-            table_header_2+='    LOW     YR'
+            table_header_2+='  LO   YR'
     print table_header
     print table_header_2
     #Data
     for doy in range(366):
         row =''
         mon,day = WRCCUtils.compute_mon_day(doy+1)
-        row+='%3s%3s' %(mon, day)
+        row+='%2s%3s' %(mon, day)
         for el_idx, el in enumerate(el_list):
-            for k in range(2,6):
+            '''
+            width = len(str(results[0][el_idx][doy][k]))
+            if width <= 2:
+                row+='%3s' %results[0][el_idx][doy][k]
+            elif width <=3 and width <5:
+                row+='%5s' %results[0][el_idx][doy][k]
+            else:
                 row+='%7s' %results[0][el_idx][doy][k]
+            '''
+            for k in range(2,5):
+                if el in ['pcpn','snow','snwd']:
+                    if k == 3:
+                        row+=' %3s' %results[0][el_idx][doy][k]
+                    else:
+                        row+='%6s' %results[0][el_idx][doy][k]
+                else:
+                    row+='%4s' %results[0][el_idx][doy][k]
+            for k in range(5,6):
+                row+='%5s' %results[0][el_idx][doy][k]
             if el in ['maxt', 'mint']:
-                row+='%7s %7s' %(results[0][el_idx][doy][6],results[0][el_idx][doy][7])
+                row+='%4s%5s' %(results[0][el_idx][doy][6],results[0][el_idx][doy][7])
         print row
 
 def format_sodumm_results_txt(table_name, results, start_year, end_year, station_id, station_name, station_state):
@@ -1310,6 +1337,11 @@ def por_to_valid_daterange(stn_id):
 def format_date(date):
     d = date.replace('-','').replace(':','').replace('/','').replace(' ','')
     return d
+
+def run_soddyrec(arg_list, output_file=None):
+    if output_file:
+        sys.stdout = open(output_file, 'w')
+    soddyrec_wrapper(arg_list)
 
 #########
 # M A I N

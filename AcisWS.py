@@ -24,8 +24,22 @@ import json
 #settings file
 #FIX ME:
 #Works for web server
-import my_acis.settings as settings
+'''
+try:
+    #Settings
+    #from django.conf import settings
+    import my_acis.settings as settings
+except:
+    try:
+        import my_acis_settings as settings
+    except:
+        pass
 #from django.conf import settings
+'''
+try:
+    import my_acis.settings as settings
+except ImportError:
+    import my_acis_settings as settings
 
 #Acis WebServices functions
 ###########################
@@ -40,7 +54,6 @@ def make_request(url,params) :
         #if error.code == 400 : print error.msg
         return None
 
-#FIX me: Shouldn't need two seperate wsettings files
 def MultiStnData(params):
     req = {}
     for url in settings.ACIS_SERVERS:

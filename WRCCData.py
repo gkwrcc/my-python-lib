@@ -162,6 +162,31 @@ ACIS_ELEMENTS_DICT = {
               'yly_pcpn': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation', 'vX':98}
 }
 
+#Soddyrec el list
+ACIS_ELEMENTS_DICT_SR = {
+              'maxt':{'name':'maxt', 'name_long': 'Maximum Temperature', 'vX':1},
+              'mint':{'name':'mint', 'name_long': 'Minimum Temperature', 'vX':2},
+              'avgt': {'name':'avgt', 'name_long': 'Mean Temperature', 'vX':43},
+              'dtr': {'name':'dtr', 'name_long': 'Temperature Range', 'vX':None},
+              'obst':{'name':'obst', 'name_long': 'Observation Time Temperature', 'vX':3},
+              'pcpn': {'name': 'pcpn', 'name_long':'Precipitation', 'vX':4},
+              'snow': {'name': 'snow', 'name_long':'Snowfall', 'vX':10},
+              'snwd': {'name': 'snwd', 'name_long':'Snow Depth', 'vX':11},
+              'cdd': {'name': 'cdd', 'name_long':'Cooling Degree Days', 'vX':44},
+              'hdd': {'name': 'hdd', 'name_long':'Heating Degree Days', 'vX':45},
+              'gdd': {'name': 'gdd', 'name_long':'Growing Degree Days', 'vX':44},
+              'evap': {'name': 'evap', 'name_long':'Evaporation', 'vX':7},
+              'wdmv': {'name': 'wdmv', 'name_long':'Wind Movement', 'vX':12},
+              'mly_maxt':{'name':'mly_maxt', 'name_long': 'Maximum Monthly Temperature', 'vX':91},
+              'mly_mint':{'name':'mly_mint', 'name_long': 'Minimum Monthly Temperature', 'vX':92},
+              'mly_avgt': {'name':'mly_avgt', 'name_long': 'Mean Monthly Temperature', 'vX':99},
+              'mly_pcpn': {'name': 'mly_pcpn', 'name_long':'Monthly Precipitation', 'vX':94},
+              'yly_maxt':{'name':'yly_maxt', 'name_long': 'Maximum Yearly Temperature', 'vX':91},
+              'yly_mint':{'name':'yly_mint', 'name_long': 'Minimum Yearly Temperature', 'vX':92},
+              'yly_avgt': {'name':'yly_avgt', 'name_long': 'Mean Yearly Temperature', 'vX':99},
+              'yly_pcpn': {'name': 'yly_pcpn', 'name_long':'Yearly Precipitation', 'vX':98}
+}
+
 ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum Daily Temperature (F)'],
                       ['avgt','Average Daily Temperature (F)'], ['obst', 'Observation Time Temperature (F)'], \
                       ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
@@ -169,6 +194,40 @@ ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum
                       ['hdd','Heating Degree Days'], ['gdd', 'Growing Degree Days'], \
                       ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
 
+ELEMENT_THRESHOLDS = {
+    'english':{
+        'maxt':['60','80'],
+        'mint':['30','50'],
+        'avgt':['40','60'],
+        'dtr': ['10','40'],
+        'obst':['30','50'],
+        'pcpn': ['0','1'],
+        'snow': ['0','1'],
+        'snwd': ['0','1'],
+        'cdd': ['10','20'],
+        'hdd': ['10','20'],
+        'gdd':['10','20'],
+        'evap': ['0','1'],
+        'wdmv': ['0','50'],
+        'pet':['0','1']
+        },
+    'metric':{
+        'maxt':['20','30'],
+        'mint':['0','10'],
+        'avgt':['15','25'],
+        'dtr': ['10','40'],
+        'obst':['10','20'],
+        'pcpn': ['0','3'],
+        'snow': ['0','3'],
+        'snwd': ['0','10'],
+        'cdd': ['10','20'],
+        'hdd': ['10','20'],
+        'gdd':['10','20'],
+        'evap': ['0','3'],
+        'wdmv': ['0','65'],
+        'pet':['0','3']
+        },
+}
 
 UNITS_METRIC = {
     'maxt':'C',

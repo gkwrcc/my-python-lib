@@ -18,8 +18,19 @@ import WRCCUtils, AcisWS, WRCCData
 
 #Settings
 #from django.conf import settings
-import my_acis.settings as settings
-
+'''
+try:
+    import my_acis.settings as settings
+except:
+    try:
+        import my_acis_settings as settings
+    except:
+        pass
+'''
+try:
+    import my_acis.settings as settings
+except ImportError:
+    import my_acis_settings as settings
 #############################
 #CSC DATA PORTAL APPLICATIONS
 #############################
@@ -3594,7 +3605,13 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
                             mcnt = int(data[i][smry_idx][k][2])
                         except:
                             mcnt = num_years
-                        row.append(val)
+                        if el in ['maxt', 'mint']:
+                            try:
+                                row.append(str(int(round(float(val)))))
+                            except:
+                                row.append(val)
+                        else:
+                            row.append(val)
                         row.append(num_years - mcnt)
                     else:
                         #high and low, record year of occurrence
@@ -3602,7 +3619,13 @@ def Soddyrec(data, dates, elements, coop_station_ids, station_names):
                             year = data[i][smry_idx][k][1][0:4]
                         except:
                             year = data[i][smry_idx][k][1]
-                        row.append(val)
+                        if el in ['maxt', 'mint']:
+                            try:
+                                row.append(str(int(round(float(val)))))
+                            except:
+                                row.append(val)
+                        else:
+                            row.append(val)
                         row.append(year)
                 results[i][j].append(row)
     return results
