@@ -577,7 +577,7 @@ def format_soddynorm_results_txt(results, wrapper,data_params):
 
 def format_soddynorm_results_web(results,wrapper,data_params):
     '''
-    Generates Soddyrec web content
+    Generates Soddynorm web content
     '''
     print_html_header()
     if 'redirect' in data_params.keys():
@@ -631,7 +631,7 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     '''
     Generates soddyrec text output that matches Kelly's commandline output
     '''
-    print ' Daily Records for station %s  %s                  state: %s' %(data_params['sid'], wrapper.station_names[0], wrapper.station_states[0])
+    print ' Daily Records for station %s  %s                  state: %s' %(data_params['sid'], wrapper.station_names[0], wrapper.station_states[0].lower())
     print ''
     if data_params['element'] in ['all', 'tmp','wtr', 'pcpn','maxt', 'mint']:
         print ' For temperature and precipitation, multi-day accumulations'
@@ -673,12 +673,18 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
     table_header_2 = 'MO DY'
     for el_idx, el in enumerate(el_list):
         el_name = WRCCData.ACIS_ELEMENTS_DICT_SR[el]['name_long']
-        if el in ['hdd']:
+        if el == 'hdd':
             el_name = 'Heat'
-        if el in ['cdd']:
+            start ='|--';end='--'
+        if el == 'cdd':
             el_name = 'Cool'
-        start ='|---';end='---'
-
+            start ='|--';end='--'
+        if el in ['maxt','mint']:
+            start ='|---';end='---'
+        if el == 'pcpn':
+            start ='|----';end='---'
+        if el in ['snow','snwd']:
+            start ='|-------';end='-----'
         '''
         if el in ['maxt', 'mint']:
             max_l = 42
@@ -698,7 +704,9 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         table_header+=start
         table_header+=el_name
         table_header+=end
-        if el in ['pcpn','snow','snwd']:
+        if el in ['hdd','cdd']:
+            table_header_2+='   ' + el.upper() + '   NO'
+        elif el in ['pcpn','snow','snwd']:
             table_header_2+='   AVG  NO  HI   YR'
         else:
             table_header_2+=' AVG  NO  HI   YR'
@@ -712,25 +720,20 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         mon,day = WRCCUtils.compute_mon_day(doy+1)
         row+='%2s%3s' %(mon, day)
         for el_idx, el in enumerate(el_list):
-            '''
-            width = len(str(results[0][el_idx][doy][k]))
-            if width <= 2:
-                row+='%3s' %results[0][el_idx][doy][k]
-            elif width <=3 and width <5:
-                row+='%5s' %results[0][el_idx][doy][k]
-            else:
-                row+='%7s' %results[0][el_idx][doy][k]
-            '''
             for k in range(2,5):
                 if el in ['pcpn','snow','snwd']:
                     if k == 3:
                         row+=' %3s' %results[0][el_idx][doy][k]
                     else:
-                        row+='%6s' %results[0][el_idx][doy][k]
+                        #row+='%6s' %results[0][el_idx][doy][k]
+                        row+='%5s' %results[0][el_idx][doy][k]
+                elif el in ['hdd','cdd'] and (k == 2 or k == 3):
+                    row+='%6s' %results[0][el_idx][doy][k]
                 else:
                     row+='%4s' %results[0][el_idx][doy][k]
             for k in range(5,6):
-                row+='%5s' %results[0][el_idx][doy][k]
+                if el not in ['hdd','cdd']:
+                    row+='%5s' %results[0][el_idx][doy][k]
             if el in ['maxt', 'mint']:
                 row+='%4s%5s' %(results[0][el_idx][doy][6],results[0][el_idx][doy][7])
         print row
