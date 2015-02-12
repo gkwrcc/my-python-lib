@@ -1301,9 +1301,10 @@ def format_sodsum_results_web(results, data, data_params,wrapper,station_dates=N
             print '<BR>'
 
 def print_html_header():
-    print '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">'
-    print 'Content-type: text/html \r\n\r\n'
+    print 'Content-type: text/html; charset=utf-8 \r\n\r\n'
+    print '<!DOCTYPE html>'
     print '<HTML>'
+
 
 def print_error(error):
     print '<HEAD><TITLE>' + error + '</TITLE></HEAD>'
