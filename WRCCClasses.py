@@ -8,6 +8,8 @@ Defines classes used in the my_acis project
 # import modules required by Acis
 #import  pprint, time
 import time, datetime, re, os
+import numpy as np
+import scipy
 import json
 from cStringIO import StringIO
 try:
@@ -15,22 +17,13 @@ try:
 except:
     import cairocffi as cairo
 import base64
-import datetime
 import csv
-try:
-    from xlwt import Workbook
-except:
-    pass
+from xlwt import Workbook
 import logging
 from ftplib import FTP
 import smtplib
 import gzip
 
-try:
-    #Django
-    from django.http import HttpResponse
-except:
-    pass
 try:
     #Settings
     #from django.conf import settings
@@ -44,6 +37,432 @@ except:
 #WRCC modules
 import AcisWS, WRCCDataApps, WRCCUtils, WRCCData
 
+class GraphDictWriter(object):
+    '''
+    Writes dictionary for plotting
+    with generateHighartsFigure.js
+    Args:
+        form: user input dictionary
+        data: element data formatted for highcarts plotting
+    Returns:
+        Dictionary with keys:
+            data
+            chartType
+            title, subtitle, legendTitle
+            start_date, end_date
+            yLabel, xLabel
+            axis_min
+            elUnits
+    '''
+    def __init__(self, form, data,element = None, name = None):
+        self.form = form
+        self.data = data
+        self.element = element
+        self.name = name
+        if self.element is None:
+            self.element = form['element']
+        if 'start_year' in self.form.keys() and not 'start_date' in self.form.keys():
+            self.form['start_date'] = self.form['start_year']
+        if 'end_year' in self.form.keys() and not 'end_date' in self.form.keys():
+            self.form['end_date'] = self.form['end_year']
+
+
+    def set_chartType(self):
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+        if el_strip in ['pcpn','snow', 'snwd', 'hdd','cdd','gdd']:
+            chartType = 'column'
+        else:
+            chartType = 'spline'
+        return chartType
+
+    def set_elUnits(self):
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+        if 'units' in self.form.keys() and self.form['units'] == 'metric':
+            elUnits = WRCCData.UNITS_METRIC[el_strip]
+        else:
+            elUnits = WRCCData.UNITS_ENGLISH[el_strip]
+        return elUnits
+
+    def set_date(self,date):
+        if len(date) == 8:
+            return date[0:4] + '-' + date[4:6] + '-' + date[6:8]
+        else:
+            return date
+
+    def set_title(self):
+        #NOTE: element comes from form_cleaned as english
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+        '''
+        if self.form['units'] == 'metric':
+            base_temp = WRCCUtils.convert_to_metric('base_temp',base_temp)
+        '''
+        unit = self.set_elUnits()
+        title = ''
+        if 'spatial_summary' in self.form.keys():
+            title = WRCCData.DISPLAY_PARAMS[self.form['spatial_summary']]
+            title += ' of ' + WRCCData.DISPLAY_PARAMS[el_strip]
+        elif 'temporal_summary' in self.form.keys() and not 'start_month' in self.form.keys():
+            title = WRCCData.DISPLAY_PARAMS[self.form['temporal_summary']]
+            title += ' of ' + WRCCData.DISPLAY_PARAMS[el_strip]
+        elif 'monthly_statistic' in self.form.keys():
+            if self.form['monthly_statistic'] == 'ndays':
+                title = 'Number of days where ' +  WRCCData.DISPLAY_PARAMS[el_strip]
+                if self.form['less_greater_or_between'] == 'l':
+                    title+= ' less than ' + str(self.form['threshold_for_less_than']) + ' '  + unit
+                if self.form['less_greater_or_between'] == 'g':
+                    title+= ' greater than ' + str(self.form['threshold_for_greater_than']) + ' '  + unit
+                if self.form['less_greater_or_between'] == 'b':
+                    title+= ' between ' + self.form['threshold_low_for_between'] + ' '  + unit +\
+                    ' and ' +  self.form['threshold_high_for_between'] + ' '  + unit
+            else:
+                title = WRCCData.DISPLAY_PARAMS[self.form['monthly_statistic']]
+                title += ' of ' + WRCCData.DISPLAY_PARAMS[el_strip]
+        elif 'station_id' in self.form.keys() or 'location' in self.form.keys():
+            if 'user_area_id' in self.form.keys():
+                title = self.form['user_area_id']
+            elif 'station_id' in self.form.keys():
+                title = 'Station ID: ' + self.form['station_id']
+            elif 'location' in self.form.keys():
+                 title = 'Location: ' + self.form['location']
+            title += ', '
+            if 'temporal_summary' in self.form.keys():
+                title += WRCCData.DISPLAY_PARAMS[self.form['temporal_summary']] + ' of '
+            elif 'spatial_summary' in self.form.keys():
+                title += WRCCData.DISPLAY_PARAMS[self.form['spatial_summary']] + ' of '
+            title += WRCCData.DISPLAY_PARAMS[el_strip]
+            if self.name is None:
+                self.name = title.split(', ')[-1]
+        if base_temp:
+            title+= ' Base: ' + str(base_temp)
+        return title
+        title += ' (' + unit + ')'
+        return title
+
+    def set_subTitle(self):
+        subTitle = ''
+        if 'spatial_summary' in self.form.keys():
+            subTitle = WRCCData.DISPLAY_PARAMS[self.form['area_type']]
+            subTitle+= ': ' + self.form[self.form['area_type']]
+        if 'monthly_statistic' in self.form.keys():
+            if 'station_id' in self.form.keys():
+                try:
+                    subTitle = 'Station: ' + self.form['user_area_id']
+                except:
+                    subTitle = 'Station: ' + self.form['station_id']
+            if 'location' in self.form.keys():
+                subTitle = 'Location: ' + self.form['location']
+        if 'start_month' in self.form.keys() and 'start_day' in self.form.keys():
+            if 'end_month' in self.form.keys() and 'end_day' in self.form.keys():
+                subTitle = 'From ' + WRCCData.NUMBER_TO_MONTH_NAME[self.form['start_month']]
+                subTitle+= ', ' + self.form['start_day'] + ' To '
+                subTitle+= WRCCData.NUMBER_TO_MONTH_NAME[self.form['end_month']]
+                subTitle+= ', ' + self.form['end_day']
+        return subTitle
+
+
+    def set_xLabel(self):
+        xLabel = ''
+        if 'start_date' in self.form.keys() and 'end_date' in self.form.keys():
+            xLabel = 'Start Date: '
+            xLabel+= WRCCUtils.format_date_string(self.form['start_date'],'dash')
+            xLabel+= ' End Date: '
+            xLabel+= WRCCUtils.format_date_string(self.form['end_date'],'dash')
+        if 'start_year' in self.form.keys() and 'end_year' in self.form.keys():
+            xLabel = 'Start Year: '
+            xLabel+= self.form['start_year']
+            xLabel+= ' End Year: '
+            xLabel+= self.form['end_year']
+        return xLabel
+
+    def set_yLabel(self):
+        yLabel = self.set_elUnits()
+        return yLabel
+
+    def set_legendTitle(self):
+        legendTitle = ''
+        return legendTitle
+
+    def set_axisMin(self):
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+        if el_strip in ['snow', 'snwd', 'hdd','cdd','gdd']:
+            axisMin = 0
+        else:
+            axisMin = None
+        return axisMin
+
+    def set_plotColor(self):
+        if 'monthly_statistic' in self.form.keys():
+            pl_color  = WRCCData.PLOT_COLOR_MONTH[self.name.upper()][0]
+        else:
+            el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+            pl_color = WRCCData.PLOT_COLOR[el_strip]
+        return pl_color
+
+    def set_runningMeanColor(self):
+         if 'monthly_statistic' in self.form.keys():
+            rm_color  = WRCCData.PLOT_COLOR_MONTH[self.name.upper()][1]
+         else:
+            el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+            rm_color =  WRCCData.RM_COLOR[el_strip]
+         return rm_color
+
+    def set_seriesName(self):
+        sname = self.name
+        if 'spatial_summary' in self.form.keys():
+            el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element)
+            if self.form['units'] == 'metric':
+                base_temp = WRCCUtils.convert_to_metric('base_temp',base_temp)
+            sname = WRCCData.DISPLAY_PARAMS[el_strip]
+            if base_temp:
+                sname+=' ' + str(base_temp)
+        if 'monthly_statistic' in self.form.keys():
+            if self.name != None:
+                sname = self.name
+        return sname
+
+    def write_dict(self):
+        datadict = {
+            'chartType':self.set_chartType(),
+            'data':self.data,
+            'element':self.element,
+            'elUnits':self.set_elUnits(),
+            'startDate':self.set_date(self.form['start_date']),
+            'endDate': self.set_date(self.form['end_date']),
+            'title':self.set_title(),
+            'subTitle':self.set_subTitle(),
+            'legendTitle':self.set_legendTitle(),
+            'xLabel':self.set_xLabel(),
+            'yLabel':self.set_yLabel(),
+            'axisMin':self.set_axisMin(),
+            'series_color':self.set_plotColor(),
+            'running_mean_color':self.set_runningMeanColor(),
+            'seriesName':self.set_seriesName(),
+        }
+        return datadict
+
+class CsvWriter(object):
+    '''
+    Writes data to csv
+    Keyword arguments:
+        req data requestdictionary with keys
+            data,meta, smry,form,errors
+        f file, if given, data will be written to file
+        response HTTPResponse object, if given, output file will appear in browser
+    '''
+    def __init__(self, req, f=None, response=None):
+        self.req = req
+        self.form =  self.req['form']
+        self.response = response
+        self.f = f
+        self.delim = WRCCData.DELIMITERS[self.form['delimiter']]
+
+    def set_data_type(self):
+        self.data_type = WRCCUtils.get_data_type(self.form)
+
+    def set_data(self):
+        if 'smry' in self.req.keys() and self.req['smry']:
+            self.data = self.req['smry']
+            self.smry = True
+        else:
+            self.data = self.req['data']
+            self.smry = False
+
+    def set_meta_keys(self):
+        self.meta_keys = WRCCUtils.get_meta_keys(self.form)
+
+    def set_writer(self):
+        import csv
+        if self.f is not None:
+            #self.csvfile = open(self.f, 'w+')
+            self.csvfile = gzip.open(self.f, 'wb')
+            self.writer = csv.writer(self.csvfile, delimiter=self.delim )
+        if self.response is not None:
+            self.writer = csv.writer(self.response, delimiter=self.delim)
+
+    def write_header(self):
+        #Search params header:
+        if self.smry and self.form['data_summary'] != 'None':
+            header_keys = [self.form['area_type'],'data_summary','start_date', 'end_date']
+        else:
+            header_keys = [self.form['area_type'],'start_date', 'end_date']
+        if 'data_type' in self.form.keys():
+            header_keys.insert(0,'data_type')
+        if 'user_area_id' in self.form.keys():
+            header_keys.insert(0,'user_area_id')
+        header = WRCCUtils.form_to_display_list(header_keys, self.form)
+        for key_val in header:
+            row = ['*' + key_val[0].replace(' ',''),key_val[1]]
+            self.writer.writerow(row)
+
+        if self.data_type == 'station' and not self.smry:
+            row = ['*DataFlags','M=Missing', 'T=Trace', 'S=Subsequent', 'A=Accumulated']
+            self.writer.writerow(row)
+
+    def write_data(self):
+        #Loop over data points
+        for p_idx, p_data in enumerate(self.data):
+            self.writer.writerow(['*'])
+            #Write meta
+            meta_display_params = WRCCUtils.metadict_to_display_list(self.req['meta'][p_idx], self.meta_keys, self.form)
+            for key_val in meta_display_params:
+                row = ['*' + key_val[0].replace(' ',''),' '.join(key_val[1])]
+                self.writer.writerow(row)
+            #Write data
+            self.writer.writerow(['*'])
+            for d_idx, date_data in enumerate(p_data):
+                if d_idx == 0:
+                    #Data Header
+                    h = ['*' + date_data[0]]
+                else:
+                    h = [date_data[0]]
+                d = date_data[1:]
+                self.writer.writerow(h + d)
+
+
+    def write_summary(self):
+        for s_idx, s_data in enumerate(self.data):
+            if s_idx == 0:
+                #Data Header
+                s_data[0] = '*' + s_data[0]
+            row = s_data
+            self.writer.writerow(row)
+
+    def close_writer(self):
+        try:
+            self.csvfile.close()
+        except:
+            pass
+
+    def write_to_file(self):
+        self.set_data_type()
+        self.set_data()
+        self.set_meta_keys()
+        self.set_writer()
+        self.write_header()
+        if self.smry:
+            self.write_summary()
+        else:
+            self.write_data()
+        self.close_writer()
+
+class ExcelWriter(object):
+    '''
+    Writes data to excel
+    Keyword arguments:
+        req data requestdictionary with keys
+            data, meta, smry, form, errors
+            f file, if given, data will be written to file
+        response HTTPResponse object, if given, output file will appear in browser
+    '''
+    def __init__(self, req, f = None, response = None):
+        self.req = req
+        self.form =  self.req['form']
+        self.f = f
+        self.response = response
+        self.delim = WRCCData.DELIMITERS[self.form['delimiter']]
+
+    def set_data_type(self):
+        self.data_type = WRCCUtils.get_data_type(self.form)
+
+    def set_data(self):
+        if 'smry' in self.req.keys() and self.req['smry']:
+            self.data = self.req['smry']
+            self.smry = True
+        else:
+            self.data = self.req['data']
+            self.smry = False
+
+    def set_meta_keys(self):
+        self.meta_keys = WRCCUtils.get_meta_keys(self.form)
+
+    def set_workbook(self):
+        from xlwt import Workbook
+        self.wb = Workbook()
+
+    def write_header(self,ws):
+        '''
+        if self.smry:
+            header_keys = [self.form['area_type'],'data_summary','start_date', 'end_date']
+            header = WRCCUtils.form_to_display_list(header_keys, self.form)
+        else:
+            header = []
+        for k_idx, key_val in enumerate(header):
+            ws.write(0,k_idx,key_val[0].replace(' ',''))
+            ws.write(1,k_idx,key_val[1])
+        '''
+        #Search params header:
+        if self.smry and self.form['data_summary'] != 'None':
+            header_keys = [self.form['area_type'],'data_summary','start_date', 'end_date']
+        else:
+            header_keys = [self.form['area_type'],'start_date', 'end_date']
+        if 'data_type' in self.form.keys():
+            header_keys.insert(0,'data_type')
+        if 'user_area_id' in self.form.keys():
+            header_keys.insert(0,'user_area_id')
+        header = WRCCUtils.form_to_display_list(header_keys, self.form)
+        for k_idx, key_val in enumerate(header):
+            ws.write(0,k_idx,key_val[0].replace(' ',''))
+            ws.write(1,k_idx,key_val[1])
+
+    def write_data(self):
+        #Loop over data points
+        for p_idx, p_data in enumerate(self.data):
+            #Write meta
+            meta_display_params = WRCCUtils.metadict_to_display_list(self.req['meta'][p_idx], self.meta_keys, self.form)
+            #New sheet for each point
+            ws = self.wb.add_sheet('Point' + str(p_idx))
+            self.write_header(ws)
+            #Write header
+            for m_idx,key_val in enumerate(meta_display_params):
+                ws.write(3,m_idx,meta_display_params[m_idx][0])
+                ws.write(4,m_idx,' '.join(meta_display_params[m_idx][1]))
+            if self.data_type =='station':
+                ws.write(6,0,'DataFlags')
+                ws.write(6,1,'M=Missing')
+                ws.write(6,2,'T=Trace')
+                ws.write(6,3,'S=Subsequent')
+                ws.write(6,4,'A=Accumulated')
+            #Write data
+            for date_idx in range(len(p_data)):
+                for data_idx in range(len(p_data[date_idx])):
+                    try:
+                        ws.write(date_idx + 8, data_idx, float(p_data[date_idx][data_idx]))
+                    except:
+                        ws.write(date_idx + 8, data_idx, p_data[date_idx][data_idx])
+        #Save workbook
+        if self.f is not None:
+            self.wb.save(self.f)
+        if self.response is not None:
+            self.wb.save(self.response)
+
+    def write_summary(self):
+        ws = self.wb.add_sheet('1')
+        self.write_header(ws)
+        #Write data
+        for row_idx in range(len(self.data)):
+            for val_idx in range(len(self.data[row_idx])):
+                try:
+                    val =  round(float(self.data[row_idx][val_idx]),4)
+                except:
+                    val = self.data[row_idx][val_idx]
+                ws.write(row_idx + 4 ,val_idx,val)
+        #Save workbook
+        if self.f is not None:
+            self.wb.save(self.f)
+        if self.response is not None:
+            self.wb.save(self.response)
+
+    def write_to_file(self):
+        self.set_data_type()
+        self.set_data()
+        self.set_meta_keys()
+        self.set_workbook()
+        #self.write_header()
+        if self.smry:
+            self.write_summary()
+        else:
+            self.write_data()
+
 class DataComparer(object):
     '''
     Compare historic station data with gridded data at a lat/lon coordinate.
@@ -52,7 +471,7 @@ class DataComparer(object):
     Data is obtained for both.
 
     Keywork arguments:
-    params: Dictionary containing request parameters:
+        form: Dictionary containing request parameters:
             location: lon, lat
             grid: grid ID
             start_date/end_date of request
@@ -60,18 +479,24 @@ class DataComparer(object):
             degree_days: comma separated list of degree days with irregular base temperatures
             units: metric or english
     '''
-    def __init__(self, params):
-        self.location = params['location']
-        self.grid = params['grid']
-        self.start_date = params['start_date']
-        self.end_date = params['end_date']
-        self.elements = params['elements']
+    def __init__(self, form):
+        self.form = form
+        self.location = form['location']
+        self.grid = form['grid']
+        self.start_date = form['start_date']
+        self.end_date = form['end_date']
+        self.element = form['element']
+        if isinstance(self.element, list):
+            self.elements = [form['element']]
+            self.element = form['element'][0]
+        else:
+            self.elements = [form['element']]
         if isinstance(self.elements,list):
             self.elements  = ','.join(self.elements)
         self.degree_days = None
-        if 'degree_days' in params.keys():
-            self.degree_days = params['degree_days']
-        self.units = params['units']
+        if 'degree_days' in form.keys():
+            self.degree_days = form['degree_days']
+        self.units = form['units']
 
     def hms_to_seconds(self,date_string):
         #Convert python date string to javascript milliseconds
@@ -144,14 +569,14 @@ class DataComparer(object):
         '''
         length = 0.01
         stn_meta = {}
-        els = self.combine_elements()
+        #els = self.combine_elements()
         while not stn_meta:
             bbox = self.get_bbox(length)
             meta_params = {
                 'bbox':bbox,
-                "meta":"name,state,sids,ll,elev,uid,county,climdiv,valid_daterange",
+                "meta":"name,state,sids,ll,elev,uid,valid_daterange",
             }
-            meta_params['elems'] = els
+            meta_params['elems'] = self.element
             try:
                 req = AcisWS.StnMeta(meta_params)
                 req['meta']
@@ -214,11 +639,11 @@ class DataComparer(object):
 
     def get_data(self):
         #Grid Data
-        els =  self.combine_elements()
+        #els =  self.combine_elements()
         data_params = {
             'loc': self.location,
             'grid':self.grid,
-            'elems': els,
+            'elems': self.element,
             'sdate': self.start_date,
             'edate': self.end_date,
             'meta':'ll,elev'
@@ -235,7 +660,7 @@ class DataComparer(object):
             del data_params['loc']
             del data_params['grid']
             data_params['sid'] = str(stn_meta['sids'][0].split(' ')[0])
-            data_params['meta'] = 'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'
+            data_params['meta'] = 'name,state,sids,ll,elev,uid,valid_daterange'
             try:
                 sdata = AcisWS.StnData(data_params)
             except Exception, e:
@@ -247,303 +672,96 @@ class DataComparer(object):
         For each element return series data [date, val] for both grid and station data.
         Returns dict {el1:[[Date1, el_val1],[Date,el_val2],...], 'el2':...}
         '''
-        els = self.combine_elements()
+        graph_data = []
+        #els = self.combine_elements()
         gloc = str(round(gdata['meta']['lon'],2)) + ', ' + str(round(gdata['meta']['lat'],2))
         sloc = ','.join([str(round(s,2)) for s in sdata['meta']['ll']])
         sname = str(sdata['meta']['name'])
+        sids = ''
+        for idx, sid in enumerate(sdata['meta']['sids']):
+            sids+= sid.split(' ')[0]
+            if idx != len(sdata['meta']['sids']) - 1:
+                sids+=', '
+        s_graph_title = 'Station' + sname + ', IDs: (' + sids + ')'
+        g_graph_title =  'Location: ' +  gloc
         sid = str(sdata['meta']['sids'][0].split(' ')[0])
-        graph_data = {
-            'grid_location':gloc,
-            'stn_location':sloc,
-            'stn_id': sid,
-            'state': str(sdata['meta']['state']),
-            'units':self.units,
-            'start_date':self.start_date,
-            'end_date':self.end_date,
-            'elements': els,
-            'elements_long':{},
-            'data': {}
-        }
-        for el_idx,el in enumerate(els.split(',')):
-            el_strip, base_temp = WRCCUtils.get_el_and_base_temp(el,units=self.units)
-            graph_data['elements_long'][el] = WRCCData.ACIS_ELEMENTS_DICT[el_strip]['name_long']
-            if self.units == 'metric':
-                graph_data['elements_long'][el] += ' (' + WRCCData.UNITS_METRIC[el_strip] + ')'
-            else:
-                graph_data['elements_long'][el] += ' (' + WRCCData.UNITS_ENGLISH[el_strip] + ')'
-            if base_temp:
-                graph_data['elements_long'][el] += ' Base Temp: ' + str(base_temp)
-
-            grid_data = [];station_data = [];dates = []
-            for date_idx, data in enumerate(gdata['data']):
-                try:
-                    if self.units == 'english':
-                        gd = float(data[el_idx + 1])
-                    else:
-                        gd = WRCCUtils.convert_to_metric(el_strip,float(data[el_idx + 1]))
-                except:
-                    gd = None
-                try:
-                    if self.units == 'english':
-                        sd = float(sdata['data'][date_idx][el_idx + 1])
-                    else:
-                        sd = WRCCUtils.convert_to_metric(el_strip,float(sdata['data'][date_idx][el_idx + 1]))
-                except:
-                    sd = None
-                if el_idx == 0:
-                    dates.append(str(data[0]))
-                int_time = self.hms_to_seconds(str(data[0]))
-                grid_data.append([int(int_time),gd])
-                station_data.append([int(int_time),sd])
-            graph_data['data'][el] = [grid_data,station_data]
-        graph_data['dates'] = dates
+        el_strip, base_temp = WRCCUtils.get_el_and_base_temp(self.element, units=self.units)
+        grid_data = [];station_data = [];
+        for date_idx, data in enumerate(gdata['data']):
+            try:
+                if self.units == 'english':
+                    gd = float(data[1])
+                else:
+                    gd = WRCCUtils.convert_to_metric(el_strip,float(data[1]))
+            except:
+                gd = None
+            try:
+                if self.units == 'english':
+                    sd = float(sdata['data'][date_idx][1])
+                else:
+                    sd = WRCCUtils.convert_to_metric(el_strip,float(sdata['data'][date_idx][1]))
+            except:
+                sd = None
+            int_time = self.hms_to_seconds(str(data[0]))
+            grid_data.append([int(int_time),gd])
+            station_data.append([int(int_time),sd])
+            SGDWriter = GraphDictWriter(self.form, station_data, self.element, name = sname)
+            s_graph_dict = SGDWriter.write_dict()
+            GGDWriter =  GraphDictWriter(self.form, grid_data, self.element, name = g_graph_title)
+            g_graph_dict = GGDWriter.write_dict()
+            graph_data = [s_graph_dict,g_graph_dict]
         return graph_data
 
-
-class DownloadDataJob(object):
-    '''
-    Download data to excel, .dat or .txt
-
-    Keyword arguments:
-    app_name         --  Application name, one of the following
-                         Sodsumm, Sodsum, Sodxtrmts,Soddyrec,Sodpiii, Soddynorm,
-                         Sodrun, Soddd, Sodpct, Sodpad, Sodthr
-    data_fomat       --  One of dlm (.dat), clm (.txt), xl (.xls)
-    delimiter        --  Delimiter separating the data values. One of:
-                         space, tab, comma, colon, pipe
-    json_in_file     --  Abs path to  file containing the data, json file content must be a dict
-    data             --  List object containg the row data
-    output_file_name --  Output file name. Default: Output. will be saved to /tmp/output_file_name_time_stamp
-    request          --  html request object. If None, data will be saved to '/tmp/Output_time_stamp.file_extension'.
-                         If request object is given , data will be saved in output file on the client.
-    '''
-    def __init__(self,app_name, data_format, delimiter, output_file_name, request=None, json_in_file=None, data=[], flags=None):
-        self.app_name = app_name
-        self.header = None
-        self.data = data
-        self.data_format = data_format
-        self.delimiter = delimiter
-        self.spacer = ': '
-        if self.delimiter == ':':
-            self.spacer = ' '
-        self.request = request
-        self.json_in_file = json_in_file
-        self.output_file_name = output_file_name
-        self.flags = flags
-        self.app_data_dict = {
-            'Sodxtrmts':'data',
-            'Sodsumm':'table_data',
-            'area_time_series':'download_data'
+    def get_statistics(self,s_graph_dict, g_graph_dict):
+        stats = {
+            'max':[None, None],
+            'min':[None, None],
+            'mean':[None, None],
+            'median':[None, None],
+            'std':[None, None],
+            'skew':[None, None],
+            'pearsonc':None,
+            'pearsonp': None,
+            'ksc':None,
+            'ksp':None,
         }
-        self.file_extension = {
-            'dlm': '.dat',
-            'clm': '.txt',
-            'xl': '.xls'
-        }
-        self.delimiter_dict = {
-            'space':' ',
-            'tab':'\t',
-            'comma':',',
-            'colon':':',
-            'pipe':'|'
-        }
-        self.column_headers = {
-            'Sodxtrmts':WRCCData.COLUMN_HEADERS['Sodxtrmts'],
-            'Sodsumm':None,
-            'area_time_series':['Date      ']
-        }
-
-
-    def get_time_stamp(self):
-        return datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S')
-
-    def set_output_file_path(self):
-        file_extension = self.file_extension[self.data_format]
-        if self.output_file_name == 'Output':
-            time_stamp = self.get_time_stamp()
-            f_path = '/tmp/' + 'Output_' + time_stamp + file_extension
-        else:
-            f_path = '/tmp/' + self.output_file_name + file_extension
-        return f_path
-
-    def get_row_data(self):
-        if self.data:
-            return self.data
-        try:
-            with open(self.json_in_file, 'r') as json_f:
-                #need unicode converter since json.loads writes unicode
-                json_data = WRCCUtils.u_convert(json.loads(json_f.read()))
-                #json_data = json.loads(json_f.read())
-                #Find header info if in json_data
-        except:
-            json_data = {}
-        #Set headers and column headers for the apps
-        if self.app_name == 'Sodxtrmts':
+        sdata = s_graph_dict['data']
+        gdata = g_graph_dict['data']
+        svals =[];gvals = []
+        #need separate data arrays to compute correlations
+        #data arrays need to be of same size even when data is missing
+        scorrvals = [];gcorrvals = []
+        for idx, date_val in enumerate(sdata):
             try:
-                self.header = json_data['header']
+                svals.append(float(date_val[1]))
+            except:
+                svals.append(None)
+            try:
+                gvals.append(float(gdata[idx][1]))
+            except:
+                gvals.append(None)
+            try:
+                scorrvals.append(float(date_val[1]))
+                gcorrvals.append(float(gdata[idx][1]))
             except:
                 pass
-        if self.app_name == 'Sodsumm':
-            self.header = []
-            labels = ['Station Name', 'Station ID', 'Station Network', 'Station State', 'Start Year', 'End Year', 'Climate Variables']
-            for idx, key in enumerate(['stn_name', 'stn_id', 'stn_network', 'stn_state', 'record_start', 'record_end', 'table_name_long']):
-                self.header.append([labels[idx], json_data[key]])
-        if self.app_name == 'area_time_series':
-            self.header = json_data['display_params_list']
-            for el in json_data['search_params']['element_list']:
-                self.column_headers['area_time_series'].append(el)
-        if self.app_data_dict[self.app_name] in json_data.keys():
-            data = json_data[self.app_data_dict[self.app_name]]
-        else:
-            data = []
-        return data
-
-    def write_to_csv(self,column_header, data):
-
-        if self.request:
-            response = HttpResponse(mimetype='text/csv')
-            response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
-            writer = csv.writer(response, delimiter=self.delimiter_dict[self.delimiter])
-
-        else: #write to file
-            try:
-                output_file = self.set_output_file_path()
-                csvfile = open(output_file, 'w+')
-                writer = csv.writer(csvfile, delimiter=self.delimiter_dict[self.delimiter])
-                response = None
-            except Exception, e:
-                #Can' open user given file, create emergency writer object
-                writer = csv.writer(open('/tmp/csv.txt', 'w+'), delimiter=self.delimiter_dict[self.delimiter])
-                response = 'Error! Cant open file' + str(e)
-        #Write header if it exists
-        if self.header:
-            row = []
-            for idx,key_val in enumerate(self.header):
-                if len(key_val) != 2:
-                    continue
-                #three entries per row
-                row.append(key_val[0] + self.spacer + key_val[1])
-                if (idx + 1) % 2 == 0 or idx == len(self.header) - 1:
-                    writer.writerow(row)
-                    row = []
-            writer.writerow(row)
-            writer.writerow([])
-            if self.app_name == 'Sodxtrmts':
-                row = ['*a = 1 day missing, b = 2 days missing, c = 3 days, ..etc..,']
-                writer.writerow(row)
-                row = ['*z = 26 or more days missing, A = Accumulations present']
-                writer.writerow(row)
-                row=['*Long-term means based on columns; thus, the monthly row may not']
-                writer.writerow(row)
-                row=['*sum (or average) to the long-term annual value.']
-                writer.writerow(row)
-
-        writer.writerow([])
-        row = column_header
-        #row = ['%8s' %str(h) for h in column_header] #Kelly's format
-        #row = ['%s' %str(h) for h in column_header]
-        writer.writerow(row)
-        for row_idx, row in enumerate(data):
-            row_formatted = []
-            for idx, r in enumerate(row):
-                row_formatted.append('%s' %str(r))
-                #row_formatted.append('%8s' %str(r)) #Kelly's format
-            writer.writerow(row_formatted)
-            #writer.writerow(row)
-        try:
-            csvfile.close()
-        except:
-            pass
-        return response
-
-    def write_to_excel(self,column_header, data):
-        wb = Workbook()
-        #Note row number limit is 65536 in some excel versions
-        row_number = 0
-        flag = 0
-        sheet_counter = 0
-        for date_idx, date_vals in enumerate(data): #row
-            for j, val in enumerate(date_vals):#column
-                if row_number == 0:
-                    flag = 1
-                else:
-                    row_number+=1
-                if row_number == 65535:flag = 1
-
-                if flag == 1:
-                    sheet_counter+=1
-                    #add new workbook sheet
-                    ws = wb.add_sheet('Sheet_%s' %sheet_counter)
-                    #Header
-                    if self.header:
-                        for idx,key_val in enumerate(self.header):
-                            ws.write(idx,0,key_val[0])
-                            ws.write(idx,1,key_val[1])
-                    #Column Header
-                    for idx, head in enumerate(column_header):
-                        ws.write(len(self.header), idx, head)
-                        row_number = 1;flag = 0
-                try:
-                    row_idx = len(self.header) + 1 + date_idx
-                    try:
-                        ws.write(row_idx, j, float(val))
-                    except:
-                        ws.write(row_idx, j, str(val))#row, column, label
-                except Exception, e:
-                    response = 'Excel write error:' + str(e)
-                    break
-        if self.request:
-            response = HttpResponse(content_type='application/vnd.ms-excel;charset=UTF-8')
-            response['Content-Disposition'] = 'attachment;filename=%s%s' % (self.output_file_name,self.file_extension[self.data_format])
-            wb.save(response)
-        else: #write to file
-            try:
-                output_file = self.set_output_file_path()
-                wb.save(output_file)
-                response = None
-            except Exception, e:
-                response = 'Excel save error:' + str(e)
-        return response
-
-    def write_to_json(self,column_header, data):
-        if request:
-            response = json.dumps({'column_header':column_header,'data':data})
-        else:
-            output_file = self.set_output_file_path()
-            with open(output_file, 'w+') as jsonf:
-                json.dump(data, jsonf)
-                response = None
-        return response
-
-    def write_to_file(self):
-        time_stamp = self.get_time_stamp()
-        column_header = self.column_headers[self.app_name]
-        data = self.get_row_data()
-        if self.app_name == 'Sodsumm':
-            try:
-                column_header = data[0]
-            except:
-                column_header = []
-            try:
-                data = data[1:]
-            except:
-                data = []
-        #Sanity Check
-        if not self.json_in_file and not self.data:
-            return 'Error! Need either a data object or a json file that contains data!'
-        if self.json_in_file and self.data:
-            return 'Error! Only one allowed: json_file path OR data'
-
-        #Write data to file
-        if self.data_format in ['dlm', 'clm']:
-            response = self.write_to_csv(column_header, data)
-        elif self.data_format == 'json':
-            response = self.write_to_json(column_header, data)
-        elif self.data_format == 'xl':
-            response = self.write_to_excel(column_header, data)
-
-        return response
-
+        compute_stat = getattr(WRCCUtils,'compute_statistic')
+        stats['max'] = [compute_stat(svals,'max'),compute_stat(gvals,'max')]
+        stats['min'] = [compute_stat(svals,'min'),compute_stat(gvals,'min')]
+        stats['mean'] = [compute_stat(svals,'mean'),compute_stat(gvals,'mean')]
+        stats['median'] = [compute_stat(svals,'median'),compute_stat(gvals,'median')]
+        stats['std'] = [compute_stat(svals,'std'),compute_stat(gvals,'std')]
+        stats['skew'] = [compute_stat(svals,'skew'),compute_stat(gvals,'skew')]
+        #Single value stats
+        snp = np.array(scorrvals, dtype = np.float)
+        gnp = np.array(gcorrvals, dtype = np.float)
+        pearson_stats = scipy.stats.pearsonr(snp, gnp)
+        stats['pearsonc'] = round(pearson_stats[0],4)
+        stats['pearsonp'] =  round(pearson_stats[1],4)
+        ks_stats = scipy.stats.ks_2samp(snp, gnp)
+        stats['ksc'] = round(ks_stats[0],4)
+        stats['ksp'] =  round(ks_stats[1],4)
+        return stats
 
 class SODDataJob(object):
     '''
@@ -568,7 +786,7 @@ class SODDataJob(object):
             'all_sodsumm':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
             'all':['maxt', 'mint', 'pcpn', 'snow', 'snwd', 'hdd', 'cdd'],
             'tmp':['maxt', 'mint', 'pcpn'],
-            'both':['max', 'mint', 'avgt', 'pcpn', 'snow'],
+            'both':['maxt', 'mint', 'avgt', 'pcpn', 'snow'],
             'temp':['maxt', 'mint', 'avgt'],
             'prsn':['pcpn', 'snow'],
             'wtr':['pcpn', 'snow', 'snwd'],
@@ -633,7 +851,7 @@ class SODDataJob(object):
         Converts string of lon, lat pairs into list of lon, lat pairs
         '''
         loc_list = []
-        for key in ['locations', 'location']:
+        for key in ['locations', 'location','loc']:
             if key in params.keys():
                 if isinstance(params[key], basestring):
                     ll_list = params[key].split(',')
@@ -701,6 +919,13 @@ class SODDataJob(object):
         if 'station_id' in self.params.keys():
             if not self.station_ids:
                 return s_date, e_date
+        if 'sid' in self.params.keys() and not self.station_ids:
+             self.station_ids = [self.params['sid']]
+        if 'sids' in self.params.keys() and self.station_ids is None:
+            if isinstance(self.params['sids'], basestring):
+                self.station_ids = self.params['sids'].replace(' ','').split(',')
+            else:
+                self.station_ids = self.params['sids']
         #Format yyyy, yyyymm data into yyyymmdd
         if len(self.params['start_date']) == 4:
             s_date = self.params['start_date'] + '0101'
@@ -764,8 +989,6 @@ class SODDataJob(object):
             'elevs': [],
             'uids':[''],
             'networks':[''],
-            'climdivs':[''],
-            'countys':[''],
             'valid_daterange':[['00000000','00000000']]
         }
         meta_dict['location_list'] = self.set_locations_list(self.params)
@@ -787,8 +1010,6 @@ class SODDataJob(object):
             'elevs':[],
             'uids':[],
             'networks':[],
-            'climdivs':[],
-            'countys':[],
             'valid_daterange':[]
         }
         area, val = self.set_area_params()
@@ -817,7 +1038,7 @@ class SODDataJob(object):
                     meta_dict['valid_dateranges'] = stn['valid_daterange']
                 #Find other meta data info
                 #NOTE: ACIS quirk: sometimes other meta data attributes don't show up
-                keys = ['state', 'elev', 'uid', 'climdiv', 'county']
+                keys = ['state', 'elev', 'uid']
                 for key in keys:
                     meta_dict_key = key + 's'
                     if key in stn.keys():
@@ -868,6 +1089,9 @@ class SODDataJob(object):
         el_type = self.set_element_param()
         if self.app_name == 'Sodsumm' and self.params[el_type] == 'all':
             el_list = self.el_type_element_dict['all_sodsumm']
+            #Grid data dows not have snow
+            if 'location' in self.params.keys() or 'loc' in self.params.keys():
+                el_list = self.el_type_element_dict[self.params['element']]
         elif self.app_name == 'Soddynorm':
              el_list = self.el_type_element_dict['tmp']
         elif self.app_name == 'Sodxtrmts' and self.params[el_type] in ['hdd','cdd', 'gdd','dtr']:
@@ -916,7 +1140,7 @@ class SODDataJob(object):
             params['grid'] = self.params['grid']
             params['meta'] = 'll, elev'
         else:
-            params['meta'] = 'name,state,sids,ll,elev,uid,county,climdiv'
+            params['meta'] = 'name,state,sids,ll,elev,uid'
         return params
 
     def find_leap_yr_indices(self):
@@ -928,17 +1152,10 @@ class SODDataJob(object):
         s_yr = int(self.params['start_date'][0:4])
         e_yr = int(self.params['end_date'][0:4])
         yrs = range(s_yr, e_yr + 1)
-        num_years = e_yr - s_yr + 1
-        max_num_leap = num_years / 4
-        idx = 0
         #Find first leap year
-        for yr in range(s_yr, e_yr + 1):
-            if WRCCUtils.is_leap_year(yr):break
-            idx+=1
-        leap_indices.append(idx)
-        while idx < len(yrs):
-            idx+=4
-            leap_indices.append(idx)
+        for idx, yr in enumerate(yrs):
+            if WRCCUtils.is_leap_year(yr):
+                leap_indices.append(idx)
         return leap_indices, yrs
 
     def format_data_grid(self, request, locations,elements):
@@ -950,7 +1167,7 @@ class SODDataJob(object):
         request[i]['data'] = [[date_1, el1, el2,...], ['date_2', el_1, el_2,..]...]
         We need to convert to staton data request format that is grouped by year
         '''
-        leap_indices,year_list =self.find_leap_yr_indices()
+        leap_indices,year_list = self.find_leap_yr_indices()
         #Set up data output dictonary
         error = ''
         if self.app_name == 'Sodsum':
@@ -977,33 +1194,13 @@ class SODDataJob(object):
             if not 'data' in loc_request.keys():
                 error = 'No data found for parameters: %s' % str(self.params)
                 continue
-            '''
-            for el_idx, element in enumerate(elements):
-                start_idx = 0
-                yr_data = []
-                for yr_idx, yr in enumerate(year_list):
-                    length = 365
-                    #Feb 29 not recorded as M for non-leap years.
-                    # Need to insert for gouping by year
-                    if yr_idx in leap_indices:length =  366
-                    else:length=365
-                    d = loc_request['data'][start_idx:start_idx + length]
-                    start_idx = start_idx + length
-                    #Only pick relevant element data
-                    d = [d[el_idx + 1] for d in d]
-                    #Add missing leap year value if not leap year
-                    if length == 365:d.insert(59,'M')
-                    yr_data.append(d)
-                    data[loc_idx][el_idx].append(yr_data)
-            '''
             start_idx = 0
             for yr_idx, yr in enumerate(year_list):
                 yr_data = [[] for el in elements]
                 length = 365
-                #Feb 29 not recorded as M for non-leap years.
-                # Need to insert for gouping by year
-                if yr_idx in leap_indices:length =  366
-                else:length=365
+                #Grid 1, 3 and 21 record Feb 29
+                if yr_idx in leap_indices and self.params['grid'] in ['1','3','21']:
+                    length =  366
                 d = loc_request['data'][start_idx:start_idx + length]
                 start_idx = start_idx + length
                 for el_idx, element in enumerate(elements):
@@ -1157,11 +1354,17 @@ class SODApplication(object):
                     'lls':self.data['lls']
                     }
         if 'station_ids' in self.data.keys():
+            #Delete eventually
             app_params['coop_station_ids'] = self.data['station_ids']
             app_params['station_names'] = self.data['station_names']
+            #Use ids and names oin WRCCDataApps
+            app_params['ids'] = self.data['station_ids']
+            app_params['names'] = self.data['station_names']
         if 'location_list' in self.data.keys():
             app_params['location_list'] = self.data['location_list']
             app_params['station_names'] = self.data['location_list']
+            app_params['ids'] = self.data['location_list']
+            app_params['names'] = self.data['location_list']
         if self.app_specific_params:
             app_params.update(self.app_specific_params)
         #Sanity check, make sure data has data
@@ -1267,7 +1470,10 @@ class GridFigure(object) :
     image_padding = 0,150
     def __init__(self, params, img_offset=0, text_offset=(80,50)) :
         self.params= params
-        self.region =params['select_grid_by']
+        try:
+            self.region = params['select_grid_by']
+        except:
+            self.region = params['area_type']
         if 'date' in params.keys():
             self.date = params['date']
         elif 'this' in params.keys():
@@ -1378,8 +1584,12 @@ class GridFigure(object) :
         title+=' ' + WRCCData.DISPLAY_PARAMS[el_strip] + ' (' + WRCCData.UNITS_ENGLISH[el_strip] + ')'
         if base_temp:
             title+= ' Base Temperature: ' + str(base_temp)
-        area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
-        area_description+= ': ' + self.params[self.params['select_grid_by']].upper()
+        try:
+            area_description = WRCCData.DISPLAY_PARAMS[self.params['select_grid_by']]
+            area_description+= ': ' + self.params[self.params['select_grid_by']].upper()
+        except:
+            area_description = WRCCData.DISPLAY_PARAMS[self.params['area_type']]
+            area_description+= ': ' + self.params[self.params['area_type']].upper()
         date_str = 'Start Date: %s End Date: %s' % (self.params['sdate'], self.params['edate'])
         if self.params['image']['width']<301:
             ctx.set_font_size(8.)
@@ -1667,224 +1877,163 @@ class LargeDataRequest(object):
     '''
     This class handles large station data request freom SCENIC.
     Components:
-    Keyword arguments:
-        params -- data request parameters, keys:
-                  select_station_by/select_grid_by: specifies type of data request (station data/gridded data)
-                  start_date/end_date, temporal resolution (daily/monthly/yearly)
-                  elements, units (metric/english), flags (station data only)
-                  grid (gridded data only)
-                  data_summary (temporal/spatial)
-                        temporal_summary/spatial_summary (max, min, mean, sum)
-                  date_format (yyyy-mm-dd/yyyymmdd/yyyy:mm:dd/yyyy/mm/dd)/data_format (html, csv, excel)
+    Args:
+        form:  dictionary of user input
         logger -- logger object
     '''
-    def __init__(self, params, logger):
-        self.params = params
+    def __init__(self, form, logger, local_base_dir, ftp_server, ftp_dir, max_lines_per_file):
+        self.form = form
         self.logger =  logger
-        #Limit of days per data request
-        self.day_limit = settings.GRID_REQUEST_DAY_LIMIT
-        #Limit of lats, lons for file writing
-        self.max_lats = settings.MAX_LATS
-        self.max_lons = settings.MAX_LONS
-        #Limit of stations for file writing
-        self.max_stations = settings.MAX_STATIONS
-        #Set data request and formatting scripts
-        if 'select_grid_by' in self.params.keys():
-            self.request_data = getattr(AcisWS, 'get_grid_data')
-            self.format_data = getattr(WRCCUtils, 'format_grid_data')
-            self.write_to_file = getattr(WRCCUtils, 'write_griddata_to_file')
-        else:
-            self.request_data = getattr(AcisWS, 'get_station_data')
-            self.format_data = getattr(WRCCUtils, 'format_station_data')
-            self.write_to_file = getattr(WRCCUtils, 'write_station_data_to_file')
+        self.base_dir = local_base_dir
+        self.ftp_server = ftp_server
+        self.ftp_dir = ftp_dir
+        self.max_lines_per_file = max_lines_per_file
 
     def get_data(self):
         '''
-        ACIS data request
-        request_type -- grid or station
-        params       -- parameter file
+        Requests and format data
+        resultsdict has keys:
+            errors, meta, data, smry, form
         '''
-        self.request = {'data':[]}
-        try:
-            self.request = self.request_data(self.params,'sodlist-web')
-        except:
-            self.request['error'] = 'Invalid data request.'
+        resultsdict = WRCCUtils.request_and_format_data(self.form)
+        if 'errors' in resultsdict.keys():
+            self.logger.error('ERROR in get_data: ' + str(resultsdict['errors']))
+        self.logger.info('Data request  %s completed successfully!' %str(self.form['output_file_name']))
+        if not resultsdict['data'] and not resultsdict['smry']:
+            self.logger.error('ERROR in get_data: empty data lists')
+            return {}
+        return resultsdict
 
-    def split_data_station(self):
+    def split_data(self,resultsdict,max_lines):
         '''
-        Splits grid data request into smaller chunks
-        for writing to file
-        request     -- results of a large station data request
-                       (MultiStnData call)
-        max_stations -- max number of stations allowed
-                       for writing to file
-        return a list of stn  indices
+        Splits results of get_data into
+        smaller chunks if needed
         '''
-        #Sanity check
-        if 'error' in self.request.keys():return []
-        if not 'data' in self.request.keys():return []
-        if not self.request['data']:return []
-        idx_list = [0]
-        num_stations = len(self.request['data'])
-        if num_stations < int(self.max_stations):
-            div = 1
-            rem = 0
+
+        if resultsdict['data']:
+            data = resultsdict['data']
+            key_data = 'data';key_empty = 'smry'
+        elif resultsdict['smry']:
+            data = resultsdict['smry']
+            key_data = 'smry';key_empty = 'data'
         else:
-            div = num_stations / int(self.max_stations)
-            rem = num_stations % int(self.max_stations)
-        for idx in range(1, div + 1):
-            idx_list.append(idx * self.max_stations)
-        if rem != 0:
-            idx_list.append(idx_list[-1] + rem)
-        if self.logger:
-            self.logger.info('Splitting data request into %s chunks' % str(len(idx_list)))
-        return idx_list
+            self.logger.error('ERROR in split_data: empty data lists')
+            return []
+        chunks =[]
+        c_idx = 0
+        start_idx = 0
+        if len(data) <= max_lines:
+            end_idx = len(data)
+        else:
+            end_idx = max_lines
+        while end_idx <= len(data):
+            c_idx+=1
+            chunk = {
+                key_data:data[start_idx:end_idx],
+                key_empty:[],
+                'meta':resultsdict['meta'][start_idx:end_idx],
+                'form':resultsdict['form']
+            }
+            chunks.append(chunk)
+            #Check if we at end of data
+            if end_idx == len(data):
+                break
+            #Set start/end for next chunk
+            start_idx = end_idx
+            end_idx = end_idx + max_lines
+            #Check if new chunk covers rest of data
+            if end_idx > len(data):
+                end_idx = len(data)
+        self.logger.info('Split data into %s chunks.' %str(c_idx))
+        return chunks
 
+    def set_out_file_path(self):
+        time_stamp = datetime.datetime.now().strftime('%Y%m_%d_%H_%M_%S.%f')
+        fe = WRCCData.FILE_EXTENSIONS[self.form['data_format']]
+        path_to_file = self.base_dir + self.form['output_file_name']
+        #FIX ME: save excel wb to file as .gz.
+        if self.form['data_format'] == 'xl':
+            path_to_file +='_' + time_stamp + fe
+        else:
+            path_to_file +='_' + time_stamp + fe + '.gz'
+        self.logger.info('Output file path: %s.' %str(path_to_file))
+        return path_to_file
 
-    def split_data_grid(self):
-        '''
-        Splits grid data request into smaller chunks
-        by looking at lats, lons and number of days
-        for writing to file
-        request        -- results of a large gridde data request
-                          (GridData call)
-        returns list of data indices
-        '''
-        #Sanity check
-        if 'error' in self.request.keys():return []
-        if not 'meta' in self.request.keys():return []
-        if not 'lat' in self.request['meta'].keys(): return []
-        if not 'lat' in self.request['meta'].keys(): return []
-        if not 'data' in self.request.keys() and not 'smry' in self.request.keys():return []
-        idx_list = [0]
-        #find number of grid points in request
-        num_lats =0;num_lons=0
-        try:
-            num_lats = len(self.request['meta']['lat'])
-        except:
-            if type(self.request['meta']['lat']) == float:
-                num_lats = 1
-        try:
-            num_lons = len(self.request['meta']['lon'][0])
-        except:
-            if type(self.request['meta']['lon']) == float:
-                num_lons = 1
-        if 'smry' in self.request.keys():days = 1
-        else:days =  len(self.request['data'])
-        num_loop_points = num_lats * num_lons * days
-        max_loop_points = self.day_limit * self.max_lats * self.max_lons
-        max_days = 0
-        while (max_days + 1) * num_lats * num_lons < max_loop_points:
-            max_days+=1
-        div = days / max_days
-        rem = days % max_days
-        if div == 0:
-            if 'smry' in self.request.keys():idx_list = [0, len(self.request['smry'])]
-            else:idx_list = [0, len(self.request['data'])]
-            return idx_list
-        for idx in range(1, div + 1):
-            idx_list.append(idx * max_days)
-        if rem != 0:
-            idx_list.append(idx_list[-1] + rem)
-        return idx_list
-
-    def split_data(self):
-        idx_list = []
-        if 'select_grid_by' in self.params.keys():
-            idx_list = self.split_data_grid()
-        elif 'select_stations_by' in self.params.keys():
-            idx_list = self.split_data_station()
-        return idx_list
-
-    def load_file(self,f_name, ftp_server, ftp_dir, logger=None):
+    def write_to_file(self,data_chunk,path_to_file):
         error = None
-        if logger:FTP = FTPClass(ftp_server, ftp_dir, f_name, logger)
-        else: FTP = FTPClass(ftp_server, ftp_dir, f_name)
+        if self.form['data_format'] in ['clm','dlm']:
+            try:
+                Writer = CsvWriter(data_chunk, f = path_to_file)
+            except Exception, e:
+                self.logger.error('ERROR in write_to_file. Cannot initialize writer: ' + str(e))
+                return str(e)
+        if self.form['data_format'] == 'xl':
+            try:
+                Writer = ExcelWriter(data_chunk,f = path_to_file)
+            except Exception, e:
+                self.logger.error('ERROR in write_to_file. Cannot initialize writer: ' + str(e))
+                return str(e)
+        self.logger.info('Writing data to file.')
+        Writer.write_to_file()
+        '''
+        try:
+            Writer.write_to_file()
+        except Exception, e:
+            self.logger.error('ERROR in write_to_file. Cannot write to file: ' + str(e))
+            return str(e)
+        return error
+        '''
+    def load_file(self,f_name, ftp_server, ftp_dir):
+        error = None
+        FTP = FTPClass(ftp_server, ftp_dir, f_name, self.logger)
         error = FTP.FTPUpload()
         if error:
-            if self.logger:
-                self.logger.error('ERROR tranferring %s to ftp server. Error %s'%(os.path.basename(f_name),error))
+            self.logger.error('ERROR in load_file: %s' %str(error))
             os.remove(f_name)
-        return error
-
-
-    def format_write_transfer(self,params_file, params_files_failed,out_file, ftp_server, ftp_dir,max_file_size,logger=None):
-        '''
-        Formats data for file output.
-        Writes data to files of max size max_file_size in chunks.
-        Transfers data files to ftp server.
-        Returns list of output files of max size max_file_size
-        '''
-        f_ext = os.path.splitext(out_file)[1]
-        f_base = os.path.splitext(out_file)[0]
-        file_idx = 1
-        f_name = f_base + '_' + str(file_idx) + f_ext + '.gz'
-        out_files = []
-        f = gzip.open(f_name, 'wb')
-        if self.logger:
-            self.logger.info('Splitting data into smaller chunks for formatting')
-        idx_list = self.split_data()
-        if 'smry' in self.request.keys():
-            generator = (self.request['smry'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
-        else:
-            generator = (self.request['data'][idx_list[idx]:idx_list[idx+1]] for idx in range(len(idx_list) - 1) )
-        if self.logger:
-            self.logger.info('Formatting data')
-        idx = 0
-        for data in generator:
-            idx+=1
-            req_small={}
-            for key, val in self.request.iteritems():
-                if key != 'data':
-                    req_small[key] = val
-            req_small['data'] = data
-            temp_file = settings.DATA_REQUEST_BASE_DIR + 'temp_out'
-            if self.logger:
-                self.logger.info('Formatting data chunk %s' %str(idx))
-            results_small = self.format_data(req_small, self.params)
-            if self.logger:
-                self.logger.info('Finished formatting data chunk %s' %str(idx))
-                self.logger.info('Writing data chunk %s to file' %str(idx))
-            self.write_to_file(results_small,self.params,f=temp_file)
-            if self.logger:
-                self.logger.info('Finished writing data chunk %s to file' %str(idx))
-                self.logger.info('Appending data chunk  %s to output file %s' %(str(idx), os.path.basename(f_name)))
-            with open(temp_file, 'r') as temp:
-                f.write(temp.read())
-            #Check file size and open new file if needed
-            fs = str(round(os.stat(f_name).st_size / 1048576.0,2)) + 'MB'
-            ms = str(round(settings.MAX_FILE_SIZE / 1048576.0,2))+ 'MB'
-            self.logger.info('FILE SIZE %s , MAX FILE SIZE %s' %(fs, ms))
-            if os.stat(f_name).st_size < max_file_size:
-                continue
-            try:f.close()
-            except:pass
-            if self.logger:
-                self.logger.info('FILE SIZE %s' %fs)
-            out_files.append(os.path.basename(f_name) + ' '  + fs)
-            logger.info('Files: %s' %str(out_files))
-            #transfer to FTP and delete file
-            error = self.load_file(f_name, ftp_server, ftp_dir, logger)
-            if error:params_files_failed.append(params_file)
-            os.remove(f_name)
-            file_idx+=1
-            #new file
-            f_name = f_base +  '_' + str(file_idx) + f_ext +'.gz'
-            f = gzip.open(f_name, 'wb')
-        if self.logger:
-            self.logger.info('Data request completed')
-        #Transfer last file
-        try:f.close()
-        except:pass
-        if not os.stat(f_name).st_size > 0:
-            return out_files
-        out_files.append(os.path.basename(f_name) + ' '  + str(round(os.stat(f_name).st_size / 1048576.0, 2)) + 'MB')
-        f.close()
-        error = self.load_file(f_name, ftp_server, ftp_dir, logger)
-        if error:params_files_failed.append(params_file)
+            return error
+        self.logger.info('File loaded to ftp server.')
         os.remove(f_name)
-        return out_files
+        self.logger.info('File deleted from local server server.')
+        return None
 
-
-
-
+    def process_request(self):
+        error = None
+        out_files =[]
+        resultsdict = self.get_data()
+        if not resultsdict:
+            error = 'ERROR: Data Request failed!'
+            return error, out_files
+        chunks = self.split_data(resultsdict,self.max_lines_per_file)
+        if not chunks:
+            error = 'ERROR: Data request could not be slpit into chunks.'
+            return error, out_files
+        for c_idx,data_chunk in enumerate(chunks):
+            path_to_file = self.set_out_file_path()
+            f_name = path_to_file
+            self.logger.info('Processing chunk %s' %str(c_idx))
+            error = self.write_to_file(data_chunk,path_to_file)
+            if error is not None:
+                return error, []
+            #Compress file
+            '''
+            try:
+                f = gzip.open(f_name, 'wb')
+            except:
+                error = 'ERROR: Cannot open file %s' %f_name
+                return error, []
+            try:
+                with open(path_to_file, 'r') as temp:
+                    f.write(temp.read())
+                f.close()
+            except:
+                error = 'ERROR: Cannot read file %s' %path_to_file
+                return error, out_files
+            self.logger.info('Output file compressed.')
+            '''
+            error = self.load_file(f_name, self.ftp_server, self.ftp_dir)
+            if error is not None:
+                return error,[]
+            self.logger.info('File %s successfully loaded to FTP server' %f_name)
+            out_files.append(f_name)
+        self.logger.info('All files successfully loaded to FTP server')
+        return error, out_files

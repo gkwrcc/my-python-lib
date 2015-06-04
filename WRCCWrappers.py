@@ -18,6 +18,15 @@ import WRCCUtils, AcisWS, WRCCDataApps, WRCCClasses, WRCCData
 
 today = WRCCUtils.set_back_date(0)
 
+import logging
+logger = logging.getLogger('WrapperLogger')
+logger.setLevel(logging.DEBUG)
+sh = logging.StreamHandler()
+sh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(lineno)d in %(filename)s - %(message)s')
+sh.setFormatter(formatter)
+logger.addHandler(sh)
+
 #########
 # CLASSES
 #########
@@ -45,8 +54,6 @@ class Wrapper:
         self.station_lls = meta_dict['lls']
         self.station_elevs = meta_dict['elevs']
         self.station_uids = meta_dict['uids']
-        self.station_climdivs = meta_dict['climdivs']
-        self.station_countys = meta_dict['countys']
         if 'valid_dateranges' in meta_dict.keys():
             self.station_valid_dateranges = meta_dict['valid_dateranges']
         return data
@@ -65,7 +72,7 @@ def sodxtrmts_wrapper(argv):
            ndays analysis not implemented here
     argv -- stn_id start_year end_year element base_temperature monthly_statistic
             max_missing_days start_month departure_from_averages
-    Explaination:
+    Input Options:
             element choices:
                 pcpn, snow, snwd, maxt, mint, avgt, dtr, hdd, cdd, gdd
             base_temperature: for hdd, cdd, gdd
@@ -82,7 +89,7 @@ def sodxtrmts_wrapper(argv):
                 F  --> False
     Examples
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+hdd+60+mave+5+01+F
-
+    http://wrcc-test.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+hdd+60+mave+5+01+F
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodxtrmts+266779+2000+2012+maxt+none+mave+5+01+F
     '''
     #Sanity Check
@@ -200,7 +207,7 @@ def sodsum_wrapper(argv):
     '''
     argv -- stn_id start_date end_date element
 
-    Explaination:
+    Input Options:
             element choices:
                 One of:
                 pcpn, snow, snwd, maxt, mint, obst, multi (all 6)
@@ -208,6 +215,8 @@ def sodsum_wrapper(argv):
                 html --> html output for display on WRCC pages
     Example:
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+por+multi
+    http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+20100101+multi
+    http://wrcc-test.dri.edu/cgi-bin/WRCCWrappers.py?sodsum+266779+por+por+multi
     '''
     #Sanity Check
     if len(argv) != 4:
@@ -288,7 +297,6 @@ def sodsumm_wrapper(argv):
                     hdd    -- heating degeree days stats
                     cdd    -- heating degeree days stats
                     gdd    -- heating degeree days stats
-                    corn   -- heating degeree days stats
                     ts_tps -- tabular summmary for temp/precip/snow (Period of Record Data Tables)
                     ts_tp  -- tabular summmary for temp/precip (1981/1971/1961 -2000 tabular summaries)
             start/end year:
@@ -300,6 +308,7 @@ def sodsumm_wrapper(argv):
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+temp+por+por+5
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+ts_tps+por+por+5
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+ts_tp+1971+2000+5
+    http://wrcc-test.dri.edu/cgi-bin/WRCCWrappers.py?sodsumm+266779+ts_tp+1971+2000+5
     '''
     #Sanity Check on input parameter number
     if len(argv) != 5:
@@ -403,7 +412,7 @@ def soddyrec_wrapper(argv):
     '''
     argv -- stn_id element_type start_date end_date
 
-    Explaination:
+    Input Options:
             stn_id -- station identifier
             start/end date are 8 digits long, e.g 20100102
             element_type choices:
@@ -423,6 +432,7 @@ def soddyrec_wrapper(argv):
     Examples (web):
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+20000101+20101231+html
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por+html
+    http://wrcc-test.dri.edu/cgi-bin/WRCCWrappers.py?soddyrec+266779+all+por+por+html
     Example text output
     python WRCCWrappers.py soddyrec 266779 all 20000101 20101231 txt
     '''
@@ -486,13 +496,14 @@ def soddynorm_wrapper(argv):
     '''
     argv -- stn_id start_year end_year filter_type filter_days
 
-    Explaination:
+    Input Options:
             start/end year --> start/end year of analysis
             filter_type    --> rm or gauss (running mean or Gaussian)
             filter_days --> number of days to compute running mean/gaussian over
     Examples:
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddynorm+266779+1950+2000+rm+9
     http://cyclone1.dri.edu/cgi-bin/WRCCWrappers.py?soddynorm+266779+por+por+gauss+5
+    http://wrcc-test.dri.edu/cgi-bin/WRCCWrappers.py?soddynorm+266779+por+por+gauss+5
     '''
     #Sanity Check
     if len(argv) != 5:
@@ -675,10 +686,10 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         el_name = WRCCData.ACIS_ELEMENTS_DICT_SR[el]['name_long']
         if el == 'hdd':
             el_name = 'Heat'
-            start ='|--';end='--'
+            start ='|--------';end='-------'
         if el == 'cdd':
             el_name = 'Cool'
-            start ='|--';end='--'
+            start ='|--------';end='-------'
         if el in ['maxt','mint']:
             start ='|---';end='---'
         if el == 'pcpn':
@@ -704,9 +715,7 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
         table_header+=start
         table_header+=el_name
         table_header+=end
-        if el in ['hdd','cdd']:
-            table_header_2+='   ' + el.upper() + '   NO'
-        elif el in ['pcpn','snow','snwd']:
+        if el in ['pcpn','snow','snwd','hdd','cdd']:
             table_header_2+='   AVG  NO  HI   YR'
         else:
             table_header_2+=' AVG  NO  HI   YR'
@@ -725,15 +734,22 @@ def format_soddyrec_results_txt(results, wrapper,data_params):
                     if k == 3:
                         row+=' %3s' %results[0][el_idx][doy][k]
                     else:
-                        #row+='%6s' %results[0][el_idx][doy][k]
-                        row+='%5s' %results[0][el_idx][doy][k]
+                        if k == 2 and el == 'pcpn':
+                            #extra space between mint year and pcpn avgt
+                            row+='%6s' %results[0][el_idx][doy][k]
+                        else:
+                            #row+='%6s' %results[0][el_idx][doy][k]
+                            row+='%5s' %results[0][el_idx][doy][k]
                 elif el in ['hdd','cdd'] and (k == 2 or k == 3):
                     row+='%6s' %results[0][el_idx][doy][k]
                 else:
                     row+='%4s' %results[0][el_idx][doy][k]
             for k in range(5,6):
+                '''
                 if el not in ['hdd','cdd']:
                     row+='%5s' %results[0][el_idx][doy][k]
+                '''
+                row+='%5s' %results[0][el_idx][doy][k]
             if el in ['maxt', 'mint']:
                 row+='%4s%5s' %(results[0][el_idx][doy][6],results[0][el_idx][doy][7])
         print row
@@ -1104,7 +1120,12 @@ def format_sodxtrmts_results_web(results, data, data_params, app_params, wrapper
             print '<H1>' + wrapper.station_names[0] + ', ' + wrapper.station_states[0] + '</H1>'
         else:
             print '<H1> No Station Name</H1>'
-        print '<H2>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] +  ' of '+ WRCCData.DISPLAY_PARAMS[data_params['element']] + ' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[data_params['element']]] +') </H2>'
+
+        header2 = '<H2>' + WRCCData.SXTR_ANALYSIS_CHOICES_DICT[app_params['monthly_statistic']] +  ' of '+ WRCCData.DISPLAY_PARAMS[data_params['element']]
+        if WRCCData.UNITS_ENGLISH[data_params['element']]!= '':
+            header2+=' ('+ WRCCData.UNITS_LONG[WRCCData.UNITS_ENGLISH[data_params['element']]] +')'
+        header2+= '</H2>'
+        print header2
         print '<H3> (<B>' + data_params['sid'] + '</B>) </H3>'
         if data_params['element'] in ['hdd', 'cdd', 'gdd']:
             print '<H4>   Base Temperature = ' + str(data_params['base_temperature'])+' F</H4>'
@@ -1226,10 +1247,10 @@ def format_sodsum_results_web(results, data, data_params,wrapper,station_dates=N
             print '<H2>   Station Metadata </H2>'
             print '<BR>'
             print '<TABLE>'
-            print '<TR><TH>Count</TH><TH> Number</TH><TH>   Station Name   </TH><TH>Lat</TH><TH> Long</TH><TH>  Elev</TH><TH>  Start</TH><TH>  End</TH></TR>'
-            print '<TR><TD> </TD><TD> (Coop) </TD><TD>  (From ACIS listing) </TD><TD>    ddmmss</TD><TD> dddmmss</TD><TD> ft</TD><TD> yy mm</TD><TD> yy mm</TD></TR>'
-            print '<TR><TD>=====</TD><TD> ======</TD><TD>   =======================</TD><TD> ======</TD><TD> ======</TD><TD> ====</TD><TD>  =====</TD><TD> =====</TD></TR>'
-            print '<TR><TD>' + wrapper.station_countys[0] + '</TD><TD>' + wrapper.station_ids[0] + '</TD><TD>' + wrapper.station_names[0] + '</TD><TD>' + lat_ddmmss + '</TD><TD>' + lon_ddmmss + '</TD><TD>' + str(int(round(float(wrapper.station_elevs[0])))) + '</TD><TD>' + station_start + '</TD><TD>' + station_end + '</TD></TR>'
+            print '<TR><TH> Number</TH><TH>   Station Name   </TH><TH>Lat</TH><TH> Long</TH><TH>  Elev</TH><TH>  Start</TH><TH>  End</TH></TR>'
+            print '<TR><TD> (Coop) </TD><TD>  (From ACIS listing) </TD><TD>    ddmmss</TD><TD> dddmmss</TD><TD> ft</TD><TD> yy mm</TD><TD> yy mm</TD></TR>'
+            print '<TR><TD> ======</TD><TD>   =======================</TD><TD> ======</TD><TD> ======</TD><TD> ====</TD><TD>  =====</TD><TD> =====</TD></TR>'
+            print '<TR><TD>' + wrapper.station_ids[0] + '</TD><TD>' + wrapper.station_names[0] + '</TD><TD>' + lat_ddmmss + '</TD><TD>' + lon_ddmmss + '</TD><TD>' + str(int(round(float(wrapper.station_elevs[0])))) + '</TD><TD>' + station_start + '</TD><TD>' + station_end + '</TD></TR>'
             print '</TABLE></CENTER>'
             print '<HR>'
             print '<CENTER>'
@@ -1305,7 +1326,6 @@ def print_html_header():
     print '<!DOCTYPE html>'
     print '<HTML>'
 
-
 def print_error(error):
     print '<HEAD><TITLE>' + error + '</TITLE></HEAD>'
     print '<BODY BGCOLOR="#FFFFFF">'
@@ -1342,6 +1362,7 @@ def format_date(date):
     d = date.replace('-','').replace(':','').replace('/','').replace(' ','')
     return d
 
+#For running soddyrec offline
 def run_soddyrec(arg_list, output_file=None):
     if output_file:
         sys.stdout = open(output_file, 'w')

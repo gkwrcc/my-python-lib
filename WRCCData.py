@@ -42,7 +42,6 @@ today = set_back_date(0)
 #General
 ###################################
 ###################################
-
 FIPS_STATE_KEYS = {'al':'01','az':'02','ca':'04','co':'05','ct':'06','hi':'51', 'id':'10','mt':'24', 'nv':'26', \
              'nm':'29','pa':'91','or':'35','tx':'41', 'ut':'42', 'wa':'45','ar':'03', 'ct':'06', \
              'de':'07','fl':'08','ga':'09','il':'11', 'in':'12', 'ia':'13','ks':'14', 'ky':'15', \
@@ -55,7 +54,7 @@ STATE_CHOICES = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA
                 'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', \
                 'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM', 'NV', \
                 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', \
-                'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
+                'VA', 'VT', 'WA', 'WI', 'WV', 'WY','AS']
 
 NETWORK_CODES = {
                 '1': 'WBAN',
@@ -192,7 +191,8 @@ ACIS_ELEMENTS_LIST = [['maxt','Maximum Daily Temperature (F)'], ['mint','Minimum
                       ['pcpn', 'Precipitation (in)'], ['snow', 'Snowfall (in)'], \
                       ['snwd', 'Snow Depth (in)'], ['cdd', 'Cooling Degree Days'], \
                       ['hdd','Heating Degree Days'], ['gdd', 'Growing Degree Days'], \
-                      ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)']]
+                      ['evap', 'Pan Evaporation (in)'], ['gdd', 'Wind Movement (Mi)'],\
+                      ['pet', 'Potential Evapotranspiration'], ['dtr', 'Daily Temperature Range (F)']]
 
 ELEMENT_THRESHOLDS = {
     'english':{
@@ -238,9 +238,9 @@ UNITS_METRIC = {
     'pcpn': 'mm',
     'snow': 'mm',
     'snwd': 'mm',
-    'cdd': 'C',
-    'hdd': 'C',
-    'gdd':'C',
+    'cdd': '',
+    'hdd': '',
+    'gdd':'',
     'evap': 'mm',
     'wdmv': 'km',
     'elev':'m',
@@ -256,13 +256,13 @@ UNITS_ENGLISH = {
     'pcpn': 'in',
     'snow': 'in',
     'snwd': 'in',
-    'cdd': 'F',
-    'hdd': 'F',
-    'gdd':'F',
+    'cdd': '',
+    'hdd': '',
+    'gdd':'',
     'evap': 'in',
     'wdmv': 'Mi',
     'elev':'ft',
-    'pet':'in/day',
+    'pet':'in/day'
 }
 
 UNITS_LONG={
@@ -273,8 +273,65 @@ UNITS_LONG={
     'Mi':'Miles',
     'km':'Kilometer',
     'ft':'Feet',
-    'm':'Meter'
+    'm':'Meter',
+    #Degree days are unit less
+    '':''
 }
+
+PLOT_COLOR = {
+    'maxt':'#660066',
+    'mint':'#0000FF',
+    'avgt':'#FF00FF',
+    'dtr': '#FF00FF',
+    'obst':'#FF00FF',
+    'pcpn': '#008000',
+    'snow': '#008000',
+    'snwd': '#008000',
+    'cdd': '#00FFFF',
+    'hdd': '#00FFFF',
+    'gdd': '#00FFFF',
+    'evap': '#008000',
+    'wdmv': '#008000',
+    'pet':'#008000',
+}
+RM_COLOR = {
+    'maxt':'#FF0000',
+    'mint':'#8B0000',
+    'avgt':'#FF1493',
+    'dtr': '#B22222',
+    'obst':'#FF00FF',
+    'pcpn': '#FF69B4',
+    'snow': '#CD5C5C',
+    'snwd': '#F08080',
+    'cdd': '#BA55A3',
+    'hdd': '#9370BD',
+    'gdd': '#C71585',
+    'evap': '#FF0066',
+    'wdmv': '#FF99CC',
+    'pet':'#9900FF',
+}
+#Plot and running mean colors
+PLOT_COLOR_MONTH = {
+    'JAN':['#0000FF','#FF0000'],
+    'FEB':['#00FFFF','#8B0000'],
+    'MAR':['#8A2BE2','#FF1493'],
+    'APR':['#6495ED','#B22222'],
+    'MAY':['#8B008B','#FF00FF'],
+    'JUN':['#00008B','#FF69B4'],
+    'JUL':['#483D8B','#CD5C5C'],
+    'AUG':['#00CED1','#F08080'],
+    'SEP':['#00BFFF','#BA55D3'],
+    'OCT':['#696969','#9370BD'],
+    'NOV':['#4B0082','#C71585'],
+    'DEC':['#008B8B','#DB7093']
+}
+
+#Blues
+SERIES_COLOR_LIST = ['#0000FF','#00FFFF','#8A2BE2','#6495ED','  #8B008B',\
+    '#00008B','008B8B','#483D8B ','#00CED1','#00BFFF','#696969','#4B0082']
+#Reds
+RUNNING_MEAN_COLOR_LIST = ['#FF0000','#8B0000','#FF1493','#B22222', '#FF00FF',\
+    '#FF69B4','#CD5C5C','#F08080','#BA55D3','#9370BD','#C71585','#DB7093']
 
 MONTH_NAMES_LONG = ['January', 'February', 'March', 'April', 'May', 'June',\
                'July', 'August', 'September', 'October', 'November', 'December']
@@ -388,6 +445,7 @@ CLIM_SUM_MAPS_DAILY_THRESHES = {
 #FORM CHOICES/FORM related stuff
 ###################################
 ###################################
+#DELETE?
 SEARCH_AREA_FORM_TO_ACIS = {
     'station_id':'stnid',
     'station_ids':'stnids',
@@ -405,6 +463,7 @@ SEARCH_AREA_FORM_TO_ACIS = {
     'point':'loc',
 }
 
+#DELETE??
 STN_AREA_FORM_TO_PARAM = {
     'station_id':'sids',
     'station_ids':'sids',
@@ -425,6 +484,71 @@ STN_AREA_FORM_TO_PARAM = {
     'location':'loc',
     'point':'loc'
 }
+
+#NEW
+FORM_TO_META_PARAMS = {
+    'station_id':'sids',
+    'station_ids':'sids',
+    'station':'sids',
+    'grid':'sids',
+    'climate_division':'climdiv',
+    'climdiv':'climdiv',
+    'county_warning_area':'cwa',
+    'cwa':'cwa',
+    'bounding_box':'bbox',
+    'bbox':'bbox',
+    'state':'state',
+    'states':'state',
+    'county':'county',
+    'basin':'basin',
+    'shape':'bbox',
+    'location':'loc',
+    'point':'loc'
+}
+
+#NEW
+FORM_TO_PARAMS = {
+    'station_id':'sid',
+    'station_ids':'sids',
+    'sid':'sid',
+    'sids':'sids',
+    'climate_division':'climdiv',
+    'climdiv':'climdiv',
+    'county_warning_area':'cwa',
+    'cwa':'cwa',
+    'bounding_box':'bbox',
+    'bbox':'bbox',
+    'state':'state',
+    'states':'state',
+    'county':'county',
+    'basin':'basin',
+    'shape':'bbox',
+    'location':'loc',
+    'point':'loc'
+}
+#NEW
+PARAMS_TO_FORM= {
+    'climdiv':'climate_division',
+    'climate_division':'climate_division',
+    'cwa':'county_warning_area',
+    'county_warning_area':'county_warning_area',
+    'bbox':'bounding_box',
+    'bounding_box':'bounding_box',
+    'stnid':'station_id',
+    'station_id':'sid',
+    'stn_id': 'sid',
+    'stnids':'sids',
+    'station_ids':'sids',
+    'basin':'basin',
+    'county':'county',
+    'shape':'shape',
+    'point':'location',
+    'location':'location',
+    'loc':'location',
+    'state':'state',
+    'states':'states',
+}
+
 
 GRID_AREA_FORM_TO_PARAM = {
     #Note: gridACIS calls currently don't support cwa, climdiv, basin, county
@@ -490,6 +614,10 @@ AREA_DEFAULTS = {
 }
 
 DISPLAY_PARAMS = {
+    #data types
+    'data_type':'Data Type',
+    'station': 'Station',
+    'grid':'Grid',
     #metadata
     'uid':'Unique Station Identifier',
     'coop_id': 'COOP Identifier',
@@ -498,10 +626,11 @@ DISPLAY_PARAMS = {
     'elev':'Elevation',
     'name':'Station Name',
     'state':'State',
-    'valid_daterange': 'Valid Date Range (by element)',
+    'valid_daterange': 'Valid Date Range (by Element)',
     'select_grid_by':'Grid Data Request',
     'select_stations_by': 'Station Data Request',
     #search areas
+    'user_area_id': 'Point/Area',
     'stnid': 'Station ID',
     'stnids': 'Station IDs',
     'station_id': 'Station ID',
@@ -531,8 +660,13 @@ DISPLAY_PARAMS = {
     #dates and elements
     'start_date': 'Start Date',
     'end_date': 'End Date',
+    'start_window': 'Start Window',
+    'end_window': 'End Window',
+    'window':'Window',
     'start_month': 'Start Month',
     'end_month': 'End Month',
+    'start_day':'Start Day',
+    'end_day': 'End Day',
     'time_period': 'Time Period',
     'X': 'X',
     'start_year': 'Start Year',
@@ -589,7 +723,9 @@ DISPLAY_PARAMS = {
     'summary_type': 'Summary Type',
     'temporal_summary':'Temporal Summary',
     'spatial_summary':'Spatial Summary',
+    'windowed_data': 'Windowed Data',
     'mean': 'Mean',
+    'median':'Median',
     'sum': 'Sum of',
     'max': 'Maximum',
     'min': 'Minimum',

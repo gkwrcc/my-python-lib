@@ -18,15 +18,6 @@ import WRCCUtils, AcisWS, WRCCData
 
 #Settings
 #from django.conf import settings
-'''
-try:
-    import my_acis.settings as settings
-except:
-    try:
-        import my_acis_settings as settings
-    except:
-        pass
-'''
 try:
     import my_acis.settings as settings
 except ImportError:
@@ -1268,8 +1259,12 @@ def Sodxtrmts(**kwargs):
             else:
                 if kwargs['monthly_statistic'] == 'ndays':
                     results[i][num_yrs+1].append(0)
+                    #space for flags
+                    results[i][num_yrs+1].append(' ')
                 else:
                     results[i][num_yrs+1].append(0.00)
+                    #space for flags
+                    results[i][num_yrs+1].append(' ')
 
             if kwargs['monthly_statistic'] == 'ndays':
                 results[i][num_yrs+2].append('%.1f' % round(sk,1))
@@ -2416,7 +2411,7 @@ def Sodlist_new(kwargs):
     params = {
         'sdate':kwargs['start_date'],
         'edate':kwargs['end_date'],
-        'meta':'name,state,sids,ll,elev,uid,county,climdiv,valid_daterange'
+        'meta':'name,state,sids,ll,elev,uid,valid_daterange'
     }
     if 'station_id' in kwargs.keys():params['sids'] = kwargs['station_id']
     if 'station_ids' in kwargs.keys():params['sids'] = kwargs['station_ids']
@@ -2556,7 +2551,7 @@ def Sodsumm(**kwargs):
     #results[i][table]
     results = defaultdict(dict)
     #Loop over stations
-    for i, stn in enumerate(kwargs['coop_station_ids']):
+    for i, stn in enumerate(kwargs['ids']):
         #Check for empty data
         flag_empty = False
         for el_data in kwargs['data'][i]:
