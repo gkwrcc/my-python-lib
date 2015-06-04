@@ -5,14 +5,6 @@ import copy
 from acis.WRCCWrappers import Wrapper
 
 
-def f1(a, b):
-    return a + b
-
-
-def test_f1():
-    assert f1(1, 2) == 3
-
-
 class TestSodsum:
     def setup_method(self, test_method):
         self.data_params = {
